@@ -9,21 +9,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
+      - uses: docker://lucteo/ghaction-conan-cmake:latest
         with:
           cc: ${{ matrix.cc }}
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
+      - uses: docker://lucteo/ghaction-conan-cmake:latest
         with:
           coverage: codecov
   valgrind:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
+      - uses: docker://lucteo/ghaction-conan-cmake:latest
         with:
           ctestflags: '-D ExperimentalMemCheck'
   clang-sanitizers:
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
+      - uses: docker://lucteo/ghaction-conan-cmake:latest
         with:
           cc: clang
           cflags: ${{ matrix.cflags }}
@@ -47,13 +47,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
+      - uses: docker://lucteo/ghaction-conan-cmake:latest
         with:
           analyzer: clang-format
   clang-analyzers:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lpenz/ghaction-cmake:latest
+      - uses: docker://lucteo/ghaction-conan-cmake:latest
         with:
           analyzer: clang-tidy

@@ -30,3 +30,8 @@
 *.exe
 *.out
 *.app
+
+
+# Project folders/files
+build
+include/concore/version.hpp
