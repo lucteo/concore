@@ -2,6 +2,7 @@
 set(sourceFiles
     "test_main.cpp"
     "smoke.cpp"
+    "test_immediate_executor.cpp"
 )
 
 # Project settings

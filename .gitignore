@@ -32,6 +32,10 @@
 *.app
 
 
+# Sublime files
+*.sublime-project
+*.sublime-workspace
+
 # Project folders/files
 build
 include/concore/version.hpp

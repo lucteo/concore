@@ -53,8 +53,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAK
 
 
 # Library options
-option(concore.testing "Compile the concore tests" OFF)
-option(concore.coverage "Enable instrumentation to get test coverage information (when run in DEBUG builds)" OFF)
+option(concore.testing "Compile the concore tests" ON)
 
 # Use C++17
 target_compile_features(concore INTERFACE cxx_std_17)
@@ -67,6 +66,7 @@ target_include_directories(concore INTERFACE
 
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)
+    enable_testing()
     add_subdirectory(test)
 endif()
 
