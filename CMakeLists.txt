@@ -64,6 +64,11 @@ target_include_directories(concore INTERFACE
   $<INSTALL_INTERFACE:include>
 )
 
+# Ensure that we link with the threading library
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+target_link_libraries(concore INTERFACE Threads::Threads)
+
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)
     enable_testing()
