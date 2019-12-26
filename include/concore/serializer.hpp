@@ -6,6 +6,7 @@
 #include "detail/utils.hpp"
 
 #include <memory>
+#include <atomic>
 #include <cassert>
 
 namespace concore {

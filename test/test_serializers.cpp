@@ -235,7 +235,7 @@ TEST_CASE("rw_serializer.writer behaves like a serializer") {
 
 TEST_CASE("rw_serializer.reader has parallelism") {
     auto ge = concore::global_executor;
-    check_parallelism(concore::rw_serializer(ge).reader(), 10000, 5);
+    check_parallelism(concore::rw_serializer(ge).reader(), 10000, 2);
 }
 
 // Generate 1 WRITE and 9 READs; the WRITE will have a random order
