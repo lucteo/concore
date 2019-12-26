@@ -234,6 +234,10 @@ TEST_CASE("rw_serializer.writer behaves like a serializer") {
 }
 
 TEST_CASE("rw_serializer.reader has parallelism") {
+    // This only works if we have multiple cores; use 4 cores to increase the chance of executing in parallel
+    if (std::thread::hardware_concurrency() < 4)
+        return;
+
     auto ge = concore::global_executor;
     check_parallelism(concore::rw_serializer(ge).reader(), 10000, 2);
 }

@@ -45,6 +45,10 @@ TEST_CASE("global_executor executes all tasks") {
 }
 
 TEST_CASE("global_executor's task completion is out-of-order") {
+    // This only works if we have multiple cores
+    if (std::thread::hardware_concurrency() < 4)
+        return;
+
     constexpr int max_runs = 100;
     // We are not guaranteed to find an out-of-order execution pattern; so try multiple times.
     for (int k = 0; k < max_runs; k++) {
@@ -78,7 +82,7 @@ TEST_CASE("global_executor's task completion is out-of-order") {
 
 TEST_CASE("global_executor runs tasks in parallel") {
     // This only works if we have multiple cores
-    if (std::thread::hardware_concurrency() <= 2)
+    if (std::thread::hardware_concurrency() < 4)
         return;
 
     std::srand(std::time(0));
