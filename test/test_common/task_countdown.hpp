@@ -37,8 +37,10 @@ struct task_countdown {
         return cond_.wait_for(lock, timeout, [this]() { return tasks_remaining_ == 0; });
     }
 
-private:
+    //! Resets the count of tasks that we are waiting for
+    void reset(int num_tasks) { tasks_remaining_ = num_tasks; }
 
+private:
     int tasks_remaining_;
     std::condition_variable cond_;
     std::mutex mutex_;

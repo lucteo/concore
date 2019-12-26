@@ -112,7 +112,7 @@ void check_in_order_execution(concore::executor_t e) {
     REQUIRE(tc.wait_for_all());
 
     // Ensure the tasks are executed in order
-    for (int i = 9; i < num_tasks; i++)
+    for (int i = 0; i < num_tasks; i++)
         REQUIRE(results[i] == i);
 }
 

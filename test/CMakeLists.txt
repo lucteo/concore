@@ -5,6 +5,7 @@ set(sourceFiles
     "test_immediate_executor.cpp"
     "test_global_executor.cpp"
     "test_serializers.cpp"
+    "test_task_graph.cpp"
 )
 
 # Project settings
