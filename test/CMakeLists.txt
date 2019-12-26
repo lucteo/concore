@@ -4,6 +4,7 @@ set(sourceFiles
     "smoke.cpp"
     "test_immediate_executor.cpp"
     "test_global_executor.cpp"
+    "test_serializers.cpp"
 )
 
 # Project settings

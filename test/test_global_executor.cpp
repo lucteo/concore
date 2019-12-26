@@ -2,43 +2,12 @@
 #include <concore/global_executor.hpp>
 #include <concore/executor_type.hpp>
 
-#include <atomic>
-#include <thread>
+#include "test_common/task_countdown.hpp"
+
+#include <cstdlib>
+#include <ctime>
 
 using namespace std::chrono_literals;
-
-//! Structure used to wait for all the tasks enqueued to be completed.
-//! The intended usage scenario:
-//!     - each task has a reference to this object
-//!     - upon completion, each task calls `task_finished`
-//!     - the main thread calls `wait_for_all` to wait for all the tasks
-//!         - this will return when all the tasks are completed, or whenever there is a timeout
-//!         - the method returns true if all tasks were completed
-struct task_countdown {
-    task_countdown(int num_tasks)
-        : tasks_remaining_(num_tasks) {}
-
-    //! Called by every task to announce that the task is completed
-    void task_finished() {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            tasks_remaining_--;
-        }
-        cond_.notify_all();
-    }
-
-    //! Called by the main thread to wait for all tasks to complete.
-    //! Returns true if all tasks were completed, or false, if there is a timeout.
-    bool wait_for_all(std::chrono::milliseconds timeout = 1000ms) {
-        std::unique_lock<std::mutex> lock(mutex_);
-        return cond_.wait_for(lock, timeout, [this]() { return tasks_remaining_ == 0; });
-    }
-
-private:
-    int tasks_remaining_;
-    std::condition_variable cond_;
-    std::mutex mutex_;
-};
 
 TEST_CASE("global_executor is copyable") {
     auto e1 = concore::global_executor;
@@ -112,6 +81,8 @@ TEST_CASE("global_executor runs tasks in parallel") {
     if (std::thread::hardware_concurrency() <= 2)
         return;
 
+    std::srand(std::time(0));
+
     constexpr int max_runs = 100;
     // We are not guaranteed to find an out-of-order execution pattern; so try multiple times.
     for (int k = 0; k < max_runs; k++) {
@@ -130,7 +101,7 @@ TEST_CASE("global_executor runs tasks in parallel") {
                 // Record the order we have at the start of the task
                 starts[starts_end_idx++] = i;
                 // Randomly wait a bit of time
-                int rnd = 1 + rand() % 6; // generates a number in range [1..6]
+                int rnd = 1 + std::rand() % 6; // generates a number in range [1..6]
                 std::this_thread::sleep_for(std::chrono::milliseconds(rnd));
                 // Record the order we have at the task finish
                 finishes[finishes_end_idx++] = i;
