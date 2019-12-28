@@ -2,6 +2,7 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
+#include "profiling.hpp"
 
 #include <memory>
 #include <atomic>
@@ -50,6 +51,7 @@ public:
 
     //! The call operator, corresponding to a task
     void operator()() {
+        CONCORE_PROFILING_SCOPE_N("chained_task.()");
         assert(impl_->pred_count_.load() == 0);
         // Execute the current task
         try {

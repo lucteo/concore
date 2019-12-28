@@ -15,6 +15,9 @@ include_directories("../include")
 # Add the tests executable
 add_executable(test.concore ${sourceFiles})
 target_link_libraries(test.concore concore)
+if (TARGET concore_profiling)
+    target_link_libraries(test.concore concore_profiling)
+endif()
 
 # The tests depend on Catch2
 find_package(Catch2 REQUIRED)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "task.hpp"
+#include "profiling.hpp"
 
 #include <deque>
 #include <array>
@@ -28,7 +29,7 @@ constexpr int num_priorities = 5;
 
 //! Structure corresponding to a worker thread
 struct worker_thread_data {
-    std::mutex mutex_;
+    profiling_mutex mutex_{CONCORE_PROFILING_MUTEX_NAME("worker_mtx")};
     std::condition_variable_any ready_;
     std::thread thread_;
     std::atomic<int> num_tasks_{0};
@@ -41,7 +42,7 @@ public:
     //! Try to pop one task from the front of the queue. Returns false if somebody else tries to
     //! read/write the queue.
     bool try_pop(task& t) {
-        std::unique_lock<std::mutex> lock{mutex_, std::try_to_lock};
+        std::unique_lock<profiling_mutex> lock{mutex_, std::try_to_lock};
         if (!lock || tasks_.empty())
             return false;
         t = std::move(tasks_.front());
@@ -52,7 +53,7 @@ public:
     //! Pops one task from the front of the queue. If the queue is busy waits until the previous
     //! operation finishes.
     bool pop(task& t) {
-        std::unique_lock<std::mutex> lock{mutex_};
+        std::unique_lock<profiling_mutex> lock{mutex_};
         if (tasks_.empty())
             return false;
         t = std::move(tasks_.front());
@@ -66,7 +67,7 @@ public:
     template <typename T>
     bool try_push(T&& t) {
         {
-            std::unique_lock<std::mutex> lock{mutex_, std::try_to_lock};
+            std::unique_lock<profiling_mutex> lock{mutex_, std::try_to_lock};
             if (!lock)
                 return false;
             tasks_.emplace_back(std::forward<T>(t));
@@ -80,7 +81,7 @@ public:
     template <typename T>
     void push(T&& t) {
         {
-            std::unique_lock<std::mutex> lock{mutex_};
+            std::unique_lock<profiling_mutex> lock{mutex_};
             tasks_.emplace_back(std::forward<T>(t));
         }
         notify_push();
@@ -93,14 +94,14 @@ private:
     //! The queue of tasks that we are encapsulating
     std::deque<task> tasks_;
     //! Mutex used to protect the access in the queue
-    std::mutex mutex_;
+    profiling_mutex mutex_{CONCORE_PROFILING_MUTEX_NAME("queue_mtx")};
     //! The data of the worker thread
     worker_thread_data* data_;
 
     //! Notify the worker thread that we've pushed some work on it
     void notify_push() {
         {
-            std::unique_lock<std::mutex> lock{data_->mutex_};
+            std::unique_lock<profiling_mutex> lock{data_->mutex_};
             data_->num_tasks_++;
         }
         data_->ready_.notify_all();
@@ -108,7 +109,7 @@ private:
 
     //! Notify the worker thread that some work was extracted from the worker thread
     void on_pop() {
-        std::unique_lock<std::mutex> lock{data_->mutex_};
+        std::unique_lock<profiling_mutex> lock{data_->mutex_};
         data_->num_tasks_--;
     }
 };
@@ -116,6 +117,8 @@ private:
 class task_system {
 public:
     task_system() {
+        CONCORE_PROFILING_INIT();
+        CONCORE_PROFILING_FUNCTION();
         // Prepare all the queues (for all prios, and for all workers)
         for (auto& qvec : task_queues_) {
             std::vector<task_queue> newVec{static_cast<size_t>(count_)};
@@ -129,6 +132,7 @@ public:
             workers_data_[i].thread_ = std::thread([this, i]() { worker_run(i); });
     }
     ~task_system() {
+        CONCORE_PROFILING_FUNCTION();
         // Set the flag to mark shut down, and wake all the threads
         done_ = true;
         for (auto& worker_data : workers_data_)
@@ -178,6 +182,8 @@ private:
 
     //! The run procedure for a worker thread
     void worker_run(int worker_idx) {
+        CONCORE_PROFILING_SETTHREADNAME("concore_worker");
+        CONCORE_PROFILING_FUNCTION();
         while (true) {
             if (done_)
                 return;
@@ -190,6 +196,7 @@ private:
 
     //! Tries to extract a task and execute it. Returns false if couldn't extract a task
     bool execute_task(int worker_idx) {
+        CONCORE_PROFILING_FUNCTION();
         task t;
         // First, try the high-prio tasks
         for (auto& qvec : task_queues_) {
@@ -210,8 +217,13 @@ private:
 
     //! Puts the worker to sleep if the `done_` flag is not set
     void try_sleep(int worker_idx) {
-        std::unique_lock<std::mutex> lock{workers_data_[worker_idx].mutex_};
+        // Early check to avoid taking the lock
+        if (done_ || workers_data_[worker_idx].num_tasks_.load() > 0)
+            return;
+
+        std::unique_lock<profiling_mutex> lock{workers_data_[worker_idx].mutex_};
         while (!done_ && workers_data_[worker_idx].num_tasks_.load() == 0) {
+            CONCORE_PROFILING_SCOPE_NC("sleep", CONCORE_PROFILING_COLOR_SILVER);
             workers_data_[worker_idx].ready_.wait(lock);
         }
     }

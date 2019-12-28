@@ -5,6 +5,8 @@
 #include "test_common/task_countdown.hpp"
 
 TEST_CASE("one can define a simple linear chain of tasks") {
+    CONCORE_PROFILING_FUNCTION();
+
     constexpr int num_tasks = 10;
     int counter{0};
     int res[num_tasks];
@@ -40,6 +42,8 @@ TEST_CASE("one can define a simple linear chain of tasks") {
 }
 
 TEST_CASE("chained_task objects are copyable") {
+    CONCORE_PROFILING_FUNCTION();
+
     task_countdown tc{2};
 
     auto e = concore::global_executor;
@@ -60,6 +64,8 @@ TEST_CASE("chained_task objects are copyable") {
 }
 
 TEST_CASE("multiple links between the tasks (same direction) are fine") {
+    CONCORE_PROFILING_FUNCTION();
+
     task_countdown tc{2};
 
     auto e = concore::global_executor;
@@ -77,6 +83,8 @@ TEST_CASE("multiple links between the tasks (same direction) are fine") {
 }
 
 TEST_CASE("circular dependencies lead to tasks not being executed") {
+    CONCORE_PROFILING_FUNCTION();
+
     task_countdown tc{4};
     bool executed[4] = {false};
 
@@ -125,6 +133,8 @@ TEST_CASE("circular dependencies lead to tasks not being executed") {
 }
 
 TEST_CASE("a lot of continuations added to a chained_task") {
+    CONCORE_PROFILING_FUNCTION();
+
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
 
@@ -148,6 +158,8 @@ TEST_CASE("a lot of continuations added to a chained_task") {
 }
 
 TEST_CASE("a lot of predecessors added to a chained_task") {
+    CONCORE_PROFILING_FUNCTION();
+
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
     bool executed[num_tasks] = {false};
@@ -187,6 +199,8 @@ TEST_CASE("a lot of predecessors added to a chained_task") {
 }
 
 TEST_CASE("tree-like structure of chained_tasks") {
+    CONCORE_PROFILING_FUNCTION();
+
     constexpr int num_tasks = 127; // needs to be 2^n-1
     task_countdown tc{num_tasks};
 
@@ -209,6 +223,8 @@ TEST_CASE("tree-like structure of chained_tasks") {
 }
 
 TEST_CASE("reverse tree-like structure of chained_tasks") {
+    CONCORE_PROFILING_FUNCTION();
+
     constexpr int num_tasks = 127; // needs to be 2^n-1
     task_countdown tc{num_tasks};
 
@@ -233,6 +249,8 @@ TEST_CASE("reverse tree-like structure of chained_tasks") {
 }
 
 TEST_CASE("hand-crafted graph of chained_tasks") {
+    CONCORE_PROFILING_FUNCTION();
+
     constexpr int num_tasks = 18;
     task_countdown tc{num_tasks};
 
@@ -273,6 +291,7 @@ TEST_CASE("hand-crafted graph of chained_tasks") {
 }
 
 TEST_CASE("a chained_task can be reused after it was run") {
+    CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
