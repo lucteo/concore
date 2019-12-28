@@ -14,3 +14,4 @@ AlignAfterOpenBracket: DontAlign
 BreakConstructorInitializersBeforeComma: true
 ReflowComments: true
 AccessModifierOffset: -4
+AlwaysBreakTemplateDeclarations: Yes

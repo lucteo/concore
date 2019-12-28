@@ -2,6 +2,10 @@
 set(sourceFiles
     "test_main.cpp"
     "smoke.cpp"
+    "test_immediate_executor.cpp"
+    "test_global_executor.cpp"
+    "test_serializers.cpp"
+    "test_task_graph.cpp"
 )
 
 # Project settings
@@ -11,6 +15,9 @@ include_directories("../include")
 # Add the tests executable
 add_executable(test.concore ${sourceFiles})
 target_link_libraries(test.concore concore)
+if (TARGET concore_profiling)
+    target_link_libraries(test.concore concore_profiling)
+endif()
 
 # The tests depend on Catch2
 find_package(Catch2 REQUIRED)

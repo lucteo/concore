@@ -37,27 +37,50 @@ endif()
 string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP concore_BUILD_YEAR "%Y")
 
+# Library options
+option(concore.testing "Compile the concore tests" ON)
+option(concore.profiling "Add profiling info the the library" OFF)
+option(concore.profiling.tracy "Use Tracy library for profiling" OFF)
+option(concore.profiling.include "The header to include for profiling" "")
+option(concore.profiling.path "Path to be used for searching the profiling code" "")
+
 # Print configuration
-message(STATUS "System       : ${CMAKE_SYSTEM}")
-message(STATUS "System name  : ${CMAKE_SYSTEM_NAME}")
-message(STATUS "System ver   : ${CMAKE_SYSTEM_VERSION}")
-message(STATUS "Library ver  : ${concore_BUILD_VERSION}")
-message(STATUS "  major ver  : ${concore_MAJOR_VERSION}")
-message(STATUS "  minor ver  : ${concore_MINOR_VERSION}")
-message(STATUS "Build date   : ${concore_BUILD_DATE}")
-message(STATUS "Build year   : ${concore_BUILD_YEAR}")
+message(STATUS "System           : ${CMAKE_SYSTEM}")
+message(STATUS "System name      : ${CMAKE_SYSTEM_NAME}")
+message(STATUS "System ver       : ${CMAKE_SYSTEM_VERSION}")
+message(STATUS "Library ver      : ${concore_BUILD_VERSION}")
+message(STATUS "  major ver      : ${concore_MAJOR_VERSION}")
+message(STATUS "  minor ver      : ${concore_MINOR_VERSION}")
+message(STATUS "Build date       : ${concore_BUILD_DATE}")
+message(STATUS "Build year       : ${concore_BUILD_YEAR}")
+message(STATUS "Use testing      : ${concore.testing}")
+message(STATUS "Use profiling    : ${concore.profiling}")
+message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
+message(STATUS "Profiling include: ${concore.profiling.include}")
+message(STATUS "Profiling path   : ${concore.profiling.path}")
 message(STATUS)
 
 # Write the version information to 'version.hpp'
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp)
 
-
-# Library options
-option(concore.testing "Compile the concore tests" OFF)
-option(concore.coverage "Enable instrumentation to get test coverage information (when run in DEBUG builds)" OFF)
-
 # Use C++17
 target_compile_features(concore INTERFACE cxx_std_17)
+
+# Configure profiling
+if(concore.profiling.tracy)
+    find_path(TRACY_PATH "Tracy.hpp" PATH "${concore.profiling.path}")
+    if(NOT EXISTS "${TRACY_PATH}")
+        message(FATAL_ERROR "Cannot find Tracy folder; try setting the concore.profiling.path variable to point to Tracy directory")
+    endif()
+    message(STATUS "Tracy path   : ${TRACY_PATH}")
+    message(STATUS)
+    set(concore.profiling ON)
+    set(concore.profiling.include "Tracy.hpp")
+    add_library(concore_profiling STATIC "${TRACY_PATH}/TracyClient.cpp")
+    target_compile_features(concore_profiling PRIVATE cxx_std_17)
+    target_include_directories(concore_profiling PUBLIC "${TRACY_PATH}")
+    add_definitions(-DTRACY_ENABLE=1)
+endif()
 
 # Declare the public include directories
 target_include_directories(concore INTERFACE
@@ -65,8 +88,14 @@ target_include_directories(concore INTERFACE
   $<INSTALL_INTERFACE:include>
 )
 
+# Ensure that we link with the threading library
+set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+find_package(Threads REQUIRED)
+target_link_libraries(concore INTERFACE Threads::Threads)
+
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)
+    enable_testing()
     add_subdirectory(test)
 endif()
 
@@ -79,20 +108,20 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 # Also install cmake helper
-include(CMakePackageConfigHelpers)
-write_basic_package_version_file(
-  ${CMAKE_CURRENT_BINARY_DIR}/concoreConfigVersion.cmake
-  VERSION ${concore_BUILD_VERSION}
-  COMPATIBILITY SameMajorVersion )
-install(EXPORT concoreTargets
-  FILE concoreTargets.cmake
-  NAMESPACE concore::
-  DESTINATION share/cmake/concore
-)
-install(FILES
-  "${concore_BINARY_DIR}/concoreConfigVersion.cmake"
-  DESTINATION share/cmake/concore
-)
+# include(CMakePackageConfigHelpers)
+# write_basic_package_version_file(
+#   ${CMAKE_CURRENT_BINARY_DIR}/concoreConfigVersion.cmake
+#   VERSION ${concore_BUILD_VERSION}
+#   COMPATIBILITY SameMajorVersion )
+# install(EXPORT concoreTargets
+#   FILE concoreTargets.cmake
+#   NAMESPACE concore::
+#   DESTINATION share/cmake/concore
+# )
+# install(FILES
+#   "${concore_BINARY_DIR}/concoreConfigVersion.cmake"
+#   DESTINATION share/cmake/concore
+# )
 
 # Basic CPack support
 include(InstallRequiredSystemLibraries)
