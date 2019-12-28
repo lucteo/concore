@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+
 // User can specify a "profiling include" to specify how profiling needs to be done
 #ifdef CONCORE_PROFILING_INCLUDE
 #include CONCORE_PROFILING_INCLUDE
