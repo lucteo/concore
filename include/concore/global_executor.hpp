@@ -26,6 +26,14 @@ enum class task_priority {
 
 constexpr int num_priorities = 5;
 
+//! Structure corresponding to a worker thread
+struct worker_thread_data {
+    std::mutex mutex_;
+    std::condition_variable_any ready_;
+    std::thread thread_;
+    std::atomic<int> num_tasks_{0};
+};
+
 //! A task queue. Implements a queue of tasks, that can be accessed concurrently from different
 //! threads. One pushes new tasks at the back, and always pops at the front.
 class task_queue {
@@ -38,6 +46,7 @@ public:
             return false;
         t = std::move(tasks_.front());
         tasks_.pop_front();
+        on_pop();
         return true;
     }
     //! Pops one task from the front of the queue. If the queue is busy waits until the previous
@@ -48,6 +57,7 @@ public:
             return false;
         t = std::move(tasks_.front());
         tasks_.pop_front();
+        on_pop();
         return true;
     }
 
@@ -60,8 +70,9 @@ public:
             if (!lock)
                 return false;
             tasks_.emplace_back(std::forward<T>(t));
+            data_->num_tasks_++;
         }
-        ready_->notify_all();
+        notify_push();
         return true;
     }
     //! Pushes one element on the back of the queue. If the queue is busy waits until the previous
@@ -72,19 +83,34 @@ public:
             std::unique_lock<std::mutex> lock{mutex_};
             tasks_.emplace_back(std::forward<T>(t));
         }
-        ready_->notify_all();
+        notify_push();
     }
 
-    //! Sets the condition variable that is notified whenever a new task is pushed to the queue.
-    void set_ready_cv(std::condition_variable& cv) { ready_ = &cv; }
+    //! Sets the data of the working thread we belong to
+    void set_data(worker_thread_data& data) { data_ = &data; }
 
 private:
     //! The queue of tasks that we are encapsulating
     std::deque<task> tasks_;
     //! Mutex used to protect the access in the queue
     std::mutex mutex_;
-    //! Pointer to the conditional variable that indicates whether the queue has work
-    std::condition_variable* ready_{nullptr};
+    //! The data of the worker thread
+    worker_thread_data* data_;
+
+    //! Notify the worker thread that we've pushed some work on it
+    void notify_push() {
+        {
+            std::unique_lock<std::mutex> lock{data_->mutex_};
+            data_->num_tasks_++;
+        }
+        data_->ready_.notify_all();
+    }
+
+    //! Notify the worker thread that some work was extracted from the worker thread
+    void on_pop() {
+        std::unique_lock<std::mutex> lock{data_->mutex_};
+        data_->num_tasks_--;
+    }
 };
 
 class task_system {
@@ -95,7 +121,7 @@ public:
             std::vector<task_queue> newVec{static_cast<size_t>(count_)};
             qvec.swap(newVec);
             for (int i = 0; i < count_; i++) {
-                qvec[i].set_ready_cv(workers_data_[i].ready_);
+                qvec[i].set_data(workers_data_[i]);
             }
         }
         // Start the worker threads
@@ -125,22 +151,17 @@ public:
 
         // Find a queue, and try to push the task on it. If we cannot do that, try another queue
         for (int i = 0; i != spin_ / count_; i++) {
-            if (task_queues_[P][(cur_idx + i) % count_].try_push(std::forward<T>(t)))
+            int worker_idx = (cur_idx + i) % count_;
+            if (task_queues_[P][worker_idx].try_push(std::forward<T>(t)))
                 return;
         }
 
         // All queues are busy; just enqueue to the corresponding queue
-        task_queues_[P][cur_idx % count_].push(std::forward<T>(t));
+        int worker_idx = cur_idx % count_;
+        task_queues_[P][worker_idx].push(std::forward<T>(t));
     }
 
 private:
-    //! Structure corresponding to a worker thread
-    struct worker_thread_data {
-        std::mutex mutex_;
-        std::condition_variable ready_;
-        std::thread thread_;
-    };
-
     //! The number of worker threads that we should have
     const int count_{static_cast<int>(std::thread::hardware_concurrency())};
     //! The amount of iterations a thread will check for tasks before going to sleep
@@ -176,7 +197,10 @@ private:
             for (int i = 0; i != spin_ / count_; i++) {
                 if (qvec[(worker_idx + i) % count_].try_pop(t)) {
                     // Found a task; run it
-                    t();
+                    try {
+                        t();
+                    } catch (...) {
+                    }
                     return true;
                 }
             }
@@ -187,8 +211,9 @@ private:
     //! Puts the worker to sleep if the `done_` flag is not set
     void try_sleep(int worker_idx) {
         std::unique_lock<std::mutex> lock{workers_data_[worker_idx].mutex_};
-        if (!done_)
+        while (!done_ && workers_data_[worker_idx].num_tasks_.load() == 0) {
             workers_data_[worker_idx].ready_.wait(lock);
+        }
     }
 };
 
