@@ -71,7 +71,6 @@ public:
             if (!lock)
                 return false;
             tasks_.emplace_back(std::forward<T>(t));
-            data_->num_tasks_++;
         }
         notify_push();
         return true;
@@ -183,7 +182,6 @@ private:
     //! The run procedure for a worker thread
     void worker_run(int worker_idx) {
         CONCORE_PROFILING_SETTHREADNAME("concore_worker");
-        CONCORE_PROFILING_FUNCTION();
         while (true) {
             if (done_)
                 return;

@@ -4,6 +4,7 @@
 #include "concurrent_queue.hpp"
 
 #include <functional>
+#include <cassert>
 
 namespace concore {
 

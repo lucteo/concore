@@ -23,11 +23,13 @@ struct task_countdown {
 
     //! Called by every task to announce that the task is completed
     void task_finished() {
+        int old_val = -1;
         {
             std::unique_lock<std::mutex> lock(mutex_);
-            tasks_remaining_--;
+            old_val = tasks_remaining_--;
         }
-        cond_.notify_all();
+        if (old_val == 1)
+            cond_.notify_all();
     }
 
     //! Called by the main thread to wait for all tasks to complete.

@@ -12,6 +12,7 @@
 #include "Tracy.hpp"
 
 #define CONCORE_ENABLE_PROFILING 1
+#define CONCORE_ENABLE_LOCK_PROFILING 0
 
 #define CONCORE_PROFILING_INIT() static_cast<void>(tracy::GetProfiler())
 #define CONCORE_PROFILING_FUNCTION() ZoneScopedN(__FUNCTION__)
@@ -24,6 +25,7 @@
 #define CONCORE_PROFILING_MESSAGE(text) TracyMessage(text, strlen(text))
 #define CONCORE_PROFILING_PLOT(staticName, val) TracyPlot(staticName, val)
 
+#if CONCORE_ENABLE_LOCK_PROFILING
 #define CONCORE_PROFILING_MUTEX_CONTEXT(ctx) tracy::LockableCtx ctx
 #define CONCORE_PROFILING_MUTEX_INIT_CONTEXT(ctx, loc) : ctx(loc)
 #define CONCORE_PROFILING_MUTEX_BEORE_LOCK(ctx) const auto run_after = (ctx).BeforeLock()
@@ -37,6 +39,15 @@
             (ctx).AfterLock();                                                                     \
     }
 #define CONCORE_PROFILING_MUTEX_MARK_LOCATION(ctx, loc) (ctx).Mark(loc)
+#else
+#define CONCORE_PROFILING_MUTEX_CONTEXT(ctx)                  /*nothing*/
+#define CONCORE_PROFILING_MUTEX_INIT_CONTEXT(ctx, loc)        /*nothing*/
+#define CONCORE_PROFILING_MUTEX_BEORE_LOCK(ctx)               /*nothing*/
+#define CONCORE_PROFILING_MUTEX_AFTER_LOCK(ctx)               /*nothing*/
+#define CONCORE_PROFILING_MUTEX_AFTER_UNLOCK(ctx)             /*nothing*/
+#define CONCORE_PROFILING_MUTEX_AFTER_TRY_LOCK(ctx, acquired) /*nothing*/
+#define CONCORE_PROFILING_MUTEX_MARK_LOCATION(ctx, loc)       /*nothing*/
+#endif
 
 #define CONCORE_PROFILING_LOCATION_TYPE const tracy::SourceLocationData*
 #define CONCORE_PROFILING_LOCATION()                                                               \
@@ -84,7 +95,7 @@
 
 #endif
 
-#ifndef CONCORE_ENABLE_PROFILING
+#if !CONCORE_ENABLE_PROFILING
 
 #define CONCORE_PROFILING_INIT()                      /*nothing*/
 #define CONCORE_PROFILING_FUNCTION()                  /*nothing*/

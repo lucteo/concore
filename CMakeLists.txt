@@ -93,6 +93,15 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 target_link_libraries(concore INTERFACE Threads::Threads)
 
+# Check if Intel TBB can be found
+find_package(tbb QUIET)
+if(${TBB_tbb_FOUND})
+    message(STATUS "TBB was also found on the system")
+    message(STATUS)
+    target_link_libraries(concore INTERFACE TBB::tbb)
+    add_definitions(-DCONCORE_USE_TBB=1)
+endif()
+
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)
     enable_testing()
