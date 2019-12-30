@@ -1,6 +1,7 @@
-#ifdef __APPLE__
-#include <catch2/catch.hpp>
 #include <concore/dispatch_executor.hpp>
+
+#if CONCORE_USE_LIBDISPATCH
+#include <catch2/catch.hpp>
 #include "test_common/common_executor_tests.hpp"
 
 using namespace std::chrono_literals;

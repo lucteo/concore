@@ -6,9 +6,6 @@ project(concore LANGUAGES CXX)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup(TARGETS)
 
-# The concore library target
-add_library(concore INTERFACE)
-
 # Get the library version
 set(concore_BUILD_VERSION 0)
 set(concore_MAJOR_VERSION 0)
@@ -63,8 +60,10 @@ message(STATUS)
 # Write the version information to 'version.hpp'
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp)
 
-# Use C++17
-target_compile_features(concore INTERFACE cxx_std_17)
+# The source files for the concore library
+set(concore_sourceFiles
+    "src/low_level/semaphore.cpp"
+)
 
 # Configure profiling
 if(concore.profiling.tracy)
@@ -82,8 +81,14 @@ if(concore.profiling.tracy)
     add_definitions(-DTRACY_ENABLE=1)
 endif()
 
+# The concore library target
+add_library(concore STATIC ${concore_sourceFiles})
+
+# Use C++17
+target_compile_features(concore PUBLIC cxx_std_17)
+
 # Declare the public include directories
-target_include_directories(concore INTERFACE
+target_include_directories(concore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
   $<INSTALL_INTERFACE:include>
 )
@@ -91,14 +96,19 @@ target_include_directories(concore INTERFACE
 # Ensure that we link with the threading library
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
-target_link_libraries(concore INTERFACE Threads::Threads)
+target_link_libraries(concore PUBLIC Threads::Threads)
+
+# Do we have to link with profiling?
+if (TARGET concore_profiling)
+    target_link_libraries(concore PUBLIC concore_profiling)
+endif()
 
 # Check if Intel TBB can be found
 find_package(tbb QUIET)
 if(${TBB_tbb_FOUND})
     message(STATUS "TBB was also found on the system")
     message(STATUS)
-    target_link_libraries(concore INTERFACE TBB::tbb)
+    target_link_libraries(concore PUBLIC TBB::tbb)
     add_definitions(-DCONCORE_USE_TBB=1)
 endif()
 
@@ -109,8 +119,10 @@ if(concore.testing)
 endif()
 
 # Targets for installation
-install(TARGETS concore EXPORT concoreTargets)
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include
+install(TARGETS concore
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib)
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
   DESTINATION include
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.hpp"

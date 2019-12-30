@@ -99,7 +99,7 @@ static void BM_execute_lots_of_tasks_dispatch(benchmark::State& state) {
 static void BM_execute_lots_of_tasks_tbb(benchmark::State& state) {
 #ifdef CONCORE_USE_TBB
     CONCORE_PROFILING_SCOPE_N("test tbb_executor");
-    tbb::task_scheduler_init init(1+std::thread::hardware_concurrency()); // make it a fair comp
+    tbb::task_scheduler_init init(1 + std::thread::hardware_concurrency()); // make it a fair comp
     execute_lots_of_tasks(concore::tbb_executor, state);
 #endif
 }
@@ -134,6 +134,5 @@ BENCHMARK_CASE2(BM_execute_lots_of_tasks_global);
 BENCHMARK_CASE2(BM_execute_lots_of_tasks_dispatch);
 BENCHMARK_CASE2(BM_execute_lots_of_tasks_tbb);
 BENCHMARK_CASE2(BM_execute_lots_of_tasks_immediate);
-
 
 BENCHMARK_MAIN();

@@ -324,7 +324,7 @@ TEST_CASE("a chained_task can be reused after it was run") {
     }
 
     // Check that all the tasks were run several times
-    for (int i=0; i<num_tasks; i++)
+    for (int i = 0; i < num_tasks; i++)
         REQUIRE(cnt[i] == num_runs);
 
     // If we run the first task again, without setting the dependencies, only the first task is run

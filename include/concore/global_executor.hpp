@@ -2,13 +2,13 @@
 
 #include "task.hpp"
 #include "profiling.hpp"
+#include "low_level/semaphore.hpp"
 
 #include <deque>
 #include <array>
 #include <vector>
 #include <thread>
 #include <atomic>
-#include <condition_variable>
 
 namespace concore {
 
@@ -29,9 +29,8 @@ constexpr int num_priorities = 5;
 
 //! Structure corresponding to a worker thread
 struct worker_thread_data {
-    profiling_mutex mutex_{CONCORE_PROFILING_MUTEX_NAME("worker_mtx")};
-    std::condition_variable_any ready_;
     std::thread thread_;
+    semaphore has_data_;
     std::atomic<int> num_tasks_{0};
 };
 
@@ -99,18 +98,13 @@ private:
 
     //! Notify the worker thread that we've pushed some work on it
     void notify_push() {
-        {
-            std::unique_lock<profiling_mutex> lock{data_->mutex_};
-            data_->num_tasks_++;
-        }
-        data_->ready_.notify_all();
+        CONCORE_PROFILING_FUNCTION();
+        if (data_->num_tasks_++ == 0)
+            data_->has_data_.signal();
     }
 
     //! Notify the worker thread that some work was extracted from the worker thread
-    void on_pop() {
-        std::unique_lock<profiling_mutex> lock{data_->mutex_};
-        data_->num_tasks_--;
-    }
+    void on_pop() { data_->num_tasks_--; }
 };
 
 class task_system {
@@ -135,7 +129,7 @@ public:
         // Set the flag to mark shut down, and wake all the threads
         done_ = true;
         for (auto& worker_data : workers_data_)
-            worker_data.ready_.notify_all();
+            worker_data.has_data_.signal();
         // Wait for all the threads to finish
         for (auto& worker_data : workers_data_)
             worker_data.thread_.join();
@@ -215,15 +209,10 @@ private:
 
     //! Puts the worker to sleep if the `done_` flag is not set
     void try_sleep(int worker_idx) {
-        // Early check to avoid taking the lock
+        // Early check to avoid entering the wait
         if (done_ || workers_data_[worker_idx].num_tasks_.load() > 0)
             return;
-
-        std::unique_lock<profiling_mutex> lock{workers_data_[worker_idx].mutex_};
-        while (!done_ && workers_data_[worker_idx].num_tasks_.load() == 0) {
-            CONCORE_PROFILING_SCOPE_NC("sleep", CONCORE_PROFILING_COLOR_SILVER);
-            workers_data_[worker_idx].ready_.wait(lock);
-        }
+        workers_data_[worker_idx].has_data_.wait();
     }
 };
 

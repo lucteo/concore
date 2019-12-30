@@ -1,5 +1,9 @@
 #pragma once
 
+#include "detail/platform.hpp"
+
+#if CONCORE_USE_LIBDISPATCH
+
 #include <dispatch/dispatch.h>
 
 #include "profiling.hpp"
@@ -53,11 +57,12 @@ struct executor_with_prio {
     }
 };
 
-} // namespace detail
+} // namespace detail_disp
 
 //! The default libdispatch task executor. This will enqueue a task with a "normal" priority in the
 //! system, and whenever we have a core available to execute it, it will be executed.
-constexpr auto dispatch_executor = detail_disp::executor_with_prio<detail_disp::task_priority::normal>{};
+constexpr auto dispatch_executor =
+        detail_disp::executor_with_prio<detail_disp::task_priority::normal>{};
 
 //! Task executor that enqueues tasks with "high" priority.
 constexpr auto dispatch_executor_high_prio =
@@ -71,3 +76,5 @@ constexpr auto dispatch_executor_low_prio =
 
 } // namespace v1
 } // namespace concore
+
+#endif

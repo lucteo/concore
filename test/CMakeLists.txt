@@ -5,6 +5,7 @@ include_directories("../include")
 # The source files for the functional tests
 set(func_sourceFiles
     "func/test_main.cpp"
+    "func/low_level/test_semaphore.cpp"
     "func/test_immediate_executor.cpp"
     "func/test_global_executor.cpp"
     "func/test_serializers.cpp"

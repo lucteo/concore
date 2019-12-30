@@ -4,7 +4,6 @@
 #include <concore/tbb_executor.hpp>
 #include "test_common/common_executor_tests.hpp"
 
-
 using namespace std::chrono_literals;
 
 TEST_CASE("tbb_executor is copyable") {
