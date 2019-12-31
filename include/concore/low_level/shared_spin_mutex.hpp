@@ -2,6 +2,8 @@
 
 #include "spin_backoff.hpp"
 
+#include <atomic>
+
 namespace concore {
 inline namespace v1 {
 
