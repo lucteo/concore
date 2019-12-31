@@ -6,6 +6,7 @@ include_directories("../include")
 set(func_sourceFiles
     "func/test_main.cpp"
     "func/low_level/test_semaphore.cpp"
+    "func/low_level/test_mutexes.cpp"
     "func/test_immediate_executor.cpp"
     "func/test_global_executor.cpp"
     "func/test_serializers.cpp"

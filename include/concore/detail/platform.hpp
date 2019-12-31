@@ -21,6 +21,25 @@
 #define CONCORE_PLATFORM(X) (CONCORE_PLATFORM_##X)
 #endif
 
+// Detect processor type, if not given
+#if !defined(CONCORE_CPU_ARCH)
+
+#if defined(_M_ARM) || defined(__arm__) || defined(__aarch64__)
+#define CONCORE_CPU_ARCH_arm 1
+#elif defined(_M_X64) || defined(__x86_64__)
+#define CONCORE_CPU_ARCH_x86_64 1
+#elif defined(_M_IX86) || defined(__i386__)
+#define CONCORE_CPU_ARCH_x86_32 1
+#elif defined(__ia64__) || defined(_M_IA64)
+#define CONCORE_CPU_ARCH_ia64 1
+#else
+#define CONCORE_CPU_ARCH_generic 1
+#endif
+
+#define CONCORE_CPU_ARCH(X) (CONCORE_CPU_ARCH_##X)
+
+#endif
+
 // Detect the C++ version
 #ifndef CONCORE_CPP_VERSION
 
