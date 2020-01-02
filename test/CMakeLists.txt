@@ -7,6 +7,7 @@ set(func_sourceFiles
     "func/test_main.cpp"
     "func/low_level/test_semaphore.cpp"
     "func/low_level/test_mutexes.cpp"
+    "func/low_level/test_concurrent_dequeue.cpp"
     "func/test_immediate_executor.cpp"
     "func/test_global_executor.cpp"
     "func/test_serializers.cpp"
@@ -45,4 +46,5 @@ endfunction()
 
 def_perf_test(perf.executors "perf/perf_executors.cpp")
 def_perf_test(perf.latency "perf/perf_latency.cpp")
+def_perf_test(perf.queue "perf/perf_queue.cpp")
 
