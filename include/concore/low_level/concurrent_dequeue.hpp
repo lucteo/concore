@@ -6,6 +6,7 @@
 #include <vector>
 #include <deque>
 #include <mutex>
+#include <cassert>
 
 namespace concore {
 

@@ -6,6 +6,7 @@
 
 #include <benchmark/benchmark.h>
 #include <thread>
+#include <functional>
 
 //! Structure that is large enough for our purposes, when testing the speed
 struct test_elem {
