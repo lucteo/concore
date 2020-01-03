@@ -1,5 +1,5 @@
 #include <concore/low_level/concurrent_dequeue.hpp>
-#include <concore/low_level/concurrent_queue.hpp>
+#include <concore/data/concurrent_queue.hpp>
 #include <concore/low_level/spin_backoff.hpp>
 #include <concore/profiling.hpp>
 
@@ -24,6 +24,9 @@ struct test_elem {
 };
 
 bool operator==(const test_elem& lhs, int rhs) { return lhs.idx_ == rhs; }
+
+int as_int(int x) { return x; }
+int as_int(const test_elem& x) { return x.idx_; }
 
 template <typename T>
 struct simple_queue {
@@ -63,8 +66,8 @@ void push(Q& queue, T&& elem) {
     queue.push_back(std::forward<T>(elem));
 }
 
-template <typename T>
-void push(concore::concurrent_queue<T>& queue, T&& elem) {
+template <typename T, concore::queue_type QT>
+void push(concore::concurrent_queue<T, QT>& queue, T&& elem) {
     queue.push(std::forward<T>(elem));
 }
 
@@ -73,8 +76,8 @@ bool try_pop(Q& queue, T& elem) {
     return queue.try_pop_front(elem);
 }
 
-template <typename T>
-bool try_pop(concore::concurrent_queue<T>& queue, T& elem) {
+template <typename T, concore::queue_type QT>
+bool try_pop(concore::concurrent_queue<T, QT>& queue, T& elem) {
     return queue.try_pop(elem);
 }
 
@@ -125,6 +128,11 @@ void BM_push_back_concurrent_queue(benchmark::State& state) {
     concore::concurrent_queue<test_elem> queue;
     test_push_back_latency(queue, state);
 }
+void BM_push_back_concurrent_queue_sc(benchmark::State& state) {
+    CONCORE_PROFILING_FUNCTION();
+    concore::concurrent_queue<test_elem, concore::queue_type::multi_prod_single_cons> queue;
+    test_push_back_latency(queue, state);
+}
 
 template <typename Q>
 static void test_pop_front_latency(Q& queue, benchmark::State& state) {
@@ -166,6 +174,11 @@ void BM_pop_front_concurrent_dequeue(benchmark::State& state) {
 void BM_pop_front_concurrent_queue(benchmark::State& state) {
     CONCORE_PROFILING_FUNCTION();
     concore::concurrent_queue<test_elem> queue;
+    test_pop_front_latency(queue, state);
+}
+void BM_pop_front_concurrent_queue_sc(benchmark::State& state) {
+    CONCORE_PROFILING_FUNCTION();
+    concore::concurrent_queue<test_elem, concore::queue_type::multi_prod_single_cons> queue;
     test_pop_front_latency(queue, state);
 }
 
@@ -245,6 +258,11 @@ void BM_push_pop_par_small_concurrent_queue(benchmark::State& state) {
     concore::concurrent_queue<int> queue;
     test_push_pop(queue, state);
 }
+void BM_push_pop_par_small_concurrent_queue_sc(benchmark::State& state) {
+    CONCORE_PROFILING_FUNCTION();
+    concore::concurrent_queue<int, concore::queue_type::multi_prod_single_cons> queue;
+    test_push_pop(queue, state);
+}
 
 void BM_push_pop_par_large_mtx_queue(benchmark::State& state) {
     CONCORE_PROFILING_FUNCTION();
@@ -262,6 +280,11 @@ void BM_push_pop_par_large_concurrent_queue(benchmark::State& state) {
     concore::concurrent_queue<test_elem> queue;
     test_push_pop(queue, state);
 }
+void BM_push_pop_par_large_concurrent_queue_sc(benchmark::State& state) {
+    CONCORE_PROFILING_FUNCTION();
+    concore::concurrent_queue<test_elem, concore::queue_type::multi_prod_single_cons> queue;
+    test_push_pop(queue, state);
+}
 
 #define BENCHMARK_CASE1(fun)                                                                       \
     BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMicrosecond)->Args({10'000, 11'000});
@@ -275,25 +298,32 @@ void BM_push_pop_par_large_concurrent_queue(benchmark::State& state) {
 BENCHMARK_CASE1(BM_push_back_mtx_queue);
 BENCHMARK_CASE1(BM_push_back_concurrent_dequeue);
 BENCHMARK_CASE1(BM_push_back_concurrent_queue);
+BENCHMARK_CASE1(BM_push_back_concurrent_queue_sc);
 BENCHMARK_CASE2(BM_push_back_mtx_queue);
 BENCHMARK_CASE2(BM_push_back_concurrent_dequeue);
 BENCHMARK_CASE2(BM_push_back_concurrent_queue);
+BENCHMARK_CASE2(BM_push_back_concurrent_queue_sc);
 BENCHMARK_CASE3(BM_push_back_mtx_queue);
 BENCHMARK_CASE3(BM_push_back_concurrent_dequeue);
 BENCHMARK_CASE3(BM_push_back_concurrent_queue);
+BENCHMARK_CASE3(BM_push_back_concurrent_queue_sc);
 BENCHMARK_CASE4(BM_push_back_mtx_queue);
 BENCHMARK_CASE4(BM_push_back_concurrent_dequeue);
 BENCHMARK_CASE4(BM_push_back_concurrent_queue);
+BENCHMARK_CASE4(BM_push_back_concurrent_queue_sc);
 
 BENCHMARK_CASE1(BM_pop_front_mtx_queue);
 BENCHMARK_CASE1(BM_pop_front_concurrent_dequeue);
 BENCHMARK_CASE1(BM_pop_front_concurrent_queue);
+BENCHMARK_CASE1(BM_pop_front_concurrent_queue_sc);
 
 BENCHMARK_CASE1(BM_push_pop_par_small_mtx_queue);
 BENCHMARK_CASE1(BM_push_pop_par_small_concurrent_dequeue);
 BENCHMARK_CASE1(BM_push_pop_par_small_concurrent_queue);
+BENCHMARK_CASE1(BM_push_pop_par_small_concurrent_queue_sc);
 BENCHMARK_CASE1(BM_push_pop_par_large_mtx_queue);
 BENCHMARK_CASE1(BM_push_pop_par_large_concurrent_dequeue);
 BENCHMARK_CASE1(BM_push_pop_par_large_concurrent_queue);
+BENCHMARK_CASE1(BM_push_pop_par_large_concurrent_queue_sc);
 
 BENCHMARK_MAIN();
