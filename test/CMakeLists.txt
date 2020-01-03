@@ -8,6 +8,7 @@ set(func_sourceFiles
     "func/low_level/test_semaphore.cpp"
     "func/low_level/test_mutexes.cpp"
     "func/low_level/test_concurrent_dequeue.cpp"
+    "func/low_level/test_concurrent_queue.cpp"
     "func/test_immediate_executor.cpp"
     "func/test_global_executor.cpp"
     "func/test_serializers.cpp"
