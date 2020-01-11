@@ -2,6 +2,7 @@
 
 #include "nodes.hpp"
 #include "../../low_level/spin_backoff.hpp"
+#include "../../low_level/spin_mutex.hpp"
 
 #include <atomic>
 
@@ -17,12 +18,15 @@ struct concurrent_queue_data {
     //! In general, the link will point to null, but this pointer will never be null.
     //! When the queue is empty, this will store the address of 'head_'.
     std::atomic<std::atomic<node_ptr>*> last_link_{&head_};
+
+    //! Used to protect the head_ changing in the consumers
+    spin_mutex head_bottleneck_;
 };
 
 //! Pushes an already constructed node on the back of the queue
 void push_back(concurrent_queue_data& queue, node_ptr node) {
     // There is nothing after the given node
-    node->next_.store(nullptr, std::memory_order_relaxed);
+    node->next_.store(nullptr, std::memory_order_release);
 
     // Chain the element at the end of the queue
     std::atomic<node_ptr>* old_link = queue.last_link_.exchange(&node->next_);
@@ -71,50 +75,57 @@ node_ptr try_pop_front_single(concurrent_queue_data& queue) {
 }
 
 //! Same as try_pop_front_single(), but allow multiple consumers on the front of the queue
+//! Actually, except the early exit, the consumers access is serialized.
 node_ptr try_pop_front_multi(concurrent_queue_data& queue) {
     // Easy check for empty queue
     node_ptr head = queue.head_.load(std::memory_order_acquire);
     if (!head)
         return nullptr;
 
-    // Try to exchange the head with the next element.
-    // Producers and consumers might try to operate on head_
-    node_ptr next;
-    while (true) {
-        if (!head)
-            return nullptr;
+    // Only one consumer can change the head
+    // We lock to avoid ABA problem between head and it's next element
+    // I.e.:
+    //  - we get the head, and the next element
+    //  - the thread goes idle for some time
+    //  - the element is removed from the queue
+    //  - the element is added back to the queue, and it has a new next
+    //  - there is no way for us to do a CAS both on the element and its next
+    std::unique_lock<spin_mutex> lock{queue.head_bottleneck_};
+    head = queue.head_.load(std::memory_order_acquire);
+    if (!head)
+        return nullptr;
 
-        next = head->next_.load();
-        if (queue.head_.compare_exchange_weak(head, next))
-            break;
-    }
-
-    // If we just consume the last element from the queue, we need to update the last link
-    if (next == nullptr) {
+    // Check if the queue has more than one element
+    node_ptr second = head->next_.load(std::memory_order_acquire);
+    if (second) {
+        // If we have a second element, there is no contention on the head. Easy peasy.
+        // The head now becomes the second element
+        queue.head_.store(second, std::memory_order_relaxed);
+    } else {
+        // Try to set the head to null, but consider a producer that just pushes an element.
+        queue.head_.store(nullptr, std::memory_order_release);
         auto old = &head->next_;
         if (queue.last_link_.compare_exchange_strong(old, &queue.head_)) {
             // No contention, we've made the transition to an empty queue.
             assert(queue.last_link_.load(std::memory_order_relaxed) != nullptr);
         } else {
+            // Unlock here, so that we don't hold all the consumers waiting for the producer
+            lock.unlock();
+
             // A producer just updated queue.last_link_ (adding a new element after 'head')
             // Wait but head->next_ to be filled, and use this as head.
             spin_backoff spinner;
-            node_ptr new_head;
             while (true) {
-                new_head = head->next_.load(std::memory_order_acquire);
-                if (new_head)
+                second = head->next_.load(std::memory_order_acquire);
+                if (second)
                     break;
                 spinner.pause();
             }
-            assert(queue.head_.load(std::memory_order_relaxed) == nullptr);
             // The newly added element is the new head
-            queue.head_.store(new_head);
-            // Note 1: after adding a head element, further pushes cannot change the head.
-            // Note 2: before this last store, all parallel pops will fail as the head is null.
+            queue.head_.store(second);
+            // Note, that after adding a head element, further pushes cannot change the head.
         }
     }
-
-    // Return the element that we've popped from the front of the queue
     return head;
 }
 
