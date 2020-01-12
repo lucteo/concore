@@ -41,33 +41,55 @@ void task_system::worker_run(int worker_idx) {
 bool task_system::execute_task(int worker_idx) {
     CONCORE_PROFILING_FUNCTION();
     task t;
-    // First, try the high-prio tasks
-    for (auto& qvec : task_queues_) {
-        // Starting from our queue, try to get a task
-        // If our queue is empty, we may be getting a task from another queue
-        for (int i = 0; i != spin_ / count_; i++) {
-            int idx = (worker_idx + i) % count_;
-            if (qvec[idx].try_pop(t)) {
-                // Decrement the number of existing tasks
-                workers_data_[idx].num_tasks_--;
 
-                // Found a task; run it
-                try {
-                    t();
-                } catch (...) {
-                }
-                return true;
+    // TODO: take tasks from the corresponding worker queue
+
+    // Try taking tasks from the global queue
+    for (auto& q : enqueued_tasks_) {
+        if (q.try_pop(t)) {
+            // Decrement the number of existing tasks
+            num_global_tasks_--;
+
+            // Found a task; run it
+            try {
+                t();
+            } catch (...) {
             }
+            return true;
         }
     }
+
     return false;
 }
 
 void task_system::try_sleep(int worker_idx) {
-    // Early check to avoid entering the wait
-    if (done_ || workers_data_[worker_idx].num_tasks_.load() > 0)
-        return;
+    {
+        CONCORE_PROFILING_SCOPE_N("before sleep");
+
+        // Spin for a bit, in the hope that new tasks are added to the system
+        // We hope that we avoid going to sleep just to be woken up immediately
+        spin_backoff spinner;
+        constexpr int new_active_wait_iterations = 8;
+        for (int i = 0; i < new_active_wait_iterations; i++) {
+            if (num_global_tasks_.load() > 0 || workers_data_[worker_idx].num_tasks_.load() > 0 ||
+                    done_)
+                return;
+            spinner.pause();
+        }
+
+        // Nothing to do. Go to sleep. Mark workers_busy_ as false
+        // We do a CAS here to avoid all workers going to sleep at the same time, just when new work
+        // is enqueued.
+        bool old = workers_busy_.load(std::memory_order_acquire);
+        if (!workers_busy_.compare_exchange_strong(old, false, std::memory_order_acq_rel))
+            return;
+    }
     workers_data_[worker_idx].has_data_.wait();
+}
+
+void task_system::wakeup_workers() {
+    for (int i = 0; i < count_; i++)
+        workers_data_[i].has_data_.signal();
 }
 
 } // namespace detail

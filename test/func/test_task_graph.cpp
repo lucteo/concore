@@ -321,6 +321,7 @@ TEST_CASE("a chained_task can be reused after it was run") {
         e(tasks[0]);
         REQUIRE(tc.wait_for_all());
         tc.reset(num_tasks);
+        std::this_thread::sleep_for(10ms);   // ensure the task is truly finished
     }
 
     // Check that all the tasks were run several times
@@ -328,6 +329,12 @@ TEST_CASE("a chained_task can be reused after it was run") {
         REQUIRE(cnt[i] == num_runs);
 
     // If we run the first task again, without setting the dependencies, only the first task is run
+    tc.reset(1);
     e(tasks[0]);
-    REQUIRE(!tc.wait_for_all(10ms));
+    REQUIRE(tc.wait_for_all());
+    // Wait a bit, so that other tasks have time to run
+    std::this_thread::sleep_for(10ms);
+    REQUIRE(cnt[0] == 1+num_runs);
+    for (int i = 1; i < num_tasks; i++)
+        REQUIRE(cnt[i] == num_runs);
 }

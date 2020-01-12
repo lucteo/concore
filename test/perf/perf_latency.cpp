@@ -64,6 +64,10 @@ void set_random_ptr_fun() {
 
 template <typename E>
 void do_iter(int n, E& executor, std::chrono::time_point<std::chrono::high_resolution_clock>& end) {
+    CONCORE_PROFILING_FUNCTION();
+    char buf[32];
+    sprintf(buf, "%d", n);
+    CONCORE_PROFILING_SET_TEXT(buf);
     if (n > 0) {
         benchmark::DoNotOptimize(executor);
         executor([n, &executor, &end]() {

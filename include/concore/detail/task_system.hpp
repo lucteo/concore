@@ -44,13 +44,14 @@ public:
         CONCORE_PROFILING_FUNCTION();
         static_assert(P < num_priorities, "Invalid task priority");
 
-        // Push the task to the corresponding task queue (priority + round robin)
-        int worker_idx = (index_++) % count_;
-        task_queues_[P][worker_idx].push(std::forward<T>(t));
+        // Push the task in the global queue, corresponding to the given prio
+        enqueued_tasks_[P].push(std::forward<T>(t));
+        num_global_tasks_++;
 
-        // Wake up the worker if needed
-        if (workers_data_[worker_idx].num_tasks_++ == 0)
-            workers_data_[worker_idx].has_data_.signal();
+        // Wake up the workers
+        bool old = workers_busy_.exchange(true);
+        if (!old)
+            wakeup_workers();
     }
 
 private:
@@ -78,6 +79,16 @@ private:
     //! Flag used to announce the shutting down of the task system
     std::atomic_bool done_{false};
 
+    //! The global task queue for each priority.
+    //! We store here all the globally enqueued tasks
+    std::array<task_queue, num_priorities> enqueued_tasks_;
+    //! The number of tasks enqueued in the global queue (across all prios)
+    std::atomic<int> num_global_tasks_{0};
+
+    //! Set to true if ALL the workers are busy, or when we want to wake up the workers. Will be set
+    //! to false when one worker hoes to sleep.
+    std::atomic<bool> workers_busy_{false};
+
     //! The run procedure for a worker thread
     void worker_run(int worker_idx);
 
@@ -86,6 +97,9 @@ private:
 
     //! Puts the worker to sleep if the `done_` flag is not set
     void try_sleep(int worker_idx);
+
+    //! Called when adding a new task to wakeup the workers
+    void wakeup_workers();
 };
 } // namespace detail
 
