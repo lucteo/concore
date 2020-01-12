@@ -12,8 +12,6 @@
 
 namespace concore {
 
-inline namespace v1 {
-
 namespace detail {
 struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     //! The base executor used to actually execute the tasks, once we've serialized them
@@ -155,6 +153,8 @@ public:
 };
 
 } // namespace detail
+
+inline namespace v1 {
 
 //! Similar to a serializer but allows two types of tasks: READ and WRITE tasks.
 //!

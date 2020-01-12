@@ -11,8 +11,6 @@
 
 namespace concore {
 
-inline namespace v1 {
-
 namespace detail {
 
 //! The implementation details of a serializer
@@ -57,6 +55,8 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     }
 };
 } // namespace detail
+
+inline namespace v1 {
 
 //! Executor type that allows only one task to be executed at a given time.
 //!

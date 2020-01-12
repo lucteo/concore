@@ -9,8 +9,6 @@
 
 namespace concore {
 
-inline namespace v1 {
-
 namespace detail {
 
 //! The implementation details of an n_serializer
@@ -90,6 +88,8 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
     }
 };
 } // namespace detail
+
+inline namespace v1 {
 
 //! Executor type that allows maximum N tasks to be executed at a given time.
 //!
