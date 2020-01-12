@@ -5,6 +5,7 @@
 #include "../../low_level/spin_mutex.hpp"
 
 #include <atomic>
+#include <cassert>
 
 namespace concore {
 
