@@ -77,7 +77,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
 
     //! Called by the base executor to execute READ task.
     void execute_read() {
-        detail_shared::pop_and_execute(read_tasks_, except_fun_);
+        detail::pop_and_execute(read_tasks_, except_fun_);
 
         // Decrement num_active_reads
         count_bits old, desired;
@@ -95,7 +95,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     }
     //! Called by the base executor to execute WRITE task.
     void execute_write() {
-        detail_shared::pop_and_execute(write_tasks_, except_fun_);
+        detail::pop_and_execute(write_tasks_, except_fun_);
 
         // Decrement num_writes
         // If num_writes == 0, transform pending READs into active READs

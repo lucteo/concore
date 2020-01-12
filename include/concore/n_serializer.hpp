@@ -64,7 +64,7 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
     //! Note: we only execute one task, even if we have multiple tasks. We do this to ensure that
     //! the tasks are relatively small sized.
     void execute_one() {
-        detail_shared::pop_and_execute(waiting_tasks_, except_fun_);
+        detail::pop_and_execute(waiting_tasks_, except_fun_);
 
         // Decrement the number of tasks
         // Check if we need to enqueue a continuation

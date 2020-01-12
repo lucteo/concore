@@ -8,8 +8,7 @@
 #include <cassert>
 
 namespace concore {
-
-namespace detail_shared {
+namespace detail {
 
 //! Pops one task from the given task queue and executes it.
 //! If the execution throws an exception, call the given except fun
@@ -30,5 +29,5 @@ inline void pop_and_execute(Q& q, std::function<void(std::exception_ptr)> except
             except_fun(std::current_exception());
     }
 }
-} // namespace detail_shared
+} // namespace detail
 } // namespace concore

@@ -41,7 +41,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
 
     //! Called by the base executor to execute one task.
     void execute_one() {
-        detail_shared::pop_and_execute(waiting_tasks_, except_fun_);
+        detail::pop_and_execute(waiting_tasks_, except_fun_);
 
         // If there are still tasks in the queue, continue to enqueue the next task
         if (count_-- > 1)

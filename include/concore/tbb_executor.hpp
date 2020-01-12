@@ -7,7 +7,6 @@
 #include "profiling.hpp"
 
 namespace concore {
-inline namespace v1 {
 namespace detail_tbb {
 
 //! The possible priorities of tasks, as handled by the dispatch executor
@@ -45,6 +44,7 @@ struct executor_with_prio {
 
 } // namespace detail_tbb
 
+inline namespace v1 {
 //! The default TBB task executor. This will enqueue a task with a "normal" priority in the
 //! system, and whenever we have a core available to execute it, it will be executed.
 constexpr auto tbb_executor = detail_tbb::executor_with_prio<detail_tbb::task_priority::normal>{};

@@ -9,7 +9,6 @@
 #include "profiling.hpp"
 
 namespace concore {
-inline namespace v1 {
 namespace detail_disp {
 
 //! The possible priorities of tasks, as handled by the dispatch executor
@@ -59,6 +58,7 @@ struct executor_with_prio {
 
 } // namespace detail_disp
 
+inline namespace v1 {
 //! The default libdispatch task executor. This will enqueue a task with a "normal" priority in the
 //! system, and whenever we have a core available to execute it, it will be executed.
 constexpr auto dispatch_executor =

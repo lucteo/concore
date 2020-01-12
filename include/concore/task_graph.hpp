@@ -11,9 +11,7 @@
 
 namespace concore {
 
-inline namespace v1 {
-
-class chained_task;
+inline namespace v1 { class chained_task; }
 
 namespace detail {
 
@@ -30,6 +28,10 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
 };
 
 } // namespace detail
+
+inline namespace v1 {
+
+class chained_task;
 
 //! A task that can be chained with other tasks to create a graph of tasks.
 //!
