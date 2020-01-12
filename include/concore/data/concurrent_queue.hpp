@@ -31,6 +31,8 @@ public:
     using value_type = T;
 
     concurrent_queue() = default;
+    concurrent_queue(const concurrent_queue&) = delete;
+    const concurrent_queue& operator=(const concurrent_queue&) = delete;
 
     //! Pushes one element in the back of the queue.
     //! Multiple produces can call this in parallel.

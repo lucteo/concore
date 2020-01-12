@@ -24,7 +24,7 @@ struct concurrent_queue_data {
 };
 
 //! Pushes an already constructed node on the back of the queue
-void push_back(concurrent_queue_data& queue, node_ptr node) {
+inline void push_back(concurrent_queue_data& queue, node_ptr node) {
     // There is nothing after the given node
     node->next_.store(nullptr, std::memory_order_release);
 
@@ -37,7 +37,7 @@ void push_back(concurrent_queue_data& queue, node_ptr node) {
 
 //! Tries to pop one element from the front of a concurrent_queue that allows only one consumer at
 //! the front of the queue, and no producers at the front.
-node_ptr try_pop_front_single(concurrent_queue_data& queue) {
+inline node_ptr try_pop_front_single(concurrent_queue_data& queue) {
     // Easy check for empty queue
     node_ptr head = queue.head_.load(std::memory_order_relaxed);
     if (!head)
@@ -76,7 +76,7 @@ node_ptr try_pop_front_single(concurrent_queue_data& queue) {
 
 //! Same as try_pop_front_single(), but allow multiple consumers on the front of the queue
 //! Actually, except the early exit, the consumers access is serialized.
-node_ptr try_pop_front_multi(concurrent_queue_data& queue) {
+inline node_ptr try_pop_front_multi(concurrent_queue_data& queue) {
     // Easy check for empty queue
     node_ptr head = queue.head_.load(std::memory_order_acquire);
     if (!head)

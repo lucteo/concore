@@ -165,3 +165,66 @@ TEST_CASE("concurrent_queue: multiple threads pushing and popping", "[concurrent
     SECTION("multi_prod_single_cons") { test_multi_threads<queue_type::multi_prod_single_cons>(); }
     SECTION("multi_prod_multi_cons") { test_multi_threads<queue_type::multi_prod_multi_cons>(); }
 }
+
+std::atomic<int> g_num_ctors_{0};
+std::atomic<int> g_num_copy_ctors_{0};
+std::atomic<int> g_num_move_ctors_{0};
+std::atomic<int> g_num_dtors_{0};
+std::atomic<int> g_num_copy_oper_{0};
+std::atomic<int> g_num_move_oper_{0};
+
+void reset_counters() {
+    g_num_ctors_ = 0;
+    g_num_copy_ctors_ = 0;
+    g_num_move_ctors_ = 0;
+    g_num_dtors_ = 0;
+    g_num_copy_oper_ = 0;
+    g_num_move_oper_ = 0;
+}
+
+struct my_obj {
+    my_obj() { g_num_ctors_++; }
+    my_obj(const my_obj&) { g_num_copy_ctors_++; }
+    my_obj(my_obj&&) { g_num_move_ctors_++; }
+    ~my_obj() { g_num_dtors_++; }
+    void operator=(const my_obj&) { g_num_copy_oper_++; }
+    void operator=(my_obj&&) { g_num_move_oper_++; }
+};
+
+template <concore::queue_type conc_type>
+void test_ctor_dtor() {
+    constexpr int num_elements = 100;
+
+    reset_counters();
+    concore::concurrent_queue<my_obj> queue;
+
+    // Push some elements in the queue
+    for (int i = 0; i < num_elements; i++) {
+        queue.push(my_obj());
+    }
+    REQUIRE(g_num_ctors_.load() == num_elements);
+    REQUIRE(g_num_copy_ctors_.load() == 0);
+    REQUIRE(g_num_move_ctors_.load() == num_elements);
+    REQUIRE(g_num_dtors_.load() == num_elements);
+    REQUIRE(g_num_copy_oper_.load() == 0);
+    REQUIRE(g_num_move_oper_.load() == 0);
+
+    // Pop now all the elements
+    my_obj obj;
+    for (int i = 0; i < num_elements; i++) {
+        bool res = queue.try_pop(obj);
+    }
+    REQUIRE(g_num_ctors_.load() == num_elements + 1);
+    REQUIRE(g_num_copy_ctors_.load() == 0);
+    REQUIRE(g_num_move_ctors_.load() == num_elements);
+    REQUIRE(g_num_dtors_.load() == 2 * num_elements);
+    REQUIRE(g_num_copy_oper_.load() == 0);
+    REQUIRE(g_num_move_oper_.load() == num_elements);
+}
+
+TEST_CASE("concurrent_queue: ctors and dtors", "[concurrent_queue]") {
+    SECTION("single_prod_single_cons") { test_ctor_dtor<queue_type::single_prod_single_cons>(); }
+    SECTION("single_prod_multi_cons") { test_ctor_dtor<queue_type::single_prod_multi_cons>(); }
+    SECTION("multi_prod_single_cons") { test_ctor_dtor<queue_type::multi_prod_single_cons>(); }
+    SECTION("multi_prod_multi_cons") { test_ctor_dtor<queue_type::multi_prod_multi_cons>(); }
+}

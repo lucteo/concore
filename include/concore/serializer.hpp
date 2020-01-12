@@ -2,7 +2,7 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
-#include "detail/concurrent_queue.hpp"
+#include "data/concurrent_queue.hpp"
 #include "detail/utils.hpp"
 
 #include <memory>
@@ -22,7 +22,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     //! The function called to handle exceptions
     std::function<void(std::exception_ptr)> except_fun_;
     //! The queue of tasks that wait to be executed
-    concurrent_queue<task> waiting_tasks_;
+    concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
     //! The number of tasks that are in the queue
     std::atomic<int> count_{0};
 
@@ -34,7 +34,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     //! Adds a new task to this serializer
     void enqueue(task&& t) {
         // Add the task to the queue
-        waiting_tasks_.push(t);
+        waiting_tasks_.push(std::forward<task>(t));
 
         // If there were no other tasks, enqueue a task in the base executor
         if (count_++ == 0)
