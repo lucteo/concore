@@ -3,14 +3,13 @@
 namespace concore {
 namespace detail {
 
+//! TLS pointer to the worker data. This way, if we are called from a worker thread we can interact
+//! with the worker thread data
+thread_local worker_thread_data* g_worker_data{nullptr};
+
 task_system::task_system() {
     CONCORE_PROFILING_INIT();
     CONCORE_PROFILING_FUNCTION();
-    // Prepare all the queues (for all prios, and for all workers)
-    for (auto& qvec : task_queues_) {
-        std::vector<task_queue> newVec{static_cast<size_t>(count_)};
-        qvec.swap(newVec);
-    }
     // Start the worker threads
     for (int i = 0; i < count_; i++)
         workers_data_[i].thread_ = std::thread([this, i]() { worker_run(i); });
@@ -26,8 +25,23 @@ task_system::~task_system() {
         worker_data.thread_.join();
 }
 
+void task_system::spawn(task&& t) {
+    worker_thread_data* data = g_worker_data;
+
+    // If no worker thread data is stored on the current thread, this is not a worker thread, so we
+    // should enqueue the task
+    if (!data) {
+        enqueue<int(task_priority::normal)>(std::forward<task>(t));
+        return;
+    }
+
+    // Add the task to the worker's queue
+    data->local_tasks_.push(std::forward<task>(t));
+}
+
 void task_system::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
+    g_worker_data = &workers_data_[worker_idx];
     while (true) {
         if (done_)
             return;
@@ -42,7 +56,16 @@ bool task_system::execute_task(int worker_idx) {
     CONCORE_PROFILING_FUNCTION();
     task t;
 
-    // TODO: take tasks from the corresponding worker queue
+    // Attempt to consume tasks from the local queue
+    auto& worker_data = workers_data_[worker_idx];
+    if (worker_data.local_tasks_.try_pop(t)) {
+        // Found a task; run it
+        try {
+            t();
+        } catch (...) {
+        }
+        return true;
+    }
 
     // Try taking tasks from the global queue
     for (auto& q : enqueued_tasks_) {
@@ -71,8 +94,7 @@ void task_system::try_sleep(int worker_idx) {
         spin_backoff spinner;
         constexpr int new_active_wait_iterations = 8;
         for (int i = 0; i < new_active_wait_iterations; i++) {
-            if (num_global_tasks_.load() > 0 || workers_data_[worker_idx].num_tasks_.load() > 0 ||
-                    done_)
+            if (num_global_tasks_.load() > 0 || done_)
                 return;
             spinner.pause();
         }

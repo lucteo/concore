@@ -14,6 +14,18 @@ namespace concore {
 
 namespace detail {
 
+//! Structure containing the data for a worker thread
+struct worker_thread_data {
+    using task_queue = concurrent_queue<task>;
+
+    //! The thread object for this worker
+    std::thread thread_;
+    //! Semaphore used to signal when the worker has data, or some processing to do
+    semaphore has_data_;
+    //! The task queue of tasks that are local for this worker
+    task_queue local_tasks_;
+};
+
 //! The possible priorities of tasks, as handled by the global executor
 enum class task_priority {
     critical,   //! Critical priority; we better execute this tasks asap
@@ -54,14 +66,12 @@ public:
             wakeup_workers();
     }
 
-private:
-    //! Structure containing the data for a worker thread
-    struct worker_thread_data {
-        std::thread thread_;
-        semaphore has_data_;
-        std::atomic<int> num_tasks_{0};
-    };
+    //! Tries to spawn the given task, adding it to the local work queue for the current worker
+    //! thread. If this is called from a non-worker thread, the tasks will be enqueued at the back
+    //! of the global queue.
+    void spawn(task&& t);
 
+private:
     //! A task queue type
     using task_queue = concurrent_queue<task>;
 
@@ -72,12 +82,6 @@ private:
 
     //! The data for each worker thread
     std::vector<worker_thread_data> workers_data_{static_cast<size_t>(count_)};
-    //! The queues of tasks for each priority, for each worker thread
-    std::array<std::vector<task_queue>, num_priorities> task_queues_;
-    //! Index used to do a round-robin through the worker threads when enqueueing tasks
-    std::atomic<unsigned> index_{0};
-    //! Flag used to announce the shutting down of the task system
-    std::atomic_bool done_{false};
 
     //! The global task queue for each priority.
     //! We store here all the globally enqueued tasks
@@ -88,6 +92,8 @@ private:
     //! Set to true if ALL the workers are busy, or when we want to wake up the workers. Will be set
     //! to false when one worker hoes to sleep.
     std::atomic<bool> workers_busy_{false};
+    //! Flag used to announce the shutting down of the task system
+    std::atomic<bool> done_{false};
 
     //! The run procedure for a worker thread
     void worker_run(int worker_idx);

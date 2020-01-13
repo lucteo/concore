@@ -1,12 +1,11 @@
 #include <concore/global_executor.hpp>
-#ifdef __APPLE__
 #include <concore/dispatch_executor.hpp>
-#endif
 #ifdef CONCORE_USE_TBB
 #include <concore/tbb_executor.hpp>
 #include <tbb/task_scheduler_init.h>
 #endif
 #include <concore/immediate_executor.hpp>
+#include <concore/spawn.hpp>
 #include <concore/serializer.hpp>
 #include <concore/n_serializer.hpp>
 #include <concore/rw_serializer.hpp>
@@ -193,15 +192,20 @@ static void BM_latency_global(benchmark::State& state) {
     test_latency(concore::global_executor, state);
 }
 
+static void BM_latency_spawn(benchmark::State& state) {
+    CONCORE_PROFILING_SCOPE_N("test spawn");
+    test_latency(concore::spawn_executor, state);
+}
+
 static void BM_latency_dispatch(benchmark::State& state) {
-#ifdef __APPLE__
+#if CONCORE_USE_LIBDISPATCH
     CONCORE_PROFILING_SCOPE_N("test dispatch_executor");
     test_latency(concore::dispatch_executor, state);
 #endif
 }
 
 static void BM_latency_tbb(benchmark::State& state) {
-#ifdef CONCORE_USE_TBB
+#if CONCORE_USE_TBB
     CONCORE_PROFILING_SCOPE_N("test tbb_executor");
     tbb::task_scheduler_init init(1 + std::thread::hardware_concurrency()); // make it a fair comp
     test_latency(concore::tbb_executor, state);
@@ -236,6 +240,7 @@ BENCHMARK_CASE1(BM_latency_fun_call_1);
 
 BENCHMARK_CASE2(BM_latency_fun_call_n);
 BENCHMARK_CASE2(BM_latency_global);
+BENCHMARK_CASE2(BM_latency_spawn);
 BENCHMARK_CASE2(BM_latency_dispatch);
 BENCHMARK_CASE2(BM_latency_tbb);
 BENCHMARK_CASE2(BM_latency_immediate);
@@ -245,6 +250,7 @@ BENCHMARK_CASE2(BM_latency_rw_serializer);
 
 BENCHMARK_CASE2(BM_latency_fun_call_n);
 BENCHMARK_CASE2(BM_latency_global);
+BENCHMARK_CASE2(BM_latency_spawn);
 BENCHMARK_CASE2(BM_latency_dispatch);
 BENCHMARK_CASE2(BM_latency_tbb);
 BENCHMARK_CASE2(BM_latency_immediate);

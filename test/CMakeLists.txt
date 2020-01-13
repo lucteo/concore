@@ -11,6 +11,7 @@ set(func_sourceFiles
     "func/data/test_concurrent_queue.cpp"
     "func/test_immediate_executor.cpp"
     "func/test_global_executor.cpp"
+    "func/test_spawn.cpp"
     "func/test_serializers.cpp"
     "func/test_task_graph.cpp"
     "func/test_dispatch_executor.cpp"
