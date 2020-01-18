@@ -66,7 +66,10 @@ public:
     //! Tries to spawn the given task, adding it to the local work queue for the current worker
     //! thread. If this is called from a non-worker thread, the tasks will be enqueued at the back
     //! of the global queue.
-    void spawn(task&& t);
+    //!
+    //! If wake_workers is false, this will not attempt to wake other workers to try to steal the
+    //! task.
+    void spawn(task&& t, bool wake_workers = true);
 
 private:
     //! A task queue type

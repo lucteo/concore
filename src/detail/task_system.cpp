@@ -25,7 +25,8 @@ task_system::~task_system() {
         worker_data.thread_.join();
 }
 
-void task_system::spawn(task&& t) {
+void task_system::spawn(task&& t, bool wake_workers) {
+    CONCORE_PROFILING_FUNCTION();
     worker_thread_data* data = g_worker_data;
 
     // If no worker thread data is stored on the current thread, this is not a worker thread, so we
@@ -39,7 +40,8 @@ void task_system::spawn(task&& t) {
     data->local_tasks_.push(std::forward<task>(t));
 
     // Wake up the workers
-    wakeup_workers();
+    if (wake_workers)
+        wakeup_workers();
 }
 
 void task_system::worker_run(int worker_idx) {
@@ -115,6 +117,7 @@ void task_system::try_sleep(int worker_idx) {
 void task_system::wakeup_workers() {
     bool old = workers_busy_.exchange(true);
     if (!old) {
+        CONCORE_PROFILING_SCOPE_N("waking workers");
         for (int i = 0; i < count_; i++)
             workers_data_[i].has_data_.signal();
     }

@@ -197,6 +197,11 @@ static void BM_latency_spawn(benchmark::State& state) {
     test_latency(concore::spawn_executor, state);
 }
 
+static void BM_latency_spawn_cont(benchmark::State& state) {
+    CONCORE_PROFILING_SCOPE_N("test spawn continuation");
+    test_latency(concore::spawn_continuation_executor, state);
+}
+
 static void BM_latency_dispatch(benchmark::State& state) {
 #if CONCORE_USE_LIBDISPATCH
     CONCORE_PROFILING_SCOPE_N("test dispatch_executor");
@@ -219,43 +224,51 @@ static void BM_latency_immediate(benchmark::State& state) {
 
 static void BM_latency_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test serializer");
-    test_latency_ser(concore::serializer(concore::global_executor), state);
+    test_latency_ser(concore::serializer(concore::spawn_continuation_executor), state);
 }
 
 static void BM_latency_n_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test n_serializer");
-    test_latency_ser(concore::n_serializer(concore::global_executor, 1), state);
+    test_latency_ser(concore::n_serializer(concore::spawn_continuation_executor, 1), state);
 }
 
 static void BM_latency_rw_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test rw_serializer");
-    test_latency_ser(concore::rw_serializer(concore::global_executor).writer(), state);
+    test_latency_ser(concore::rw_serializer(concore::spawn_continuation_executor).writer(), state);
 }
+
+static void BM___(benchmark::State& /*state*/) {}
+#define BENCHMARK_PAUSE() BENCHMARK(BM___)
 
 #define BENCHMARK_CASE1(fun) BENCHMARK(fun)->UseManualTime()
 #define BENCHMARK_CASE2(fun)                                                                       \
     BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMicrosecond)->Arg(10000);
 
 BENCHMARK_CASE1(BM_latency_fun_call_1);
+BENCHMARK_PAUSE();
 
 BENCHMARK_CASE2(BM_latency_fun_call_n);
 BENCHMARK_CASE2(BM_latency_global);
 BENCHMARK_CASE2(BM_latency_spawn);
+BENCHMARK_CASE2(BM_latency_spawn_cont);
 BENCHMARK_CASE2(BM_latency_dispatch);
 BENCHMARK_CASE2(BM_latency_tbb);
 BENCHMARK_CASE2(BM_latency_immediate);
 BENCHMARK_CASE2(BM_latency_serializer);
 BENCHMARK_CASE2(BM_latency_n_serializer);
 BENCHMARK_CASE2(BM_latency_rw_serializer);
+BENCHMARK_PAUSE();
 
 BENCHMARK_CASE2(BM_latency_fun_call_n);
 BENCHMARK_CASE2(BM_latency_global);
 BENCHMARK_CASE2(BM_latency_spawn);
+BENCHMARK_CASE2(BM_latency_spawn_cont);
 BENCHMARK_CASE2(BM_latency_dispatch);
 BENCHMARK_CASE2(BM_latency_tbb);
 BENCHMARK_CASE2(BM_latency_immediate);
 BENCHMARK_CASE2(BM_latency_serializer);
 BENCHMARK_CASE2(BM_latency_n_serializer);
 BENCHMARK_CASE2(BM_latency_rw_serializer);
+BENCHMARK_PAUSE();
 
 BENCHMARK_MAIN();
