@@ -50,47 +50,6 @@ void test_can_execute_multiple_tasks(E executor) {
         REQUIRE(results[i] == true);
 }
 
-//! Test that checks for the tasks to be executed out-of-order.
-//! Just to make sure that the tasks are somehow executed in parallel.
-template <typename E>
-void test_tasks_arrive_out_of_order(E executor) {
-    CONCORE_PROFILING_FUNCTION();
-
-    // This only works if we have multiple cores
-    if (std::thread::hardware_concurrency() < 4)
-        return;
-
-    constexpr int max_runs = 100;
-    // We are not guaranteed to find an out-of-order execution pattern; so try multiple times.
-    for (int k = 0; k < max_runs; k++) {
-        constexpr int num_tasks = 10;
-        task_countdown tc{num_tasks};
-
-        // We store the order of execution in the results array
-        int results[num_tasks];
-        std::atomic<int> end_idx{0};
-
-        // Create the tasks
-        for (int i = 0; i < num_tasks; i++)
-            executor([&, i]() {
-                results[end_idx++] = i;
-                tc.task_finished();
-            });
-
-        // Wait for all the tasks to complete
-        REQUIRE(tc.wait_for_all());
-
-        // Ensure that the results are not ordered
-        for (int i = 0; i < num_tasks; i++)
-            if (results[i] != i) {
-                SUCCEED("Found out-of-order execution");
-                return;
-            }
-    }
-    // fail
-    REQUIRE(!"could not find an out-of-order execution");
-}
-
 //! Test that the tasks do run in parallel with the given executor.
 template <typename E>
 void test_tasks_do_run_in_parallel(E executor) {

@@ -35,7 +35,6 @@ public:
     const concurrent_queue& operator=(const concurrent_queue&) = delete;
 
     //! Pushes one element in the back of the queue.
-    //! Multiple produces can call this in parallel.
     void push(T&& elem) {
         // Fill up a new node; use in-place move ctor
         node_ptr node = factory_.acquire();
@@ -48,7 +47,6 @@ public:
     bool try_pop(T& elem) {
         node_ptr node;
         if constexpr (detail::is_single_consumer(conc_type))
-
             node = detail::try_pop_front_single(queue_);
         else {
             node = detail::try_pop_front_multi(queue_);

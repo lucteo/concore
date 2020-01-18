@@ -4,6 +4,7 @@
 #include "../profiling.hpp"
 #include "../low_level/semaphore.hpp"
 #include "../data/concurrent_queue.hpp"
+#include "worker_tasks.hpp"
 
 #include <array>
 #include <vector>
@@ -22,8 +23,8 @@ struct worker_thread_data {
     std::thread thread_;
     //! Semaphore used to signal when the worker has data, or some processing to do
     semaphore has_data_;
-    //! The task queue of tasks that are local for this worker
-    task_queue local_tasks_;
+    //! The stack of tasks spawned by this worker
+    worker_tasks local_tasks_;
 };
 
 //! The possible priorities of tasks, as handled by the global executor

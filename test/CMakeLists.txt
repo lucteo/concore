@@ -9,6 +9,7 @@ set(func_sourceFiles
     "func/low_level/test_mutexes.cpp"
     "func/low_level/test_concurrent_dequeue.cpp"
     "func/data/test_concurrent_queue.cpp"
+    "func/detail/test_worker_tasks.cpp"
     "func/test_immediate_executor.cpp"
     "func/test_global_executor.cpp"
     "func/test_spawn.cpp"

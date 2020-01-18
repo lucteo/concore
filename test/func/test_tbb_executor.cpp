@@ -20,10 +20,6 @@ TEST_CASE("tbb_executor executes all tasks") {
     test_can_execute_multiple_tasks(concore::tbb_executor);
 }
 
-TEST_CASE("tbb_executor's task completion is out-of-order") {
-    test_tasks_arrive_out_of_order(concore::tbb_executor);
-}
-
 TEST_CASE("tbb_executor runs tasks in parallel") {
     test_tasks_do_run_in_parallel(concore::tbb_executor);
 }
