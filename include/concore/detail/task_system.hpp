@@ -60,11 +60,7 @@ public:
         // Push the task in the global queue, corresponding to the given prio
         enqueued_tasks_[P].push(std::forward<T>(t));
         num_global_tasks_++;
-
-        // Wake up the workers
-        bool old = workers_busy_.exchange(true);
-        if (!old)
-            wakeup_workers();
+        wakeup_workers();
     }
 
     //! Tries to spawn the given task, adding it to the local work queue for the current worker
@@ -100,13 +96,16 @@ private:
     void worker_run(int worker_idx);
 
     //! Tries to extract a task and execute it. Returns false if couldn't extract a task
-    bool execute_task(int worker_idx);
+    bool try_extract_execute_task(int worker_idx);
 
     //! Puts the worker to sleep if the `done_` flag is not set
     void try_sleep(int worker_idx);
 
     //! Called when adding a new task to wakeup the workers
     void wakeup_workers();
+
+    //! Execute the given task
+    void execute_task(task& t) const;
 };
 } // namespace detail
 

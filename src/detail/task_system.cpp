@@ -37,6 +37,9 @@ void task_system::spawn(task&& t) {
 
     // Add the task to the worker's queue
     data->local_tasks_.push(std::forward<task>(t));
+
+    // Wake up the workers
+    wakeup_workers();
 }
 
 void task_system::worker_run(int worker_idx) {
@@ -46,39 +49,39 @@ void task_system::worker_run(int worker_idx) {
         if (done_)
             return;
 
-        if (!execute_task(worker_idx)) {
+        if (!try_extract_execute_task(worker_idx)) {
             try_sleep(worker_idx);
         }
     }
 }
 
-bool task_system::execute_task(int worker_idx) {
+bool task_system::try_extract_execute_task(int worker_idx) {
     CONCORE_PROFILING_FUNCTION();
     task t;
 
     // Attempt to consume tasks from the local queue
     auto& worker_data = workers_data_[worker_idx];
     if (worker_data.local_tasks_.try_pop(t)) {
-        // Found a task; run it
-        try {
-            t();
-        } catch (...) {
-        }
+        execute_task(t);
         return true;
     }
 
     // Try taking tasks from the global queue
     for (auto& q : enqueued_tasks_) {
         if (q.try_pop(t)) {
-            // Decrement the number of existing tasks
             num_global_tasks_--;
-
-            // Found a task; run it
-            try {
-                t();
-            } catch (...) {
-            }
+            execute_task(t);
             return true;
+        }
+    }
+
+    // Try stealing a task from another worker
+    for (int i = 0; i < count_; i++) {
+        if (i != worker_idx) {
+            if (workers_data_[i].local_tasks_.try_steal(t)) {
+                execute_task(t);
+                return true;
+            }
         }
     }
 
@@ -110,8 +113,19 @@ void task_system::try_sleep(int worker_idx) {
 }
 
 void task_system::wakeup_workers() {
-    for (int i = 0; i < count_; i++)
-        workers_data_[i].has_data_.signal();
+    bool old = workers_busy_.exchange(true);
+    if (!old) {
+        for (int i = 0; i < count_; i++)
+            workers_data_[i].has_data_.signal();
+    }
+}
+
+void task_system::execute_task(task& t) const {
+    CONCORE_PROFILING_FUNCTION();
+    try {
+        t();
+    } catch (...) {
+    }
 }
 
 } // namespace detail
