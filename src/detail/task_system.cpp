@@ -91,36 +91,69 @@ bool task_system::try_extract_execute_task(int worker_idx) {
 }
 
 void task_system::try_sleep(int worker_idx) {
-    {
-        CONCORE_PROFILING_SCOPE_N("before sleep");
-
-        // Spin for a bit, in the hope that new tasks are added to the system
-        // We hope that we avoid going to sleep just to be woken up immediately
-        spin_backoff spinner;
-        constexpr int new_active_wait_iterations = 8;
-        for (int i = 0; i < new_active_wait_iterations; i++) {
-            if (num_global_tasks_.load() > 0 || done_)
-                return;
-            spinner.pause();
-        }
-
-        // Nothing to do. Go to sleep. Mark workers_busy_ as false
-        // We do a CAS here to avoid all workers going to sleep at the same time, just when new work
-        // is enqueued.
-        bool old = workers_busy_.load(std::memory_order_acquire);
-        if (!workers_busy_.compare_exchange_strong(old, false, std::memory_order_acq_rel))
-            return;
+    auto& data = workers_data_[worker_idx];
+    data.state_.store(worker_thread_data::waiting);
+    if (before_sleep(worker_idx)) {
+        data.has_data_.wait();
     }
-    workers_data_[worker_idx].has_data_.wait();
+    data.state_.store(worker_thread_data::running);
+}
+
+bool task_system::before_sleep(int worker_idx) {
+    CONCORE_PROFILING_FUNCTION();
+    CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", worker_idx);
+    auto& data = workers_data_[worker_idx];
+
+    data.state_.store(worker_thread_data::waiting);
+
+    // Spin for a bit, in the hope that new tasks are added to the system
+    // We hope that we avoid going to sleep just to be woken up immediately
+    spin_backoff spinner;
+    constexpr int new_active_wait_iterations = 8;
+    for (int i = 0; i < new_active_wait_iterations; i++) {
+        if (num_global_tasks_.load() > 0 || done_)
+            return false;
+        spinner.pause();
+    }
+
+    // Ok, so now we have to go to sleep
+    int old = worker_thread_data::waiting;
+    if (!data.state_.compare_exchange_strong(old, worker_thread_data::idle))
+        return false; // somebody prevented us to go to sleep
+
+    return true;
 }
 
 void task_system::wakeup_workers() {
-    bool old = workers_busy_.exchange(true);
-    if (!old) {
-        CONCORE_PROFILING_SCOPE_N("waking workers");
-        for (int i = 0; i < count_; i++)
-            workers_data_[i].has_data_.signal();
+    CONCORE_PROFILING_FUNCTION();
+
+    // First try to wake up any worker that is in waiting state
+    int num_idle = 0;
+    for (int i = 0; i < count_; i++) {
+        int old = worker_thread_data::waiting;
+        if (workers_data_[i].state_.compare_exchange_strong(old, worker_thread_data::running)) {
+            // Put a worker from waiting to running. That should be enough
+            return;
+        }
+
+        if (old == worker_thread_data::idle)
+            num_idle++;
     }
+    // If we are here, it means that all our workers are either running or idle.
+    // If a worker just switched from running to waiting, it should should be picking up the new
+    // task. But we should still wake up one idle thread.
+    if (num_idle > 0) {
+        for (int i = 0; i < count_; i++) {
+            int old = worker_thread_data::idle;
+            if (workers_data_[i].state_.compare_exchange_strong(old, worker_thread_data::running)) {
+                // CONCORE_PROFILING_SCOPE_N("waking")
+                // CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", i);
+                workers_data_[i].has_data_.signal();
+                return;
+            }
+        }
+    }
+    // If we are here, it means that all workers are woken up.
 }
 
 void task_system::execute_task(task& t) const {

@@ -22,6 +22,11 @@
 #define CONCORE_PROFILING_SCOPE_NC(staticName, color) ZoneScopedNC(staticName, color)
 #define CONCORE_PROFILING_SET_DYNNAME(name) ZoneName(name, strlen(name))
 #define CONCORE_PROFILING_SET_TEXT(text) ZoneText(text, strlen(text))
+#define CONCORE_PROFILING_SET_TEXT_FMT(max_len, fmt, args...)                                      \
+    char __IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__)[max_len];                        \
+    sprintf(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__), fmt, args);                  \
+    ZoneText(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__),                             \
+            strlen(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__)))
 #define CONCORE_PROFILING_MESSAGE(text) TracyMessage(text, strlen(text))
 #define CONCORE_PROFILING_PLOT(staticName, val) TracyPlot(staticName, val)
 
@@ -73,6 +78,8 @@
 
 #define __IMPL_CONCORE_EXPAND2(x) __IMPL_CONCORE_EXPAND1(x)
 #define __IMPL_CONCORE_EXPAND1(x) #x
+#define __IMPL_CONCORE_CONCAT2(x, y) x##y
+#define __IMPL_CONCORE_CONCAT(x, y) __IMPL_CONCORE_CONCAT2(x, y)
 
 #define CONCORE_PROFILING_COLOR_WHITE 0xFFFFFF
 #define CONCORE_PROFILING_COLOR_SILVER 0xC0C0C0
@@ -97,16 +104,17 @@
 
 #if !CONCORE_ENABLE_PROFILING
 
-#define CONCORE_PROFILING_INIT()                      /*nothing*/
-#define CONCORE_PROFILING_FUNCTION()                  /*nothing*/
-#define CONCORE_PROFILING_SCOPE()                     /*nothing*/
-#define CONCORE_PROFILING_SCOPE_N(staticName)         /*nothing*/
-#define CONCORE_PROFILING_SCOPE_C(color)              /*nothing*/
-#define CONCORE_PROFILING_SCOPE_NC(staticName, color) /*nothing*/
-#define CONCORE_PROFILING_SET_DYNNAME(name)           /*nothing*/
-#define CONCORE_PROFILING_SET_TEXT(text)              /*nothing*/
-#define CONCORE_PROFILING_MESSAGE(text)               /*nothing*/
-#define CONCORE_PROFILING_PLOT(staticName, val)       /*nothing*/
+#define CONCORE_PROFILING_INIT()                              /*nothing*/
+#define CONCORE_PROFILING_FUNCTION()                          /*nothing*/
+#define CONCORE_PROFILING_SCOPE()                             /*nothing*/
+#define CONCORE_PROFILING_SCOPE_N(staticName)                 /*nothing*/
+#define CONCORE_PROFILING_SCOPE_C(color)                      /*nothing*/
+#define CONCORE_PROFILING_SCOPE_NC(staticName, color)         /*nothing*/
+#define CONCORE_PROFILING_SET_DYNNAME(name)                   /*nothing*/
+#define CONCORE_PROFILING_SET_TEXT(text)                      /*nothing*/
+#define CONCORE_PROFILING_SET_TEXT_FMT(max_len, fmt, args...) /*nothing*/
+#define CONCORE_PROFILING_MESSAGE(text)                       /*nothing*/
+#define CONCORE_PROFILING_PLOT(staticName, val)               /*nothing*/
 
 #define CONCORE_PROFILING_LOCATION_TYPE void*
 #define CONCORE_PROFILING_LOCATION() nullptr

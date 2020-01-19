@@ -64,9 +64,7 @@ void set_random_ptr_fun() {
 template <typename E>
 void do_iter(int n, E& executor, std::chrono::time_point<std::chrono::high_resolution_clock>& end) {
     CONCORE_PROFILING_FUNCTION();
-    char buf[32];
-    sprintf(buf, "%d", n);
-    CONCORE_PROFILING_SET_TEXT(buf);
+    // CONCORE_PROFILING_SET_TEXT_FMT(32, "n=%d", n);
     if (n > 0) {
         benchmark::DoNotOptimize(executor);
         executor([n, &executor, &end]() {
@@ -123,9 +121,7 @@ static void test_latency_ser(E executor, benchmark::State& state) {
         for (int i = num_tasks - 1; i >= 0; i--) {
             executor([i, &end]() {
                 CONCORE_PROFILING_SCOPE_N("ser task");
-                char buf[64];
-                sprintf(buf, "%d", i);
-                CONCORE_PROFILING_SET_TEXT(buf);
+                CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", i);
                 if (i == 0)
                     end = std::chrono::high_resolution_clock::now();
             });
