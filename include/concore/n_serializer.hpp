@@ -2,14 +2,12 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
-#include "detail/concurrent_queue.hpp"
+#include "data/concurrent_queue.hpp"
 #include "detail/utils.hpp"
 
 #include <memory>
 
 namespace concore {
-
-inline namespace v1 {
 
 namespace detail {
 
@@ -22,7 +20,7 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
     //! The number of tasks that can be executed in parallel
     int max_par_;
     //! The queue of tasks that wait to be executed
-    concurrent_queue<task> waiting_tasks_;
+    concurrent_queue<task, queue_type::multi_prod_multi_cons> waiting_tasks_;
     //! The number of tasks that are in the queue, active or not
     std::atomic<uint32_t> combined_count_{0};
 
@@ -66,7 +64,7 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
     //! Note: we only execute one task, even if we have multiple tasks. We do this to ensure that
     //! the tasks are relatively small sized.
     void execute_one() {
-        detail_shared::pop_and_execute(waiting_tasks_, except_fun_);
+        detail::pop_and_execute(waiting_tasks_, except_fun_);
 
         // Decrement the number of tasks
         // Check if we need to enqueue a continuation
@@ -90,6 +88,8 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
     }
 };
 } // namespace detail
+
+inline namespace v1 {
 
 //! Executor type that allows maximum N tasks to be executed at a given time.
 //!

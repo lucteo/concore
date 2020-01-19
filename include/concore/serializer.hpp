@@ -2,7 +2,7 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
-#include "detail/concurrent_queue.hpp"
+#include "data/concurrent_queue.hpp"
 #include "detail/utils.hpp"
 
 #include <memory>
@@ -10,8 +10,6 @@
 #include <cassert>
 
 namespace concore {
-
-inline namespace v1 {
 
 namespace detail {
 
@@ -22,7 +20,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     //! The function called to handle exceptions
     std::function<void(std::exception_ptr)> except_fun_;
     //! The queue of tasks that wait to be executed
-    concurrent_queue<task> waiting_tasks_;
+    concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
     //! The number of tasks that are in the queue
     std::atomic<int> count_{0};
 
@@ -34,7 +32,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     //! Adds a new task to this serializer
     void enqueue(task&& t) {
         // Add the task to the queue
-        waiting_tasks_.push(t);
+        waiting_tasks_.push(std::forward<task>(t));
 
         // If there were no other tasks, enqueue a task in the base executor
         if (count_++ == 0)
@@ -43,7 +41,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
 
     //! Called by the base executor to execute one task.
     void execute_one() {
-        detail_shared::pop_and_execute(waiting_tasks_, except_fun_);
+        detail::pop_and_execute(waiting_tasks_, except_fun_);
 
         // If there are still tasks in the queue, continue to enqueue the next task
         if (count_-- > 1)
@@ -57,6 +55,8 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     }
 };
 } // namespace detail
+
+inline namespace v1 {
 
 //! Executor type that allows only one task to be executed at a given time.
 //!

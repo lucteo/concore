@@ -2,7 +2,7 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
-#include "detail/concurrent_queue.hpp"
+#include "data/concurrent_queue.hpp"
 #include "detail/utils.hpp"
 
 #include <deque>
@@ -12,8 +12,6 @@
 
 namespace concore {
 
-inline namespace v1 {
-
 namespace detail {
 struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     //! The base executor used to actually execute the tasks, once we've serialized them
@@ -21,9 +19,9 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     //! The function called to handle exceptions
     std::function<void(std::exception_ptr)> except_fun_;
     //! The queue of READ tasks
-    concurrent_queue<task> read_tasks_;
+    concurrent_queue<task, queue_type::multi_prod_multi_cons> read_tasks_;
     //! The queue of WRITE tasks
-    concurrent_queue<task> write_tasks_;
+    concurrent_queue<task, queue_type::multi_prod_single_cons> write_tasks_;
     //! The number of READ and WRITE tasks in the queues; interpreted with `count_bits`
     std::atomic<uint64_t> combined_count_{0};
 
@@ -42,7 +40,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
 
     //! Adds a new READ task to this serializer
     void enqueue_read(task&& t) {
-        read_tasks_.push(t);
+        read_tasks_.push(std::forward<task>(t));
 
         // Increase the number of READ tasks.
         // If we WRITE writes, count towards the queued READs, otherwise towards the active READs.
@@ -62,7 +60,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     }
     //! Adds a new WRITE task to this serializer
     void enqueue_write(task&& t) {
-        write_tasks_.push(t);
+        write_tasks_.push(std::forward<task>(t));
 
         // Increase the number of WRITE tasks
         count_bits old, desired;
@@ -79,7 +77,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
 
     //! Called by the base executor to execute READ task.
     void execute_read() {
-        detail_shared::pop_and_execute(read_tasks_, except_fun_);
+        detail::pop_and_execute(read_tasks_, except_fun_);
 
         // Decrement num_active_reads
         count_bits old, desired;
@@ -97,7 +95,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     }
     //! Called by the base executor to execute WRITE task.
     void execute_write() {
-        detail_shared::pop_and_execute(write_tasks_, except_fun_);
+        detail::pop_and_execute(write_tasks_, except_fun_);
 
         // Decrement num_writes
         // If num_writes == 0, transform pending READs into active READs
@@ -155,6 +153,8 @@ public:
 };
 
 } // namespace detail
+
+inline namespace v1 {
 
 //! Similar to a serializer but allows two types of tasks: READ and WRITE tasks.
 //!

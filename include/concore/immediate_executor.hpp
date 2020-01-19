@@ -11,7 +11,10 @@ namespace detail {
 //! the task finishes executing.
 struct immediate_executor_type {
     //! The call operator required by executor. Takes any type of task (with no params) to execute.
-    template <typename F> void operator()(F&& f) const { std::forward<F>(f)(); }
+    template <typename F>
+    void operator()(F&& f) const {
+        std::forward<F>(f)();
+    }
 };
 
 } // namespace detail
