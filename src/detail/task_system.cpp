@@ -158,9 +158,19 @@ void task_system::wakeup_workers() {
 
 void task_system::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
+    auto& tc = t.get_task_control();
+
+    // If the task is canceled, don't do anything
+    if (tc && tc.is_cancelled())
+        return;
+
+    // Now execute the task, watching for exceptions
     try {
+        detail::task_control_access::on_starting_task(tc, t);
         t();
+        detail::task_control_access::on_task_done(tc, t);
     } catch (...) {
+        detail::task_control_access::on_task_exception(tc, t, std::current_exception());
     }
 }
 

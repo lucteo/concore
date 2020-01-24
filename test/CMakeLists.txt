@@ -15,6 +15,7 @@ set(func_sourceFiles
     "func/test_spawn.cpp"
     "func/test_serializers.cpp"
     "func/test_task_graph.cpp"
+    "func/test_task_control.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
     "func/profiling_helper_test.cpp" # Must be last
