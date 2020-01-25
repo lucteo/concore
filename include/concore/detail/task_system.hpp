@@ -79,6 +79,23 @@ public:
     //! task.
     void spawn(task&& t, bool wake_workers = true);
 
+    //! Wait until the given task control object is not active anymore.
+    //! This is going to be a busy wait, meaning that the caller will try to execute tasks.
+    //! We hope that, this way we'll make progress towards finishing early.
+    void busy_wait_on(task_control& tc);
+
+    //! Called when spanning tasks and waiting for them to ensure we have a worker_thread_data.
+    //! This is used when spawn_and_wait is called outside of our workers. If possible, we prepare
+    //! a worker_data from a reserved slot, and return it. All the tasks spawned will be added to
+    //! the returned worker_thread_data.
+    //!
+    //! Note that this can return null, if all slots are busy, of if we already have a worker on the
+    //! current thread.
+    worker_thread_data* enter_worker();
+    //! Called at the end of spawn_and_wait, after waiting, to release the worker slot.
+    //! Should be paired 1:1 with enter_worker();
+    void exit_worker(worker_thread_data* worker_data);
+
     //! Returns the task_control object for the current executing task.
     //! This uses TLS to get the task_control from the current thread.
     //! Returns an empty task_control if no task is running (but then, are you calling this from
@@ -91,11 +108,16 @@ private:
 
     //! The number of worker threads that we should have
     const int count_{static_cast<int>(std::thread::hardware_concurrency())};
-    //! The amount of iterations a thread will check for tasks before going to sleep
-    const int spin_{std::max(64, count_)};
+    //! We reserve some extra slots for others threads that could temporary join our task system
+    const int reserved_slots_{4};
 
     //! The data for each worker thread
     std::vector<worker_thread_data> workers_data_{static_cast<size_t>(count_)};
+
+    //! Reserved slots, for external threads that call spawn_and_wait
+    std::vector<worker_thread_data> reserved_worker_slots_{static_cast<size_t>(reserved_slots_)};
+    //! The number of extra slots that are currently in use; between [0, reserved_slots_]
+    std::atomic<int> num_active_extra_slots_{0};
 
     //! The global task queue for each priority.
     //! We store here all the globally enqueued tasks
@@ -110,7 +132,7 @@ private:
     void worker_run(int worker_idx);
 
     //! Tries to extract a task and execute it. Returns false if couldn't extract a task
-    bool try_extract_execute_task(int worker_idx);
+    bool try_extract_execute_task(worker_thread_data& worker_data);
 
     //! Puts the worker to sleep if the `done_` flag is not set
     void try_sleep(int worker_idx);

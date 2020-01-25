@@ -15,6 +15,9 @@ thread_local task_control g_current_task_control{};
 task_system::task_system() {
     CONCORE_PROFILING_INIT();
     CONCORE_PROFILING_FUNCTION();
+    // Mark all the extra slots as being idle
+    for (auto& w : reserved_worker_slots_)
+        w.state_.store(worker_thread_data::idle);
     // Start the worker threads
     for (int i = 0; i < count_; i++)
         workers_data_[i].thread_ = std::thread([this, i]() { worker_run(i); });
@@ -49,6 +52,66 @@ void task_system::spawn(task&& t, bool wake_workers) {
         wakeup_workers();
 }
 
+void task_system::busy_wait_on(task_control& tc) {
+    worker_thread_data* data = g_worker_data;
+
+    using namespace std::chrono_literals;
+    auto min_pause = 1us;
+    auto max_pause = 10'000us;
+    auto cur_pause = min_pause;
+    while (true) {
+        // Did we reach our goal?
+        if (!tc.is_active())
+            break;
+
+        // Try to execute a task -- if we have a worker data
+        if (data && try_extract_execute_task(*data)) {
+            cur_pause = min_pause;
+            continue;
+        }
+
+        // Nothing to execute, try pausing
+        // Grow the pause each time, so that we don't wake too often
+        std::this_thread::sleep_for(cur_pause);
+        cur_pause = std::min(cur_pause * 16 / 10, max_pause);
+    }
+}
+
+worker_thread_data* task_system::enter_worker() {
+    // Check if we already have an attached worker; if yes, no need for a new one
+    worker_thread_data* data = g_worker_data;
+    if (data)
+        return nullptr;
+
+    // Ok, so this is called from an external thread. Try to occupy a free slot
+    if (++num_active_extra_slots_ <= reserved_slots_) {
+        for (auto& data : reserved_worker_slots_) {
+            int old = worker_thread_data::idle;
+            if (data.state_.compare_exchange_strong(old, worker_thread_data::running)) {
+                // Found an empty slot; use it
+                data.state_.store(worker_thread_data::running, std::memory_order_relaxed);
+                // It's important for us to store this in TLS
+                g_worker_data = &data;
+                return &data;
+            }
+        }
+    } else
+
+        // Couldn't find any empty slot; decrement the counter back and return
+        num_active_extra_slots_--;
+    return nullptr;
+}
+
+void task_system::exit_worker(worker_thread_data* worker_data) {
+    if (worker_data) {
+        assert(worker_data->state_.load() == worker_thread_data::running);
+        worker_data->state_.store(worker_thread_data::idle, std::memory_order_release);
+        num_active_extra_slots_--;
+        // Make sure to clear the TLS storage
+        g_worker_data = nullptr;
+    }
+}
+
 task_control task_system::current_task_control() { return g_current_task_control; }
 
 void task_system::worker_run(int worker_idx) {
@@ -58,18 +121,17 @@ void task_system::worker_run(int worker_idx) {
         if (done_)
             return;
 
-        if (!try_extract_execute_task(worker_idx)) {
+        if (!try_extract_execute_task(workers_data_[worker_idx])) {
             try_sleep(worker_idx);
         }
     }
 }
 
-bool task_system::try_extract_execute_task(int worker_idx) {
+bool task_system::try_extract_execute_task(worker_thread_data& worker_data) {
     CONCORE_PROFILING_FUNCTION();
     task t;
 
     // Attempt to consume tasks from the local queue
-    auto& worker_data = workers_data_[worker_idx];
     if (worker_data.local_tasks_.try_pop(t)) {
         execute_task(t);
         return true;
@@ -86,8 +148,18 @@ bool task_system::try_extract_execute_task(int worker_idx) {
 
     // Try stealing a task from another worker
     for (int i = 0; i < count_; i++) {
-        if (i != worker_idx) {
+        if (&workers_data_[i] != &worker_data) {
             if (workers_data_[i].local_tasks_.try_steal(t)) {
+                execute_task(t);
+                return true;
+            }
+        }
+    }
+
+    // If we have extra workers joining our task system, try stealing tasks from them too
+    if (num_active_extra_slots_.load(std::memory_order_acquire) > 0) {
+        for (auto& worker_data : reserved_worker_slots_) {
+            if (worker_data.local_tasks_.try_steal(t)) {
                 execute_task(t);
                 return true;
             }
