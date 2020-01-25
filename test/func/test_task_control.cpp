@@ -135,3 +135,34 @@ TEST_CASE("task_control is called on exception", "[task_control]") {
 
     REQUIRE(exception_caught.load());
 }
+
+TEST_CASE("task_control is inherited on spawn", "[task_control]") {
+    auto tc = concore::task_control::create();
+    auto long_task_ftor = []() {
+        int counter = 0;
+        while (!concore::task_control::is_current_task_cancelled()) {
+            std::this_thread::sleep_for(1ms);
+            if (counter++ > 1000)
+                FAIL("task was not properly canceled in time");
+        }
+        REQUIRE(concore::task_control::is_current_task_cancelled());
+    };
+    auto parent_task_ftor = [&]() {
+        // spawn once
+        concore::spawn(long_task_ftor);
+        // spawn several more tasks
+        concore::spawn({long_task_ftor, long_task_ftor, long_task_ftor});
+    };
+    concore::spawn(concore::task(parent_task_ftor, tc));
+
+    // Wait a bit for the tasks to start, and cancel the task control
+    std::this_thread::sleep_for(3ms);
+    tc.cancel();
+
+    // wait until the tasks finish
+    while (tc.is_active())
+        std::this_thread::sleep_for(1ms);
+
+    SUCCEED("tasks properly canceled");
+}
+

@@ -3,6 +3,8 @@
 #include "task.hpp"
 #include "detail/task_system.hpp"
 
+#include <initializer_list>
+
 namespace concore {
 
 namespace detail {
@@ -31,6 +33,24 @@ inline namespace v1 {
 //! pass false to the wake_workers parameter.
 inline void spawn(task&& t, bool wake_workers = true) {
     detail::task_system::instance().spawn(std::move(t), wake_workers);
+}
+
+//! Spawn one task, given a functor to be executed.
+template <typename F>
+inline void spawn(F&& ftor, bool wake_workers = true) {
+    auto tc = detail::task_system::current_task_control();
+    detail::task_system::instance().spawn(task(std::forward<F>(ftor), tc), wake_workers);
+}
+
+//! Spawn multiple tasks, given the functors to be executed.
+inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_workers = true) {
+    auto tc = detail::task_system::current_task_control();
+    int count = static_cast<int>(ftors.size());
+    for (auto& ftor: ftors) {
+        // wake_workers applies only to the last element; otherwise pass true
+        bool cur_wake_workers = (count-- > 0 || wake_workers);
+        detail::task_system::instance().spawn(task(std::move(ftor), tc), cur_wake_workers);
+    }
 }
 
 //! Executor that spawns tasks instead of enqueueing them

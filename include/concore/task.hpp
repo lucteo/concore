@@ -6,7 +6,13 @@
 
 namespace concore {
 
+namespace detail {
+    class task_system;
+}
+
 inline namespace v1 {
+
+using task_function = std::function<void()>;
 
 //! A task. In essence, just a function that takes no arguments and returns nothing.
 //! This can be enqueued into an executor and executed at a later time, and/or with certain
@@ -52,6 +58,9 @@ private:
     std::function<void()> fun_;
     //! The object used to control cancellation of this task
     task_control task_control_;
+
+    // give task_system access to task_control_
+    friend detail::task_system;
 };
 } // namespace v1
 
