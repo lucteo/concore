@@ -80,6 +80,11 @@ public:
     //! Checks if the tasks overseen by this object are canceled
     bool is_cancelled() const;
 
+    //! To be called from within the execution of a task to check if the current task should be
+    //! canceled or not.
+    //! Returns false if this is called outside of an executing task.
+    static bool is_current_task_cancelled();
+
     //! Checks whether there are tasks or other task_control objects associated with this object
     bool is_active() const;
 

@@ -70,6 +70,31 @@ TEST_CASE("task_control cancellation is recursive", "[task_control]") {
     // the task should not be executed
 }
 
+TEST_CASE("one can check cancellation from within a task", "[task_control]") {
+    auto tc = concore::task_control::create();
+    auto long_task_ftor = []() {
+        int counter = 0;
+        while (!concore::task_control::is_current_task_cancelled()) {
+            std::this_thread::sleep_for(1ms);
+            if (counter++ > 1000)
+                FAIL("task was not properly canceled in time");
+        }
+        REQUIRE(concore::task_control::is_current_task_cancelled());
+    };
+    auto long_task = concore::task(long_task_ftor, tc);
+    concore::spawn(std::move(long_task));
+
+    // Wait a bit for the task to start, and cancel the task control
+    std::this_thread::sleep_for(3ms);
+    tc.cancel();
+
+    // wait until the task finishes
+    while (tc.is_active())
+        std::this_thread::sleep_for(1ms);
+
+    SUCCEED("task properly canceled");
+}
+
 TEST_CASE("task_control can be used to wait for tasks", "[task_control]") {
     auto tc = concore::task_control::create();
     std::atomic<bool> executed{false};

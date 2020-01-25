@@ -1,4 +1,5 @@
 #include "concore/task_control.hpp"
+#include "concore/detail/task_system.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -75,6 +76,12 @@ bool task_control::is_cancelled() const {
     assert(impl_);
     return impl_->is_cancelled();
 }
+
+bool task_control::is_current_task_cancelled() {
+    task_control current_task_control = detail::task_system::current_task_control();
+    return current_task_control.impl_ && current_task_control.impl_->is_cancelled();
+}
+
 
 bool task_control::is_active() const { return !impl_ || !impl_.unique(); }
 

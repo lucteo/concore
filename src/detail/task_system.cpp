@@ -1,4 +1,5 @@
 #include "concore/detail/task_system.hpp"
+#include "concore/task_control.hpp"
 
 namespace concore {
 namespace detail {
@@ -6,6 +7,10 @@ namespace detail {
 //! TLS pointer to the worker data. This way, if we are called from a worker thread we can interact
 //! with the worker thread data
 thread_local worker_thread_data* g_worker_data{nullptr};
+
+//! TLS pointer to the current task_control object.
+//! This will be set and reset at each task execution.
+thread_local task_control g_current_task_control{};
 
 task_system::task_system() {
     CONCORE_PROFILING_INIT();
@@ -43,6 +48,8 @@ void task_system::spawn(task&& t, bool wake_workers) {
     if (wake_workers)
         wakeup_workers();
 }
+
+task_control task_system::current_task_control() { return g_current_task_control; }
 
 void task_system::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
@@ -164,6 +171,8 @@ void task_system::execute_task(task& t) const {
     if (tc && tc.is_cancelled())
         return;
 
+    g_current_task_control = tc;
+
     // Now execute the task, watching for exceptions
     try {
         detail::task_control_access::on_starting_task(tc, t);
@@ -172,6 +181,8 @@ void task_system::execute_task(task& t) const {
     } catch (...) {
         detail::task_control_access::on_task_exception(tc, t, std::current_exception());
     }
+
+    g_current_task_control = task_control{};
 }
 
 } // namespace detail
