@@ -45,6 +45,7 @@ void task_system::spawn(task&& t, bool wake_workers) {
     }
 
     // Add the task to the worker's queue
+    on_task_added();
     data->local_tasks_.push(std::forward<task>(t));
 
     // Wake up the workers
@@ -239,6 +240,8 @@ void task_system::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
     auto& tc = t.get_task_control();
 
+    on_task_removed();
+
     // If the task is canceled, don't do anything
     if (tc && tc.is_cancelled())
         return;
@@ -255,6 +258,22 @@ void task_system::execute_task(task& t) const {
     }
 
     g_current_task_control = task_control{};
+}
+
+void task_system::on_task_added() const {
+#if CONCORE_ENABLE_PROFILING
+    int val = num_tasks_++;
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val+1));
+#endif
+}
+
+void task_system::on_task_removed() const {
+#if CONCORE_ENABLE_PROFILING
+    int val = num_tasks_--;
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val-1));
+#endif
 }
 
 } // namespace detail

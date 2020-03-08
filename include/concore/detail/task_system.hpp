@@ -66,6 +66,7 @@ public:
         static_assert(P < num_priorities, "Invalid task priority");
 
         // Push the task in the global queue, corresponding to the given prio
+        on_task_added();
         enqueued_tasks_[P].push(std::forward<T>(t));
         num_global_tasks_++;
         wakeup_workers();
@@ -128,6 +129,9 @@ private:
     //! Flag used to announce the shutting down of the task system
     std::atomic<bool> done_{false};
 
+    //! The number of tasks that we currently have enqueued in the task system
+    mutable std::atomic<int> num_tasks_{0};
+
     //! The run procedure for a worker thread
     void worker_run(int worker_idx);
 
@@ -146,6 +150,11 @@ private:
 
     //! Execute the given task
     void execute_task(task& t) const;
+
+    //! Called when a task was added in the task system
+    void on_task_added() const;
+    //! Called when a task was removed from the task system (before execution)
+    void on_task_removed() const;
 };
 } // namespace detail
 
