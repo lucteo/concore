@@ -124,6 +124,11 @@ endif()
 install(TARGETS concore
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib)
+if(concore.profiling.tracy)
+    install(TARGETS concore_profiling
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)
+endif()
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
   DESTINATION include
   USE_SOURCE_PERMISSIONS
