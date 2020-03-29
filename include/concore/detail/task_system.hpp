@@ -80,10 +80,10 @@ public:
     //! task.
     void spawn(task&& t, bool wake_workers = true);
 
-    //! Wait until the given task control object is not active anymore.
+    //! Wait until the given task group is not active anymore.
     //! This is going to be a busy wait, meaning that the caller will try to execute tasks.
     //! We hope that, this way we'll make progress towards finishing early.
-    void busy_wait_on(task_control& tc);
+    void busy_wait_on(task_group& grp);
 
     //! Called when spanning tasks and waiting for them to ensure we have a worker_thread_data.
     //! This is used when spawn_and_wait is called outside of our workers. If possible, we prepare

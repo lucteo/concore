@@ -1,5 +1,6 @@
 #include "concore/detail/task_system.hpp"
-#include "concore/task_control.hpp"
+#include "concore/detail/utils.hpp"
+#include "concore/task_group.hpp"
 
 namespace concore {
 namespace detail {
@@ -49,7 +50,7 @@ void task_system::spawn(task&& t, bool wake_workers) {
         wakeup_workers();
 }
 
-void task_system::busy_wait_on(task_control& tc) {
+void task_system::busy_wait_on(task_group& grp) {
     worker_thread_data* data = g_worker_data;
 
     using namespace std::chrono_literals;
@@ -58,7 +59,7 @@ void task_system::busy_wait_on(task_control& tc) {
     auto cur_pause = min_pause;
     while (true) {
         // Did we reach our goal?
-        if (!tc.is_active())
+        if (!grp.is_active())
             break;
 
         // Try to execute a task -- if we have a worker data
@@ -232,22 +233,9 @@ void task_system::wakeup_workers() {
 
 void task_system::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
-    auto& tc = t.get_task_control();
 
     on_task_removed();
-
-    // If the task is canceled, don't do anything
-    if (tc && tc.is_cancelled())
-        return;
-
-    // Now execute the task, watching for exceptions
-    try {
-        detail::task_control_access::on_starting_task(tc, t);
-        t();
-        detail::task_control_access::on_task_done(tc, t);
-    } catch (...) {
-        detail::task_control_access::on_task_exception(tc, t, std::current_exception());
-    }
+    detail::execute_task(t);
 }
 
 void task_system::on_task_added() const {

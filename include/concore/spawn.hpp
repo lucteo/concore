@@ -38,18 +38,18 @@ inline void spawn(task&& t, bool wake_workers = true) {
 //! Spawn one task, given a functor to be executed.
 template <typename F>
 inline void spawn(F&& ftor, bool wake_workers = true) {
-    auto tc = task_control::current_task_control();
-    detail::task_system::instance().spawn(task(std::forward<F>(ftor), tc), wake_workers);
+    auto grp = task_group::current_task_group();
+    detail::task_system::instance().spawn(task(std::forward<F>(ftor), grp), wake_workers);
 }
 
 //! Spawn multiple tasks, given the functors to be executed.
 inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_workers = true) {
-    auto tc = task_control::current_task_control();
+    auto grp = task_group::current_task_group();
     int count = static_cast<int>(ftors.size());
     for (auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
         bool cur_wake_workers = (count-- > 0 || wake_workers);
-        detail::task_system::instance().spawn(task(std::move(ftor), tc), cur_wake_workers);
+        detail::task_system::instance().spawn(task(std::move(ftor), grp), cur_wake_workers);
     }
 }
 
@@ -58,9 +58,9 @@ inline void spawn_and_wait(F&& ftor) {
     auto& tsys = detail::task_system::instance();
     auto worker_data = tsys.enter_worker();
 
-    auto tc = task_control::create(task_control::current_task_control());
-    tsys.spawn(task(std::forward<F>(ftor), tc), false);
-    tsys.busy_wait_on(tc);
+    auto grp = task_group::create(task_group::current_task_group());
+    tsys.spawn(task(std::forward<F>(ftor), grp), false);
+    tsys.busy_wait_on(grp);
 
     tsys.exit_worker(worker_data);
 }
@@ -69,20 +69,20 @@ inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wa
     auto& tsys = detail::task_system::instance();
     auto worker_data = tsys.enter_worker();
 
-    auto tc = task_control::create(task_control::current_task_control());
+    auto grp = task_group::create(task_group::current_task_group());
     int count = static_cast<int>(ftors.size());
     for (auto& ftor : ftors) {
         bool cur_wake_workers = count-- > 0; // don't wake on the last task
-        tsys.spawn(task(std::move(ftor), tc), cur_wake_workers);
+        tsys.spawn(task(std::move(ftor), grp), cur_wake_workers);
     }
-    tsys.busy_wait_on(tc);
+    tsys.busy_wait_on(grp);
 
     tsys.exit_worker(worker_data);
 }
 
-//! Wait on all the tasks from the task_control, and all the children task_control to finish.
-//! Keeping a children task_control alive will make this wait forever.
-inline void wait(task_control& tc) { detail::task_system::instance().busy_wait_on(tc); }
+//! Wait on all the tasks from the given group to finish.
+//! Keeping a children task alive from the group will make this wait forever.
+inline void wait(task_group& grp) { detail::task_system::instance().busy_wait_on(grp); }
 
 //! Executor that spawns tasks instead of enqueueing them
 constexpr auto spawn_executor = detail::spawn_executor{};

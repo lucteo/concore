@@ -39,15 +39,15 @@ void check_execute_with_exceptions(Creator creat) {
         num_exceptions++;
         tc.task_finished();
     };
-    auto tctrl = concore::task_control::create();
-    tctrl.set_exception_handler(except_fun);
+    auto grp = concore::task_group::create();
+    grp.set_exception_handler(except_fun);
 
     auto executor = creat();
 
     // Create the tasks, and add them to the executor
     for (int i = 0; i < num_tasks; i++)
     {
-        concore::task t{[&, i]() { throw std::logic_error("something went wrong"); }, tctrl};
+        concore::task t{[&, i]() { throw std::logic_error("something went wrong"); }, grp};
         executor(std::move(t));
     }
 

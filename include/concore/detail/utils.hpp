@@ -10,25 +10,25 @@
 namespace concore {
 namespace detail {
 
-//! Executed the given tasks. Take care of the task_control interactions
+//! Executed the given tasks. Take care of the task_group interactions
 inline void execute_task(task& t) {
-    auto& tc = t.get_task_control();
+    auto& grp = t.get_task_group();
 
     // If the task is canceled, don't do anything
-    if (tc && tc.is_cancelled())
+    if (grp && grp.is_cancelled())
         return;
 
     try {
-        detail::task_control_access::on_starting_task(tc, t);
+        detail::task_group_access::on_starting_task(grp, t);
         t();
-        detail::task_control_access::on_task_done(tc, t);
+        detail::task_group_access::on_task_done(grp, t);
     } catch (...) {
-        detail::task_control_access::on_task_exception(tc, t, std::current_exception());
+        detail::task_group_access::on_task_exception(grp, t, std::current_exception());
     }
 }
 
 //! Pops one task from the given task queue and executes it.
-//! Use task_control for controlling the execution of the task
+//! Use task_group for controlling the execution of the task
 template <typename Q>
 inline void pop_and_execute(Q& q) {
     task to_execute;
