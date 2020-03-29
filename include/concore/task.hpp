@@ -1,6 +1,6 @@
 #pragma once
 
-#include "task_control.hpp"
+#include "task_group.hpp"
 
 #include <functional>
 
@@ -25,9 +25,9 @@ public:
     task(T&& ftor)
         : fun_(std::forward<T>(ftor)) {}
     template <typename T>
-    task(T&& ftor, task_control tc)
+    task(T&& ftor, task_group grp)
         : fun_(std::forward<T>(ftor))
-        , task_control_(tc) {}
+        , task_group_(grp) {}
     template <typename T>
     task& operator=(T&& ftor) {
         fun_ = std::forward<T>(ftor);
@@ -42,7 +42,7 @@ public:
 
     void swap(task& other) {
         fun_.swap(other.fun_);
-        std::swap(task_control_, other.task_control_);
+        std::swap(task_group_, other.task_group_);
     }
 
     explicit operator bool() const noexcept { return static_cast<bool>(fun_); }
@@ -50,16 +50,16 @@ public:
     //! The call operator; called to execute the task
     void operator()() { fun_(); }
 
-    //! Return the task_control object overseeing this task
-    task_control& get_task_control() { return task_control_; }
+    //! Return the task_group object overseeing this task
+    task_group& get_task_group() { return task_group_; }
 
 private:
     //! The function to be called
     std::function<void()> fun_;
-    //! The object used to control cancellation of this task
-    task_control task_control_;
+    //! The group that this tasks belongs to
+    task_group task_group_;
 
-    // give task_system access to task_control_
+    // give task_system access to task_group_
     friend detail::task_system;
 };
 } // namespace v1

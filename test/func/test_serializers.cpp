@@ -3,27 +3,33 @@
 #include <concore/n_serializer.hpp>
 #include <concore/rw_serializer.hpp>
 #include <concore/global_executor.hpp>
+#include <concore/spawn.hpp>
 
 #include "test_common/task_countdown.hpp"
+#include "test_common/task_utils.hpp"
 
 #include <stdexcept>
 #include <cstdlib>
 #include <ctime>
 
 namespace {
+
 //! Check if the given executor can execute tasks.
 void check_execute_tasks(concore::executor_t e) {
-    constexpr int num_tasks = 10;
-    task_countdown tc{num_tasks};
-
-    // Create the tasks, and add them to the executor
-    for (int i = 0; i < num_tasks; i++)
-        e([&]() { tc.task_finished(); });
-
-    // Wait for all the tasks to complete
-    // No timeout means that all the tasks were executed.
-    REQUIRE(tc.wait_for_all());
+    int num_tasks = 10;
+    std::atomic<int> counter{0};
+    REQUIRE(enqueue_and_wait(e, [&]() { counter++; }, num_tasks));
+    REQUIRE(counter == num_tasks);
 }
+
+//! Executor that counts how many tasks it has executed.
+struct counting_executor {
+    std::shared_ptr<std::atomic<int>> count_{std::make_shared<std::atomic<int>>(0)};
+    void operator()(concore::task t) {
+        (*count_)++;
+        concore::global_executor(std::move(t));
+    }
+};
 
 using ex_fun_t = std::function<void(std::exception_ptr)>;
 
@@ -39,11 +45,16 @@ void check_execute_with_exceptions(Creator creat) {
         num_exceptions++;
         tc.task_finished();
     };
-    auto e = creat(except_fun);
+    auto grp = concore::task_group::create();
+    grp.set_exception_handler(except_fun);
+
+    auto executor = creat();
 
     // Create the tasks, and add them to the executor
-    for (int i = 0; i < num_tasks; i++)
-        e([&, i]() { throw std::logic_error("something went wrong"); });
+    for (int i = 0; i < num_tasks; i++) {
+        concore::task t{[&, i]() { throw std::logic_error("something went wrong"); }, grp};
+        executor(std::move(t));
+    }
 
     // Wait for all the tasks to complete
     REQUIRE(tc.wait_for_all());
@@ -118,12 +129,12 @@ void check_in_order_execution(concore::executor_t e) {
 
 } // namespace
 
-TEST_CASE("serializers are executors") {
+TEST_CASE("serializers are executors", "[ser]") {
     auto ge = concore::global_executor;
     auto task = []() {};
 
     SECTION("serializer is copyable") {
-        auto e1 = concore::serializer(ge);
+        auto e1 = concore::serializer();
         auto e2 = concore::serializer(ge);
         auto e3 = concore::serializer(e1);
         e2 = e1;
@@ -134,119 +145,146 @@ TEST_CASE("serializers are executors") {
     }
 
     SECTION("n_serializer is copyable") {
-        auto e1 = concore::n_serializer(ge, 4);
-        auto e2 = concore::n_serializer(ge, 4);
+        auto e1 = concore::n_serializer(4);
+        auto e2 = concore::n_serializer(4, ge);
         auto e3 = concore::n_serializer(e1);
         e2 = e1;
     }
     SECTION("n_serializer has execution syntax") {
-        auto e = concore::n_serializer(ge, 4);
+        auto e = concore::n_serializer(4);
         e(task);
     }
 
     SECTION("rw_serializer.reader is copyable") {
-        auto e1 = concore::rw_serializer(ge).reader();
-        auto e2 = concore::rw_serializer(ge).reader();
+        auto e1 = concore::rw_serializer().reader();
+        auto e2 = concore::rw_serializer().reader();
         concore::rw_serializer::reader_type e3(e1);
         e2 = e1;
     }
     SECTION("rw_serializer.reader has execution syntax") {
-        auto e = concore::rw_serializer(ge).reader();
+        auto e = concore::rw_serializer().reader();
         e(task);
     }
 
     SECTION("rw_serializer.writer is copyable") {
-        auto e1 = concore::rw_serializer(ge).writer();
-        auto e2 = concore::rw_serializer(ge).writer();
+        auto e1 = concore::rw_serializer().writer();
+        auto e2 = concore::rw_serializer().writer();
         concore::rw_serializer::writer_type e3(e1);
         e2 = e1;
     }
     SECTION("rw_serializer.writer has execution syntax") {
-        auto e = concore::rw_serializer(ge).writer();
+        auto e = concore::rw_serializer().writer();
         e(task);
     }
 }
 
-TEST_CASE("Tasks added to serializers are executed") {
-    auto ge = concore::global_executor;
-    SECTION("serializer executes tasks") { check_execute_tasks(concore::serializer(ge)); }
-    SECTION("n_serializer executes tasks") { check_execute_tasks(concore::n_serializer(ge, 4)); }
+TEST_CASE("Tasks added to serializers are executed", "[ser]") {
+    SECTION("serializer executes tasks") { check_execute_tasks(concore::serializer()); }
+    SECTION("n_serializer executes tasks") { check_execute_tasks(concore::n_serializer(4)); }
     SECTION("rw_serializer.reader executes tasks") {
-        check_execute_tasks(concore::rw_serializer(ge).reader());
+        check_execute_tasks(concore::rw_serializer().reader());
     }
     SECTION("rw_serializer.writer executes tasks") {
-        check_execute_tasks(concore::rw_serializer(ge).writer());
+        check_execute_tasks(concore::rw_serializer().writer());
     }
 }
 
-TEST_CASE("Serializers can execute tasks with exceptions") {
+TEST_CASE("Serializers use the given executors", "[ser]") {
+    auto f = []() { std::this_thread::sleep_for(1ms); };
+    SECTION("serializer and executors") {
+        counting_executor cnt_exe1, cnt_exe2;
+        auto e = concore::serializer(cnt_exe1, cnt_exe2);
+        REQUIRE(enqueue_and_wait(e, f));
+        REQUIRE(cnt_exe1.count_->load() == 1);
+        REQUIRE(cnt_exe2.count_->load() == 9);
+    }
+    SECTION("n_serializer and executors") {
+        counting_executor cnt_exe1, cnt_exe2;
+        auto e = concore::n_serializer(3, cnt_exe1, cnt_exe2);
+        REQUIRE(enqueue_and_wait(e, f));
+        REQUIRE(cnt_exe1.count_->load() == 3);
+        REQUIRE(cnt_exe2.count_->load() == 7);
+    }
+    SECTION("rw_serializer.reader and executors") {
+        counting_executor cnt_exe1, cnt_exe2;
+        concore::rw_serializer rw_ser(cnt_exe1, cnt_exe2);
+        auto e = rw_ser.reader();
+        REQUIRE(enqueue_and_wait(e, f));
+        REQUIRE(cnt_exe1.count_->load() == 10);
+        REQUIRE(cnt_exe2.count_->load() == 0);
+    }
+    SECTION("rw_serializer.writer and executors") {
+        counting_executor cnt_exe1, cnt_exe2;
+        concore::rw_serializer rw_ser(cnt_exe1, cnt_exe2);
+        auto e = rw_ser.writer();
+        REQUIRE(enqueue_and_wait(e, f));
+        REQUIRE(cnt_exe1.count_->load() == 1);
+        REQUIRE(cnt_exe2.count_->load() == 9);
+    }
+}
+
+TEST_CASE("Serializers can execute tasks with exceptions", "[ser]") {
     SECTION("serializer executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::serializer(concore::global_executor, ef);
-        };
+        auto creat = []() -> auto { return concore::serializer(concore::global_executor); };
         check_execute_with_exceptions(creat);
     }
     SECTION("n_serializer executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::n_serializer(concore::global_executor, 4, ef);
-        };
+        auto creat = []() -> auto { return concore::n_serializer(4, concore::global_executor); };
         check_execute_with_exceptions(creat);
     }
     SECTION("rw_serializer.reader executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::rw_serializer(concore::global_executor, ef).reader();
+        auto creat = []() -> auto {
+            return concore::rw_serializer(concore::global_executor).reader();
         };
         check_execute_with_exceptions(creat);
     }
     SECTION("rw_serializer.writer executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::rw_serializer(concore::global_executor, ef).writer();
+        auto creat = []() -> auto {
+            return concore::rw_serializer(concore::global_executor).writer();
         };
         check_execute_with_exceptions(creat);
     }
 }
 
-TEST_CASE("Serializers obey maximum allowed parallelism") {
-    auto ge = concore::global_executor;
-    SECTION("1 task at a time for a serializer") { check_parallelism(concore::serializer(ge), 1); }
+TEST_CASE("Serializers obey maximum allowed parallelism", "[ser]") {
+    SECTION("1 task at a time for a serializer") { check_parallelism(concore::serializer(), 1); }
     SECTION("N task at a time for an n_serializer") {
-        check_parallelism(concore::n_serializer(ge, 2), 2);
-        check_parallelism(concore::n_serializer(ge, 4), 4);
+        check_parallelism(concore::n_serializer(2), 2);
+        check_parallelism(concore::n_serializer(4), 4);
     }
     SECTION("1 task at a time for a rw_serializer.writer") {
-        check_parallelism(concore::rw_serializer(ge).writer(), 1);
+        check_parallelism(concore::rw_serializer().writer(), 1);
     }
     SECTION("1 task at a time for a rw_serializer.writer") {
-        check_parallelism(concore::rw_serializer(ge).writer(), 1);
+        check_parallelism(concore::rw_serializer().writer(), 1);
     }
 }
 
-TEST_CASE("serializer executes tasks in order") {
+TEST_CASE("serializer executes tasks in order", "[ser]") {
     check_in_order_execution(concore::serializer(concore::global_executor));
 }
 
-TEST_CASE("n_serializer with N=1 behaves like a serializer") {
-    check_in_order_execution(concore::n_serializer(concore::global_executor, 1));
+TEST_CASE("n_serializer with N=1 behaves like a serializer", "[ser]") {
+    check_in_order_execution(concore::n_serializer(1, concore::global_executor));
 }
 
-TEST_CASE("rw_serializer.writer behaves like a serializer") {
+TEST_CASE("rw_serializer.writer behaves like a serializer", "[ser]") {
     check_in_order_execution(concore::rw_serializer(concore::global_executor).writer());
 }
 
-TEST_CASE("rw_serializer.reader has parallelism") {
+TEST_CASE("rw_serializer.reader has parallelism", "[ser]") {
     // This only works if we have multiple cores; use 4 cores to increase the chance of executing in
     // parallel
     if (std::thread::hardware_concurrency() < 4)
         return;
 
-    auto ge = concore::global_executor;
-    check_parallelism(concore::rw_serializer(ge).reader(), 10000, 2);
+    check_parallelism(concore::rw_serializer().reader(), 10000, 2);
 }
 
 // Generate 1 WRITE and 9 READs; the WRITE will have a random order
 // All READs issued before the WRITE will be executed before the WRITE
 // All READs issued after the WRITE will be executed after the WRITE
-TEST_CASE("rw_serializer will execute WRITEs as soon as possible") {
+TEST_CASE("rw_serializer will execute WRITEs as soon as possible", "[ser]") {
     auto rws = concore::rw_serializer(concore::global_executor);
 
     constexpr int num_tasks = 10;

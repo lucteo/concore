@@ -225,7 +225,7 @@ static void BM_latency_serializer(benchmark::State& state) {
 
 static void BM_latency_n_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test n_serializer");
-    test_latency_ser(concore::n_serializer(concore::spawn_continuation_executor, 1), state);
+    test_latency_ser(concore::n_serializer(1, concore::spawn_continuation_executor), state);
 }
 
 static void BM_latency_rw_serializer(benchmark::State& state) {

@@ -1,6 +1,5 @@
 #include <catch2/catch.hpp>
 #include <concore/spawn.hpp>
-#include <concore/task_control.hpp>
 
 #include <thread>
 #include <atomic>

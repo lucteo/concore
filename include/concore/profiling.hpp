@@ -24,7 +24,7 @@
 #define CONCORE_PROFILING_SET_TEXT(text) ZoneText(text, strlen(text))
 #define CONCORE_PROFILING_SET_TEXT_FMT(max_len, fmt, args...)                                      \
     char __IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__)[max_len];                        \
-    sprintf(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__), fmt, args);                  \
+    snprintf(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__), max_len, fmt, args);        \
     ZoneText(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__),                             \
             strlen(__IMPL_CONCORE_CONCAT(__concore_profiling_buf, __LINE__)))
 #define CONCORE_PROFILING_MESSAGE(text) TracyMessage(text, strlen(text))

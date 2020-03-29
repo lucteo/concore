@@ -1,5 +1,6 @@
 #include "concore/detail/task_system.hpp"
-#include "concore/task_control.hpp"
+#include "concore/detail/utils.hpp"
+#include "concore/task_group.hpp"
 
 namespace concore {
 namespace detail {
@@ -7,10 +8,6 @@ namespace detail {
 //! TLS pointer to the worker data. This way, if we are called from a worker thread we can interact
 //! with the worker thread data
 thread_local worker_thread_data* g_worker_data{nullptr};
-
-//! TLS pointer to the current task_control object.
-//! This will be set and reset at each task execution.
-thread_local task_control g_current_task_control{};
 
 task_system::task_system() {
     CONCORE_PROFILING_INIT();
@@ -45,6 +42,7 @@ void task_system::spawn(task&& t, bool wake_workers) {
     }
 
     // Add the task to the worker's queue
+    on_task_added();
     data->local_tasks_.push(std::forward<task>(t));
 
     // Wake up the workers
@@ -52,7 +50,7 @@ void task_system::spawn(task&& t, bool wake_workers) {
         wakeup_workers();
 }
 
-void task_system::busy_wait_on(task_control& tc) {
+void task_system::busy_wait_on(task_group& grp) {
     worker_thread_data* data = g_worker_data;
 
     using namespace std::chrono_literals;
@@ -61,7 +59,7 @@ void task_system::busy_wait_on(task_control& tc) {
     auto cur_pause = min_pause;
     while (true) {
         // Did we reach our goal?
-        if (!tc.is_active())
+        if (!grp.is_active())
             break;
 
         // Try to execute a task -- if we have a worker data
@@ -111,8 +109,6 @@ void task_system::exit_worker(worker_thread_data* worker_data) {
         g_worker_data = nullptr;
     }
 }
-
-task_control task_system::current_task_control() { return g_current_task_control; }
 
 void task_system::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
@@ -237,24 +233,25 @@ void task_system::wakeup_workers() {
 
 void task_system::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
-    auto& tc = t.get_task_control();
 
-    // If the task is canceled, don't do anything
-    if (tc && tc.is_cancelled())
-        return;
+    on_task_removed();
+    detail::execute_task(t);
+}
 
-    g_current_task_control = tc;
+void task_system::on_task_added() const {
+#if CONCORE_ENABLE_PROFILING
+    int val = num_tasks_++;
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val+1));
+#endif
+}
 
-    // Now execute the task, watching for exceptions
-    try {
-        detail::task_control_access::on_starting_task(tc, t);
-        t();
-        detail::task_control_access::on_task_done(tc, t);
-    } catch (...) {
-        detail::task_control_access::on_task_exception(tc, t, std::current_exception());
-    }
-
-    g_current_task_control = task_control{};
+void task_system::on_task_removed() const {
+#if CONCORE_ENABLE_PROFILING
+    int val = num_tasks_--;
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val-1));
+#endif
 }
 
 } // namespace detail

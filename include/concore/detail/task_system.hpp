@@ -66,6 +66,7 @@ public:
         static_assert(P < num_priorities, "Invalid task priority");
 
         // Push the task in the global queue, corresponding to the given prio
+        on_task_added();
         enqueued_tasks_[P].push(std::forward<T>(t));
         num_global_tasks_++;
         wakeup_workers();
@@ -79,10 +80,10 @@ public:
     //! task.
     void spawn(task&& t, bool wake_workers = true);
 
-    //! Wait until the given task control object is not active anymore.
+    //! Wait until the given task group is not active anymore.
     //! This is going to be a busy wait, meaning that the caller will try to execute tasks.
     //! We hope that, this way we'll make progress towards finishing early.
-    void busy_wait_on(task_control& tc);
+    void busy_wait_on(task_group& grp);
 
     //! Called when spanning tasks and waiting for them to ensure we have a worker_thread_data.
     //! This is used when spawn_and_wait is called outside of our workers. If possible, we prepare
@@ -95,12 +96,6 @@ public:
     //! Called at the end of spawn_and_wait, after waiting, to release the worker slot.
     //! Should be paired 1:1 with enter_worker();
     void exit_worker(worker_thread_data* worker_data);
-
-    //! Returns the task_control object for the current executing task.
-    //! This uses TLS to get the task_control from the current thread.
-    //! Returns an empty task_control if no task is running (but then, are you calling this from
-    //! within a task?)
-    static task_control current_task_control();
 
 private:
     //! A task queue type
@@ -128,6 +123,9 @@ private:
     //! Flag used to announce the shutting down of the task system
     std::atomic<bool> done_{false};
 
+    //! The number of tasks that we currently have enqueued in the task system
+    mutable std::atomic<int> num_tasks_{0};
+
     //! The run procedure for a worker thread
     void worker_run(int worker_idx);
 
@@ -146,6 +144,11 @@ private:
 
     //! Execute the given task
     void execute_task(task& t) const;
+
+    //! Called when a task was added in the task system
+    void on_task_added() const;
+    //! Called when a task was removed from the task system (before execution)
+    void on_task_removed() const;
 };
 } // namespace detail
 

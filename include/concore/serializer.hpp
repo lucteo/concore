@@ -2,59 +2,10 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
-#include "data/concurrent_queue.hpp"
-#include "detail/utils.hpp"
 
 #include <memory>
-#include <atomic>
-#include <cassert>
 
 namespace concore {
-
-namespace detail {
-
-//! The implementation details of a serializer
-struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
-    //! The base executor used to actually execute the tasks, once we've serialized them
-    executor_t base_executor_;
-    //! The function called to handle exceptions
-    std::function<void(std::exception_ptr)> except_fun_;
-    //! The queue of tasks that wait to be executed
-    concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
-    //! The number of tasks that are in the queue
-    std::atomic<int> count_{0};
-
-    serializer_impl(
-            executor_t base_executor, std::function<void(std::exception_ptr)> except_fun = {})
-        : base_executor_(base_executor)
-        , except_fun_(except_fun) {}
-
-    //! Adds a new task to this serializer
-    void enqueue(task&& t) {
-        // Add the task to the queue
-        waiting_tasks_.push(std::forward<task>(t));
-
-        // If there were no other tasks, enqueue a task in the base executor
-        if (count_++ == 0)
-            enqueue_next();
-    }
-
-    //! Called by the base executor to execute one task.
-    void execute_one() {
-        detail::pop_and_execute(waiting_tasks_, except_fun_);
-
-        // If there are still tasks in the queue, continue to enqueue the next task
-        if (count_-- > 1)
-            enqueue_next();
-    }
-
-    //! Enqueue the next task to be executed in the base executor.
-    void enqueue_next() {
-        // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
-        base_executor_([p_this = shared_from_this()]() { p_this->execute_one(); });
-    }
-};
-} // namespace detail
 
 inline namespace v1 {
 
@@ -69,19 +20,20 @@ inline namespace v1 {
 //! - the tasks are executed in the order they are enqueued
 class serializer {
 public:
-    serializer(executor_t base_executor, std::function<void(std::exception_ptr)> except_fun = {})
-        : impl_(std::make_shared<detail::serializer_impl>(base_executor, except_fun)) {}
+    explicit serializer(executor_t base_executor = {}, executor_t cont_executor = {});
 
     //! The call operator that makes this an executor.
     //! Enqueues the given task in the base serializer, making sure that two tasks that pass through
     //! here are not executed at the same time.
-    void operator()(task t) { impl_->enqueue(std::move(t)); }
+    void operator()(task t);
 
 private:
+    struct impl;
+
     //! The implementation object of this serializer.
     //! We need this to be shared pointer for lifetime issue, but also to be able to copy the
     //! serializer easily.
-    std::shared_ptr<detail::serializer_impl> impl_;
+    std::shared_ptr<impl> impl_;
 };
 
 } // namespace v1

@@ -64,7 +64,10 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAK
 set(concore_sourceFiles
     "src/detail/task_system.cpp"
     "src/low_level/semaphore.cpp"
-    "src/task_control.cpp"
+    "src/n_serializer.cpp"
+    "src/rw_serializer.cpp"
+    "src/serializer.cpp"
+    "src/task_group.cpp"
 )
 
 # Configure profiling
@@ -124,6 +127,11 @@ endif()
 install(TARGETS concore
     ARCHIVE DESTINATION lib
     LIBRARY DESTINATION lib)
+if(concore.profiling.tracy)
+    install(TARGETS concore_profiling
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib)
+endif()
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
   DESTINATION include
   USE_SOURCE_PERMISSIONS
