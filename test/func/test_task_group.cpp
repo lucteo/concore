@@ -211,7 +211,7 @@ TEST_CASE("task_group is inherited when using other concore task executors", "[t
         test_task_group_and_serializers(concore::serializer(concore::global_executor));
     }
     SECTION("n_serializer") {
-        test_task_group_and_serializers(concore::n_serializer(concore::global_executor, 4));
+        test_task_group_and_serializers(concore::n_serializer(4, concore::global_executor));
     }
     SECTION("rw_serializer") {
         concore::rw_serializer ser(concore::global_executor);

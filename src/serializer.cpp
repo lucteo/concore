@@ -1,0 +1,66 @@
+#include "concore/serializer.hpp"
+#include "concore/global_executor.hpp"
+#include "concore/spawn.hpp"
+#include "concore/data/concurrent_queue.hpp"
+#include "concore/detail/utils.hpp"
+
+#include <atomic>
+#include <cassert>
+
+namespace concore {
+
+inline namespace v1 {
+
+//! The implementation details of a serializer
+struct serializer::impl : std::enable_shared_from_this<impl> {
+    //! The base executor used to actually execute the tasks, when we enqueue them
+    executor_t base_executor_;
+    //! The executor to be used when
+    executor_t cont_executor_;
+    //! The queue of tasks that wait to be executed
+    concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
+    //! The number of tasks that are in the queue
+    std::atomic<int> count_{0};
+
+    impl(executor_t base_executor, executor_t cont_executor)
+        : base_executor_(base_executor)
+        , cont_executor_(cont_executor) {
+        if (!base_executor)
+            base_executor_ = global_executor;
+        if (!cont_executor)
+            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor;
+    }
+
+    //! Adds a new task to this serializer
+    void enqueue(task&& t) {
+        // Add the task to the queue
+        waiting_tasks_.push(std::forward<task>(t));
+
+        // If there were no other tasks, enqueue a task in the base executor
+        if (count_++ == 0)
+            enqueue_next(base_executor_);
+    }
+
+    //! Called by the base executor to execute one task.
+    void execute_one() {
+        detail::pop_and_execute(waiting_tasks_);
+
+        // If there are still tasks in the queue, continue to enqueue the next task
+        if (count_-- > 1)
+            enqueue_next(cont_executor_);
+    }
+
+    //! Enqueue the next task to be executed in the given executor.
+    void enqueue_next(const executor_t& executor) {
+        // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
+        executor([p_this = shared_from_this()]() { p_this->execute_one(); });
+    }
+};
+
+serializer::serializer(executor_t base_executor, executor_t cont_executor)
+    : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}
+
+void serializer::operator()(task t) { impl_->enqueue(std::move(t)); }
+
+} // namespace v1
+} // namespace concore

@@ -64,6 +64,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAK
 set(concore_sourceFiles
     "src/detail/task_system.cpp"
     "src/low_level/semaphore.cpp"
+    "src/n_serializer.cpp"
+    "src/rw_serializer.cpp"
+    "src/serializer.cpp"
     "src/task_group.cpp"
 )
 
