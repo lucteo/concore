@@ -8,10 +8,6 @@ namespace detail {
 //! with the worker thread data
 thread_local worker_thread_data* g_worker_data{nullptr};
 
-//! TLS pointer to the current task_control object.
-//! This will be set and reset at each task execution.
-thread_local task_control g_current_task_control{};
-
 task_system::task_system() {
     CONCORE_PROFILING_INIT();
     CONCORE_PROFILING_FUNCTION();
@@ -112,8 +108,6 @@ void task_system::exit_worker(worker_thread_data* worker_data) {
         g_worker_data = nullptr;
     }
 }
-
-task_control task_system::current_task_control() { return g_current_task_control; }
 
 void task_system::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
@@ -246,8 +240,6 @@ void task_system::execute_task(task& t) const {
     if (tc && tc.is_cancelled())
         return;
 
-    g_current_task_control = tc;
-
     // Now execute the task, watching for exceptions
     try {
         detail::task_control_access::on_starting_task(tc, t);
@@ -256,8 +248,6 @@ void task_system::execute_task(task& t) const {
     } catch (...) {
         detail::task_control_access::on_task_exception(tc, t, std::current_exception());
     }
-
-    g_current_task_control = task_control{};
 }
 
 void task_system::on_task_added() const {

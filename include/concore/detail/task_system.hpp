@@ -97,12 +97,6 @@ public:
     //! Should be paired 1:1 with enter_worker();
     void exit_worker(worker_thread_data* worker_data);
 
-    //! Returns the task_control object for the current executing task.
-    //! This uses TLS to get the task_control from the current thread.
-    //! Returns an empty task_control if no task is running (but then, are you calling this from
-    //! within a task?)
-    static task_control current_task_control();
-
 private:
     //! A task queue type
     using task_queue = concurrent_queue<task>;

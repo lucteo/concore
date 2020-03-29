@@ -17,17 +17,13 @@ namespace detail {
 struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
     //! The base executor used to actually execute the tasks, once we've serialized them
     executor_t base_executor_;
-    //! The function called to handle exceptions
-    std::function<void(std::exception_ptr)> except_fun_;
     //! The queue of tasks that wait to be executed
     concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
     //! The number of tasks that are in the queue
     std::atomic<int> count_{0};
 
-    serializer_impl(
-            executor_t base_executor, std::function<void(std::exception_ptr)> except_fun = {})
-        : base_executor_(base_executor)
-        , except_fun_(except_fun) {}
+    explicit serializer_impl(executor_t base_executor)
+        : base_executor_(base_executor) {}
 
     //! Adds a new task to this serializer
     void enqueue(task&& t) {
@@ -41,7 +37,7 @@ struct serializer_impl : std::enable_shared_from_this<serializer_impl> {
 
     //! Called by the base executor to execute one task.
     void execute_one() {
-        detail::pop_and_execute(waiting_tasks_, except_fun_);
+        detail::pop_and_execute(waiting_tasks_);
 
         // If there are still tasks in the queue, continue to enqueue the next task
         if (count_-- > 1)
@@ -69,8 +65,8 @@ inline namespace v1 {
 //! - the tasks are executed in the order they are enqueued
 class serializer {
 public:
-    serializer(executor_t base_executor, std::function<void(std::exception_ptr)> except_fun = {})
-        : impl_(std::make_shared<detail::serializer_impl>(base_executor, except_fun)) {}
+    explicit serializer(executor_t base_executor)
+        : impl_(std::make_shared<detail::serializer_impl>(base_executor)) {}
 
     //! The call operator that makes this an executor.
     //! Enqueues the given task in the base serializer, making sure that two tasks that pass through

@@ -39,11 +39,17 @@ void check_execute_with_exceptions(Creator creat) {
         num_exceptions++;
         tc.task_finished();
     };
-    auto e = creat(except_fun);
+    auto tctrl = concore::task_control::create();
+    tctrl.set_exception_handler(except_fun);
+
+    auto executor = creat();
 
     // Create the tasks, and add them to the executor
     for (int i = 0; i < num_tasks; i++)
-        e([&, i]() { throw std::logic_error("something went wrong"); });
+    {
+        concore::task t{[&, i]() { throw std::logic_error("something went wrong"); }, tctrl};
+        executor(std::move(t));
+    }
 
     // Wait for all the tasks to complete
     REQUIRE(tc.wait_for_all());
@@ -181,26 +187,26 @@ TEST_CASE("Tasks added to serializers are executed") {
 
 TEST_CASE("Serializers can execute tasks with exceptions") {
     SECTION("serializer executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::serializer(concore::global_executor, ef);
+        auto creat = []() -> auto {
+            return concore::serializer(concore::global_executor);
         };
         check_execute_with_exceptions(creat);
     }
     SECTION("n_serializer executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::n_serializer(concore::global_executor, 4, ef);
+        auto creat = []() -> auto {
+            return concore::n_serializer(concore::global_executor, 4);
         };
         check_execute_with_exceptions(creat);
     }
     SECTION("rw_serializer.reader executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::rw_serializer(concore::global_executor, ef).reader();
+        auto creat = []() -> auto {
+            return concore::rw_serializer(concore::global_executor).reader();
         };
         check_execute_with_exceptions(creat);
     }
     SECTION("rw_serializer.writer executes tasks with exceptions") {
-        auto creat = [](ex_fun_t ef) -> auto {
-            return concore::rw_serializer(concore::global_executor, ef).writer();
+        auto creat = []() -> auto {
+            return concore::rw_serializer(concore::global_executor).writer();
         };
         check_execute_with_exceptions(creat);
     }

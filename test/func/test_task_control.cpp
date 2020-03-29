@@ -1,6 +1,10 @@
 #include <catch2/catch.hpp>
 #include <concore/task_control.hpp>
 #include <concore/spawn.hpp>
+#include <concore/global_executor.hpp>
+#include <concore/serializer.hpp>
+#include <concore/n_serializer.hpp>
+#include <concore/rw_serializer.hpp>
 
 #include <thread>
 #include <atomic>
@@ -166,3 +170,56 @@ TEST_CASE("task_control is inherited on spawn", "[task_control]") {
     SUCCEED("tasks properly canceled");
 }
 
+void test_task_control_and_serializers(concore::executor_t executor) {
+    auto tc = concore::task_control::create();
+    auto ftor = []() {
+        CONCORE_PROFILING_SCOPE_N("ftor");
+        int counter = 0;
+        while (!concore::task_control::is_current_task_cancelled()) {
+            std::this_thread::sleep_for(1ms);
+            if (counter++ > 1000)
+                FAIL("task was not properly canceled in time");
+        }
+        REQUIRE(concore::task_control::is_current_task_cancelled());
+    };
+    // Start the tasks
+    for (int i = 0; i < 10; i++)
+        executor(concore::task(ftor, tc));
+
+    // Add another task at the end; this time outside of the task_control
+    std::atomic<bool> reached_end_task{false};
+    auto tcEnd = concore::task_control::create();
+    executor(concore::task{[&]() { reached_end_task = true; }, tcEnd});
+
+    // Wait a bit for the tasks to start, and cancel the task control
+    std::this_thread::sleep_for(3ms);
+    tc.cancel();
+
+    // wait until the tasks finish
+    while (tc.is_active())
+        std::this_thread::sleep_for(1ms);
+
+    // Now, ensure that we execute the last task
+    concore::wait(tcEnd);
+    REQUIRE(reached_end_task.load());
+
+    SUCCEED("tasks properly canceled");
+}
+
+TEST_CASE("task_control is inherited when using other concore task executors", "[task_control]") {
+    SECTION("serializer") {
+        test_task_control_and_serializers(concore::serializer(concore::global_executor));
+    }
+    SECTION("n_serializer") {
+        test_task_control_and_serializers(concore::n_serializer(concore::global_executor, 4));
+    }
+    SECTION("rw_serializer") {
+        concore::rw_serializer ser(concore::global_executor);
+        test_task_control_and_serializers(ser.reader());
+        test_task_control_and_serializers(ser.writer());
+    }
+    SECTION("sanity check: also test spawning with this method") {
+        test_task_control_and_serializers(concore::spawn_executor);
+        test_task_control_and_serializers(concore::spawn_continuation_executor);
+    }
+}

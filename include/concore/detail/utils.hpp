@@ -10,10 +10,27 @@
 namespace concore {
 namespace detail {
 
+//! Executed the given tasks. Take care of the task_control interactions
+inline void execute_task(task& t) {
+    auto& tc = t.get_task_control();
+
+    // If the task is canceled, don't do anything
+    if (tc && tc.is_cancelled())
+        return;
+
+    try {
+        detail::task_control_access::on_starting_task(tc, t);
+        t();
+        detail::task_control_access::on_task_done(tc, t);
+    } catch (...) {
+        detail::task_control_access::on_task_exception(tc, t, std::current_exception());
+    }
+}
+
 //! Pops one task from the given task queue and executes it.
-//! If the execution throws an exception, call the given except fun
+//! Use task_control for controlling the execution of the task
 template <typename Q>
-inline void pop_and_execute(Q& q, std::function<void(std::exception_ptr)> except_fun) {
+inline void pop_and_execute(Q& q) {
     task to_execute;
     // In the vast majority of cases there is a task ready to be executed; but there can be some
     // race conditions that will prevent the first pop from extracting a task from the queue. In
@@ -22,12 +39,7 @@ inline void pop_and_execute(Q& q, std::function<void(std::exception_ptr)> except
     while (!q.try_pop(to_execute))
         spinner.pause();
 
-    try {
-        to_execute();
-    } catch (...) {
-        if (except_fun)
-            except_fun(std::current_exception());
-    }
+    execute_task(to_execute);
 }
 } // namespace detail
 } // namespace concore

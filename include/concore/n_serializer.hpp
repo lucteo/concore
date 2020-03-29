@@ -15,8 +15,6 @@ namespace detail {
 struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl> {
     //! The base executor used to actually execute the tasks, once we've serialized them
     executor_t base_executor_;
-    //! The function called to handle exceptions
-    std::function<void(std::exception_ptr)> except_fun_;
     //! The number of tasks that can be executed in parallel
     int max_par_;
     //! The queue of tasks that wait to be executed
@@ -32,11 +30,9 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
         } fields;
     };
 
-    n_serializer_impl(
-            executor_t base_executor, int N, std::function<void(std::exception_ptr)> except_fun)
+    n_serializer_impl(executor_t base_executor, int N)
         : base_executor_(base_executor)
-        , max_par_(N)
-        , except_fun_(except_fun) {}
+        , max_par_(N) {}
 
     void enqueue(task&& t) {
         // Add the task to the queue
@@ -64,7 +60,7 @@ struct n_serializer_impl : public std::enable_shared_from_this<n_serializer_impl
     //! Note: we only execute one task, even if we have multiple tasks. We do this to ensure that
     //! the tasks are relatively small sized.
     void execute_one() {
-        detail::pop_and_execute(waiting_tasks_, except_fun_);
+        detail::pop_and_execute(waiting_tasks_);
 
         // Decrement the number of tasks
         // Check if we need to enqueue a continuation
@@ -101,9 +97,8 @@ inline namespace v1 {
 //! - if N==1, behaves like the `serializer` class
 class n_serializer : public std::enable_shared_from_this<n_serializer> {
 public:
-    n_serializer(executor_t base_executor, int N,
-            std::function<void(std::exception_ptr)> except_fun = {})
-        : impl_(std::make_shared<detail::n_serializer_impl>(base_executor, N, except_fun)) {}
+    n_serializer(executor_t base_executor, int N)
+        : impl_(std::make_shared<detail::n_serializer_impl>(base_executor, N)) {}
 
     //! The call operator that makes this an executor.
     //! Enqueues the given task in the base serializer, making sure that we don't execute too many

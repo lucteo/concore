@@ -48,6 +48,7 @@ class chained_task;
 //! Any exception thrown by the task will be ignored, and the next tasks will still be executed.
 class chained_task {
 public:
+    chained_task() = default;
     chained_task(task t, executor_t executor)
         : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
 

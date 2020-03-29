@@ -16,8 +16,6 @@ namespace detail {
 struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     //! The base executor used to actually execute the tasks, once we've serialized them
     executor_t base_executor_;
-    //! The function called to handle exceptions
-    std::function<void(std::exception_ptr)> except_fun_;
     //! The queue of READ tasks
     concurrent_queue<task, queue_type::multi_prod_multi_cons> read_tasks_;
     //! The queue of WRITE tasks
@@ -34,9 +32,8 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
         } fields;
     };
 
-    rw_serializer_impl(executor_t base_executor, std::function<void(std::exception_ptr)> except_fun)
-        : base_executor_(base_executor)
-        , except_fun_(except_fun) {}
+    explicit rw_serializer_impl(executor_t base_executor)
+        : base_executor_(base_executor) {}
 
     //! Adds a new READ task to this serializer
     void enqueue_read(task&& t) {
@@ -77,7 +74,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
 
     //! Called by the base executor to execute READ task.
     void execute_read() {
-        detail::pop_and_execute(read_tasks_, except_fun_);
+        detail::pop_and_execute(read_tasks_);
 
         // Decrement num_active_reads
         count_bits old, desired;
@@ -95,7 +92,7 @@ struct rw_serializer_impl : std::enable_shared_from_this<rw_serializer_impl> {
     }
     //! Called by the base executor to execute WRITE task.
     void execute_write() {
-        detail::pop_and_execute(write_tasks_, except_fun_);
+        detail::pop_and_execute(write_tasks_);
 
         // Decrement num_writes
         // If num_writes == 0, transform pending READs into active READs
@@ -176,8 +173,8 @@ public:
     using reader_type = detail::reader_type;
     using writer_type = detail::writer_type;
 
-    rw_serializer(executor_t base_executor, std::function<void(std::exception_ptr)> except_fun = {})
-        : impl_(std::make_shared<detail::rw_serializer_impl>(base_executor, except_fun)) {}
+    explicit rw_serializer(executor_t base_executor)
+        : impl_(std::make_shared<detail::rw_serializer_impl>(base_executor)) {}
 
     //! Returns an executor that will apply treat all the given tasks as READ tasks.
     reader_type reader() const { return reader_type(impl_); }

@@ -9,6 +9,10 @@ namespace concore {
 
 namespace detail {
 
+//! TLS pointer to the current task_control object.
+//! This will be set and reset at each task execution.
+thread_local task_control g_current_task_control{};
+
 //! The data for a task_control object. Can be shared between multiple task_control values.
 //! Also the tasks have a shared reference to this one. This means that it will be destroyed when
 //! all the task_control and all its tasks are destructed.
@@ -33,13 +37,14 @@ struct task_control_impl : std::enable_shared_from_this<task_control_impl> {
 };
 
 void task_control_access::on_starting_task(task_control& tc, const task& t) {
-    // TODO
+    g_current_task_control = tc;
 }
 void task_control_access::on_task_done(task_control& tc, const task& t) {
-    // TODO
+    g_current_task_control = task_control{};
 }
 void task_control_access::on_task_exception(
         task_control& tc, const task& t, std::exception_ptr ex) {
+    g_current_task_control = task_control{};
     if (tc.impl_ && tc.impl_->except_fun_)
         tc.impl_->except_fun_(ex);
 }
@@ -77,9 +82,11 @@ bool task_control::is_cancelled() const {
     return impl_->is_cancelled();
 }
 
+task_control task_control::current_task_control() { return detail::g_current_task_control; }
+
 bool task_control::is_current_task_cancelled() {
-    task_control current_task_control = detail::task_system::current_task_control();
-    return current_task_control.impl_ && current_task_control.impl_->is_cancelled();
+    task_control cur_tc = current_task_control();
+    return cur_tc.impl_ && cur_tc.impl_->is_cancelled();
 }
 
 
