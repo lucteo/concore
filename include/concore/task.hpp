@@ -32,6 +32,8 @@ using task_function = std::function<void()>;
  * Tasks have move-only semantics, and disable copy semantics. Also, the library prefers to move
  * tasks around instead of using shared references to the task. That means that, after construction
  * and initialization, once passed to an executor, the task cannot be modified.
+ * 
+ * It is assumed that a task can only be executed once.
  *
  * **Ensuring correctness when working with tasks**
  *

@@ -2,14 +2,15 @@
 
 #include "detail/platform.hpp"
 
-#if CONCORE_USE_LIBDISPATCH
+#if CONCORE_USE_LIBDISPATCH || DOXYGEN_BUILD
 
 #include <dispatch/dispatch.h>
 
 #include "profiling.hpp"
 
 namespace concore {
-namespace detail_disp {
+namespace detail {
+namespace disp {
 
 //! The possible priorities of tasks, as handled by the dispatch executor
 enum class task_priority {
@@ -56,23 +57,46 @@ struct executor_with_prio {
     }
 };
 
-} // namespace detail_disp
+} // namespace disp
+} // namespace detail
 
 inline namespace v1 {
-//! The default libdispatch task executor. This will enqueue a task with a "normal" priority in the
-//! system, and whenever we have a core available to execute it, it will be executed.
+/**
+ * @brief      Executor that enqueues task in libdispatch.
+ * 
+ * The tasks that are enqueued by this executor will have *normal* priority inside libdispatch.
+ * 
+ * This can be used as a bridge between concore and libdispatch.
+ * 
+ * @see        global_executor
+ */
 constexpr auto dispatch_executor =
-        detail_disp::executor_with_prio<detail_disp::task_priority::normal>{};
+        detail::disp::executor_with_prio<detail::disp::task_priority::normal>{};
 
-//! Task executor that enqueues tasks with "high" priority.
+/**
+ * @brief      Task executor that enqueues tasks in libdispatch with *high* priority.
+ * 
+ * This can be used as a bridge between concore and libdispatch.
+ */
 constexpr auto dispatch_executor_high_prio =
-        detail_disp::executor_with_prio<detail_disp::task_priority::high>{};
-//! Task executor that enqueues tasks with "normal" priority. Same as `dispatch_executor`.
+        detail::disp::executor_with_prio<detail::disp::task_priority::high>{};
+/**
+ * @brief      Task executor that enqueues tasks in libdispatch with *normal* priority.
+ * 
+ * Same as @ref dispatch_executor.
+ * 
+ * This can be used as a bridge between concore and libdispatch.
+ */
 constexpr auto dispatch_executor_normal_prio =
-        detail_disp::executor_with_prio<detail_disp::task_priority::normal>{};
-//! Task executor that enqueues tasks with "low" priority.
+        detail::disp::executor_with_prio<detail::disp::task_priority::normal>{};
+
+/**
+ * @brief      Task executor that enqueues tasks in libdispatch with *low* priority.
+ * 
+ * This can be used as a bridge between concore and libdispatch.
+ */
 constexpr auto dispatch_executor_low_prio =
-        detail_disp::executor_with_prio<detail_disp::task_priority::low>{};
+        detail::disp::executor_with_prio<detail::disp::task_priority::low>{};
 
 } // namespace v1
 } // namespace concore

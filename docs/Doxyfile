@@ -2562,3 +2562,4 @@ GENERATE_LATEX         = NO
 
 EXCLUDE_PATTERNS       = */detail/*
 EXCLUDE_SYMBOLS        = concore::detail
+PREDEFINED             = DOXYGEN_BUILD
