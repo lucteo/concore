@@ -1,23 +1,29 @@
 API reference
 =============
 
-.. 
-    .. doxygenclass:: concore::v1::task
-        :members:
+Tasks
+-----
 
-.. .. doxygenfunction: :
-.. .. doxygenstruct: :
-.. .. doxygenenum: :
-.. .. doxygenclass: :
+`task.hpp`
+^^^^^^^^^^
+.. doxygenfile:: task.hpp
 
-`dispatch_executor.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^
-.. doxygenfile:: dispatch_executor.hpp
+`task_group.hpp`
+^^^^^^^^^^^^^^^^
+.. doxygenfile:: task_group.hpp
 
-.. .. doxygenvariable: : dispatch_executor
-.. .. doxygenvariable: : dispatch_executor_high_prio
-.. .. doxygenvariable: : dispatch_executor_normal_prio
-.. .. doxygenvariable: : dispatch_executor_low_prio
+`spawn.hpp`
+^^^^^^^^^^^
+.. doxygenfile:: spawn.hpp
+
+`task_graph.hpp`
+^^^^^^^^^^^^^^^^
+.. doxygenfile:: task_graph.hpp
+
+
+
+Executors
+---------
 
 `executor_type.hpp`
 ^^^^^^^^^^^^^^^^^^^
@@ -33,57 +39,35 @@ API reference
 .. doxygenfile:: immediate_executor.hpp
 
 
-`n_serializer.hpp`
-^^^^^^^^^^^^^^^^^^
-.. doxygenfile:: n_serializer.hpp
-
-
-`profiling.hpp`
-^^^^^^^^^^^^^^^
-.. doxygenfile:: profiling.hpp
-
-
-`rw_serializer.hpp`
-^^^^^^^^^^^^^^^^^^^
-.. doxygenfile:: rw_serializer.hpp
-
-
-`serializer.hpp`
-^^^^^^^^^^^^^^^^
-.. doxygenfile:: serializer.hpp
-
-
-`spawn.hpp`
-^^^^^^^^^^^
-.. doxygenfile:: spawn.hpp
-
-
-`task.hpp`
-^^^^^^^^^^
-.. doxygenfile:: task.hpp
-
-
-`task_graph.hpp`
-^^^^^^^^^^^^^^^^
-.. doxygenfile:: task_graph.hpp
-
-
-`task_group.hpp`
-^^^^^^^^^^^^^^^^
-.. doxygenfile:: task_group.hpp
-
+`dispatch_executor.hpp`
+^^^^^^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: dispatch_executor.hpp
 
 `tbb_executor.hpp`
 ^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: tbb_executor.hpp
 
 
-`version.hpp`
-^^^^^^^^^^^^^
-.. doxygenfile:: version.hpp
+
+Serializers
+-----------
+
+`serializer.hpp`
+^^^^^^^^^^^^^^^^
+.. doxygenfile:: serializer.hpp
+
+`n_serializer.hpp`
+^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: n_serializer.hpp
+
+`rw_serializer.hpp`
+^^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: rw_serializer.hpp
 
 
 
+Data
+----
 
 `data/concurrent_queue.hpp`
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -96,20 +80,8 @@ API reference
 
 
 
-`low_level/concurrent_dequeue.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^^
-.. doxygenfile:: concurrent_dequeue.hpp
-
-
-`low_level/semaphore.hpp`
-^^^^^^^^^^^^^^^
-.. doxygenfile:: semaphore.hpp
-
-
-`low_level/shared_spin_mutex.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^
-.. doxygenfile:: shared_spin_mutex.hpp
-
+Low level
+---------
 
 `low_level/spin_backoff.hpp`
 ^^^^^^^^^^^^^^^^^^
@@ -120,3 +92,14 @@ API reference
 ^^^^^^^^^^^^^^^^
 .. doxygenfile:: spin_mutex.hpp
 
+`low_level/shared_spin_mutex.hpp`
+^^^^^^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: shared_spin_mutex.hpp
+
+`low_level/semaphore.hpp`
+^^^^^^^^^^^^^^^
+.. doxygenfile:: semaphore.hpp
+
+`low_level/concurrent_dequeue.hpp`
+^^^^^^^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: concurrent_dequeue.hpp
