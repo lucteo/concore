@@ -55,9 +55,7 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 breathe_projects = {"concore": "doxygen_out/xml"}
-
 breathe_default_project = "concore"
-
 
 build_doxygen = os.environ.get('READTHEDOCS', None) == 'True'
 build_doxygen = True
