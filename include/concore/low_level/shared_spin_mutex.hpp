@@ -13,36 +13,116 @@ inline namespace v1 {
  * For mutexes that protect very small regions of code, a shared_spin_mutex can be much faster than
  * a traditional shared_mutex. Instead of taking a lock, this will spin on the CPU, trying to avoid
  * yielding the CPU quanta.
+ * 
+ * The ownership of the mutex can fall in 3 categories:
+ *  - no ownership -- no thread is using the mutex
+ *  - exclusive ownership -- only one thread can access the mutex, exclusively (*WRITE* operations)
+ *  - shared ownership -- multiple threads can access the mutex in a shared way (*READ* operations)
+ *  
+ * While one threads acquires exclusive ownership, no other thread can have shared ownership.
+ * Multiple threads can have a shared ownership over the mutex.
+ * 
+ * This implementation favors exclusive ownership versus shared ownership. If a thread is waiting
+ * for exclusive ownership and one thread is waiting for the shared ownership, the thread that waits
+ * on the exclusive ownership will be granted the ownership first.
  *
- * This can be locked in two ways:
- *  - exclusive access (lock()/try_lock()/unlock()) -- similar to a regular mutex
- *  - shared access (lock_shared()/try_lock_shared()/unlock_shared()) -- multiple threads can have
- *    shared ownership of the lock, but no exclusive access is permitted during this time.
+ * This uses an exponential backoff spinner. If after some time doing small waits it cannot enter
+ * the  critical section, it will yield the CPU quanta of the current thread.
+ * 
+ * Spin shared mutexes should only be used to protect very-small regions of code; a handful of CPU
+ * instructions. For larger scopes, a traditional shared mutex may be faster; but then, think about
+ * using @ref rw_serializer to avoid mutexes completely.
  *
- * This uses an exponential backoff spinner.
- *
- * @see spin_mutex, spin_backoff
+ * @see spin_mutex, spin_backoff, rw_serializer
  */
 class shared_spin_mutex {
 public:
+    /**
+     * @brief      Default constructor.
+     * 
+     * Constructs a shared spin mutex that is in the *no ownership* state.
+     */
     shared_spin_mutex() = default;
 
-    // Copy is disabled
+    //! Copy constructor is DISABLED
     shared_spin_mutex(const shared_spin_mutex&) = delete;
+    //! Copy assignment is DISABLED
     shared_spin_mutex& operator=(const shared_spin_mutex&) = delete;
 
-    //! Acquires exclusive ownership of the mutex; spins if the mutex is not available
+    /**
+     * @brief      Acquires exclusive ownership of the mutex
+     * 
+     * This will put the mutex in the *exclusive ownership* case. If other threads have exclusive or
+     * shared ownership, this will wait until those threads are done
+     * 
+     * Uses a @ref spin_backoff to spin while waiting for the ownership to be free. When exiting
+     * this function the mutex will be exclusively owned by the current thread.
+     * 
+     * An @ref unlock() call must be made for each call to lock().
+     * 
+     * @see try_lock(), unlock(), lock_shared()
+     */
     void lock();
-    //! Tries to lock the mutex exclusively; returns false if the mutex is not available
+    /**
+     * @brief      Tries to acquire exclusive ownership; returns false it fails the acquisition.
+     *
+     * @return     True if the mutex exclusive ownership was acquired; false if the mutex is busy
+     * 
+     * This is similar to @ref lock() but does not wait for the mutex to be free again. If the mutex
+     * is acquired by a different thread, or if the mutex has shared ownership this will return
+     * false.
+     *             
+     * An @ref unlock() call must be made for each call to this method that returns true.
+     * 
+     * @see lock(), unlock()
+     */
     bool try_lock();
-    //! Releases the exclusive ownership on the mutex
+    /**
+     * @brief      Releases the exclusive ownership on the mutex
+     * 
+     * This needs to be called for every @ref lock() and for every @ref try_lock() that returns
+     * true. It should not be called without a matching @ref lock() or @ref try_lock().
+     * 
+     * @see lock(), try_lock()
+     */
     void unlock();
 
-    //! Acquires shared ownership of the mutex; spins if the mutex is not available.
+    /**
+     * @brief      Acquires shared ownership of the mutex
+     * 
+     * This will put the mutex in the *shared ownership* case. If other threads have exclusive
+     * ownership, this will wait until those threads are done.
+     * 
+     * Uses a @ref spin_backoff to spin while waiting for the ownership to be free. When exiting
+     * this function the mutex will be exclusively owned by the current thread.
+     * 
+     * An @ref unlock_shared() call must be made for each call to lock().
+     * 
+     * @see try_lock_shared(), unlock_shared(), lock()
+     */
     void lock_shared();
-    //! Tries to acquire shared ownership of the mutex; returns false on failure
+    /**
+     * @brief      Tries to acquire shared ownership; returns false it fails the acquisition.
+     *
+     * @return     True if the mutex shared ownership was acquired; false if the mutex is busy
+     * 
+     * This is similar to @ref lock_shared() but does not wait for the mutex to be free again. If
+     * the mutex is exclusively acquired by a different thread this will return false.
+     *             
+     * An @ref unlock_shared() call must be made for each call to this method that returns true.
+     * 
+     * @see lock_shared(), unlock_shared()
+     */
     bool try_lock_shared();
-    //! Releases the shared ownership of the mutex
+    /**
+     * @brief      Releases the sjared ownership on the mutex
+     * 
+     * This needs to be called for every @ref lock_shared() and for every @ref try_lock_shared()
+     * that returns true. It should not be called without a matching @ref lock_shared() or
+     * @ref try_lock_shared().
+     * 
+     * @see lock_shared(), try_lock_shared()
+     */
     void unlock_shared();
 
 private:
