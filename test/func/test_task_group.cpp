@@ -28,7 +28,7 @@ TEST_CASE("can create a task_group", "[task_group]") {
         REQUIRE(static_cast<bool>(grp1));
         REQUIRE(static_cast<bool>(grp));
 
-        REQUIRE(grp1.is_active()); // has one children
+        REQUIRE_FALSE(grp1.is_active());
         REQUIRE_FALSE(grp.is_active());
     }
 }
@@ -222,4 +222,44 @@ TEST_CASE("task_group is inherited when using other concore task executors", "[t
         test_task_group_and_serializers(concore::spawn_executor);
         test_task_group_and_serializers(concore::spawn_continuation_executor);
     }
+}
+
+TEST_CASE("task_group::is_active doesn't count the sub-groups", "[task_group]") {
+    auto grp = concore::task_group::create();
+    auto grp1 = concore::task_group::create(grp);
+    auto grp2 = concore::task_group::create(grp);
+    auto grp3 = concore::task_group::create(grp);
+    REQUIRE_FALSE(grp.is_active());
+    REQUIRE_FALSE(grp1.is_active());
+    REQUIRE_FALSE(grp2.is_active());
+    REQUIRE_FALSE(grp3.is_active());
+}
+
+TEST_CASE("task_group::is_active doesn't return true for multiple copies of the group", "[task_group]") {
+    auto grp = concore::task_group::create();
+    auto grp1 = grp;
+    auto grp2 = grp;
+    REQUIRE_FALSE(grp.is_active());
+    REQUIRE_FALSE(grp1.is_active());
+    REQUIRE_FALSE(grp2.is_active());
+}
+
+TEST_CASE("task_group::is_active also counts the tasks from sub-groups", "[task_group]") {
+    auto grpMain = concore::task_group::create();
+    auto grpSub = concore::task_group::create(grpMain);
+    REQUIRE_FALSE(grpMain.is_active());
+    REQUIRE_FALSE(grpSub.is_active());
+
+    auto t1 = concore::task([](){}, grpSub);
+    REQUIRE(grpSub.is_active());
+    REQUIRE(grpMain.is_active());
+}
+
+TEST_CASE("an empty group cannot be active", "[task_group]") {
+    concore::task_group grp;
+    concore::task_group grp1 = grp;
+    concore::task_group grp2 = grp;
+    REQUIRE_FALSE(grp.is_active());
+    REQUIRE_FALSE(grp1.is_active());
+    REQUIRE_FALSE(grp2.is_active());
 }

@@ -23,6 +23,9 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     //! Set to true whenever we want to cancel all the tasks with a task_group
     std::atomic<bool> is_cancelled_{false};
 
+    //! The number of tasks active in this group
+    std::atomic<int> num_active_tasks_{0};
+
     //! The except function to be called whenever an exception occurs on the corresponding tasks
     std::function<void(std::exception_ptr)> except_fun_;
 
@@ -36,17 +39,33 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     }
 };
 
-void task_group_access::on_starting_task(task_group& grp, const task& t) {
+void task_group_access::on_starting_task(const task_group& grp, const task& t) {
     g_current_task_group = grp;
 }
-void task_group_access::on_task_done(task_group& grp, const task& t) {
+void task_group_access::on_task_done(const task_group& grp, const task& t) {
     g_current_task_group = task_group{};
 }
-void task_group_access::on_task_exception(
-        task_group& grp, const task& t, std::exception_ptr ex) {
+void task_group_access::on_task_exception(const task_group& grp, const task& t, std::exception_ptr ex) {
     g_current_task_group = task_group{};
     if (grp.impl_ && grp.impl_->except_fun_)
         grp.impl_->except_fun_(ex);
+}
+
+void task_group_access::on_task_created(task_group& grp) {
+    // Increase the number of active tasks; recurse up
+    auto pimpl = grp.impl_;
+    while (pimpl) {
+        pimpl->num_active_tasks_++;
+        pimpl = pimpl->parent_;
+    }
+}
+void task_group_access::on_task_destroyed(task_group& grp) {
+    // Decrease the number of tasks; recurse up
+    auto pimpl = grp.impl_;
+    while (pimpl) {
+        pimpl->num_active_tasks_--;
+        pimpl = pimpl->parent_;
+    }
 }
 
 } // namespace detail
@@ -77,18 +96,13 @@ void task_group::clear_cancel() {
     impl_->is_cancelled_.store(false, std::memory_order_release);
 }
 
-bool task_group::is_cancelled() const {
-    return impl_ && impl_->is_cancelled();
-}
+bool task_group::is_cancelled() const { return impl_ && impl_->is_cancelled(); }
 
 task_group task_group::current_task_group() { return detail::g_current_task_group; }
 
-bool task_group::is_current_task_cancelled() {
-    return detail::g_current_task_group.is_cancelled();
-}
+bool task_group::is_current_task_cancelled() { return detail::g_current_task_group.is_cancelled(); }
 
-
-bool task_group::is_active() const { return !impl_ || !impl_.unique(); }
+bool task_group::is_active() const { return impl_ && impl_->num_active_tasks_ > 0; }
 
 } // namespace v1
 

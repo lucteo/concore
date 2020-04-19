@@ -28,11 +28,11 @@ using task_function = std::function<void()>;
  *
  * A task can be enqueued into an *executor* and executed at a later time. That is, this represents
  * work that can be scheduled.
- * 
+ *
  * Tasks have move-only semantics, and disable copy semantics. Also, the library prefers to move
  * tasks around instead of using shared references to the task. That means that, after construction
  * and initialization, once passed to an executor, the task cannot be modified.
- * 
+ *
  * It is assumed that a task can only be executed once.
  *
  * **Ensuring correctness when working with tasks**
@@ -113,12 +113,17 @@ public:
      * Through the given group one can cancel the execution of the task, and check (indirectly) when
      * the task is complete.
      *
+     * After a call to this constructor, the group becomes "active". Calling @ref
+     * task_group::is_active() will return true.
+     *
      * @see get_task_group()
      */
     template <typename T>
     task(T&& ftor, task_group grp)
         : fun_(std::forward<T>(ftor))
-        , task_group_(grp) {}
+        , task_group_(grp) {
+        detail::task_group_access::on_task_created(grp);
+    }
     /**
      * @brief      Assignment operator from a functor
      *
@@ -127,7 +132,7 @@ public:
      * @tparam     T     The type of the functor. Must be compatible with @ref task_function.
      *
      * @return     The result of the assignment
-     * 
+     *
      * This can be used to change the task function inside the task.
      */
     template <typename T>
@@ -135,6 +140,15 @@ public:
         fun_ = std::forward<T>(ftor);
         return *this;
     }
+
+    /**
+     * @brief      Destructor.
+     *
+     * If the task belongs to the group, the group will contain one less active task. If this was
+     * the last task registered in the group, after this call, calling @ref task_group::is_active()
+     * will yield false.
+     */
+    ~task() { detail::task_group_access::on_task_destroyed(task_group_); }
 
     //! Move constructor
     task(task&&) = default;
@@ -166,13 +180,13 @@ public:
 
     /**
      * @brief      Function call operator; performs the action stored in the task.
-     * 
+     *
      * This is called by the execution engine whenever the task is ready to be executed. It will
      * call the functor stored in the task.
-     * 
+     *
      * The functor can throw, and the execution system is responsible for catching the exception and
      * ensuring its properly propagated to the user.
-     * 
+     *
      * This is typically called after some time has passed since task creation. The user must ensure
      * that the functor stored in the task is safe to be executed at that point.
      */
@@ -181,19 +195,19 @@ public:
     /**
      * @brief      Gets the task group.
      *
-     * @return     The task group, as a reference.
-     * 
+     * @return     The group associated with this task.
+     *
      * This allows the users to consult the task group associated with the task and change it.
      */
-    task_group& get_task_group() { return task_group_; }
+    const task_group& get_task_group() const { return task_group_; }
 
 private:
     /**
      * The function to be called.
-     * 
+     *
      * This can be associated with a task through construction and by using the special assignment
      * operator.
-     * 
+     *
      * Please note that, as the tasks cannot be copied and shared, and as the task system prefers
      * moving tasks, after the task is enqueued this is constant.
      */
@@ -201,7 +215,7 @@ private:
 
     /**
      * The group that this tasks belongs to.
-     * 
+     *
      * This can be set by the constructor, or can be set by calling @ref get_task_group().
      * As the library prefers passing tasks around by moving them, after the task was enqueued, the
      * task group cannot be changed.
