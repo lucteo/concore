@@ -39,3 +39,5 @@
 # Project folders/files
 build
 include/concore/version.hpp
+docs/_build
+docs/doxygen_out

@@ -7,6 +7,8 @@ namespace concore {
 
 inline namespace v1 {
 
+#if !DOXYGEN_BUILD
+
 #if defined(CONCORE_PLATFORM_CUSTOM_SEMAPHORE)
 
 // Externally supplied; nothing to do
@@ -51,6 +53,8 @@ inline namespace v1 {
 
 #endif
 
+#endif
+
 /**
  * @brief      The classic "semaphore" synchronization primitive.
  *
@@ -63,16 +67,38 @@ inline namespace v1 {
  */
 class semaphore {
 public:
+    /**
+     * @brief      Constructs a new semaphore instance
+     *
+     * @param      start_count  The value that the semaphore count should have at start
+     */
     explicit semaphore(int start_count = 0);
+    //! Destructor
     ~semaphore();
 
-    // No copy
+    //! Copy constructor is DISABLED
     semaphore(const semaphore&) = delete;
+    //! Copy assignment is DISABLED
     void operator=(const semaphore&) = delete;
 
-    //! Decrement the internal count and wait on the count to be positive
+    /**
+     * @brief      Decrement the internal count and wait on the count to be positive
+     * 
+     * If the count of the semaphore is positive this will decrement the count and return
+     * immediately. On the other hand, if the count is 0, it wait for it to become positive before
+     * decrementing it and returning.
+     * 
+     * @see signal()
+     */
     void wait();
-    //! Increment the internal count
+    /**
+     * @brief      Increment the internal count
+     * 
+     * If there are at least one thread that is blocked inside a @ref wait() call, this will wake up
+     * a waiting thread.
+     * 
+     * @see wait()
+     */
     void signal();
 
 private:
@@ -91,17 +117,32 @@ private:
  */
 class binary_semaphore {
 public:
+    // Constructor. Puts the semaphore in the SIGNALED state
     binary_semaphore();
+    //! Destructor
     ~binary_semaphore();
 
-    // No copy
+    //! Copy constructor is DISABLED
     binary_semaphore(const binary_semaphore&) = delete;
+    //! Copy assignment is DISABLED
     void operator=(const binary_semaphore&) = delete;
 
-    //! Puts the semaphore in the WAITING state and wait for a call to @ref signal()
+    /**
+     * @brief      Wait for the semaphore to be signaled.
+     * 
+     * This will put the binary semaphore in the WAITING state, and wait for a thread to signal it.
+     * The call will block until a corresponding thread will signal it.
+     * 
+     * @see signal(0)
+     */
     void wait();
 
-    //! Puts the semaphore in the SIGNALED state
+    /**
+     * @brief      Signal the binary semaphore
+     * 
+     * Puts the semaphore in the SIGNALED state. If there is a thread that waits on the semaphore
+     * it will wake it.
+     */
     void signal();
 
 private:

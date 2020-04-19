@@ -1,13 +1,14 @@
 #pragma once
 
-#if CONCORE_USE_TBB
+#if CONCORE_USE_TBB || DOXYGEN_BUILD
 
 #include <tbb/task.h>
 
 #include "profiling.hpp"
 
 namespace concore {
-namespace detail_tbb {
+namespace detail {
+namespace tbb_d {
 
 //! The possible priorities of tasks, as handled by the dispatch executor
 enum class task_priority {
@@ -42,22 +43,45 @@ struct executor_with_prio {
     }
 };
 
-} // namespace detail_tbb
+} // namespace tbb
+} // namespace detail
 
 inline namespace v1 {
-//! The default TBB task executor. This will enqueue a task with a "normal" priority in the
-//! system, and whenever we have a core available to execute it, it will be executed.
-constexpr auto tbb_executor = detail_tbb::executor_with_prio<detail_tbb::task_priority::normal>{};
+/**
+ * @brief      Executor that enqueues task in TBB.
+ *
+ * The tasks that are enqueued by this executor will have *normal* priority inside TBB.
+ *
+ * This can be used as a bridge between concore and Intel TBB.
+ *
+ * @see        global_executor
+ */
+constexpr auto tbb_executor = detail::tbb_d::executor_with_prio<detail::tbb_d::task_priority::normal>{};
 
-//! Task executor that enqueues tasks with "high" priority.
+/**
+ * @brief      Task executor that enqueues tasks in TBB with *high* priority.
+ *
+ * This can be used as a bridge between concore and Intel TBB.
+ */
 constexpr auto tbb_executor_high_prio =
-        detail_tbb::executor_with_prio<detail_tbb::task_priority::high>{};
-//! Task executor that enqueues tasks with "normal" priority. Same as `tbb_executor`.
+        detail::tbb_d::executor_with_prio<detail::tbb_d::task_priority::high>{};
+/**
+ * @brief      Task executor that enqueues tasks in TBB with *normal* priority.
+ *
+ * Same as @ref tbb_executor.
+ *
+ * This can be used as a bridge between concore and Intel TBB.
+ */
 constexpr auto tbb_executor_normal_prio =
-        detail_tbb::executor_with_prio<detail_tbb::task_priority::normal>{};
-//! Task executor that enqueues tasks with "low" priority.
+        detail::tbb_d::executor_with_prio<detail::tbb_d::task_priority::normal>{};
+
+/**
+ * @brief      Task executor that enqueues tasks in TBB with *low* priority.
+ *
+ * This can be used as a bridge between concore and Intel TBB.
+ */
 constexpr auto tbb_executor_low_prio =
-        detail_tbb::executor_with_prio<detail_tbb::task_priority::low>{};
+        detail::tbb_d::executor_with_prio<detail::tbb_d::task_priority::low>{};
 
 } // namespace v1
 } // namespace concore
