@@ -31,7 +31,7 @@ author = 'Lucian Radu Teodorescu'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['breathe']
+extensions = ['breathe', 'sphinxcontrib.plantuml']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -53,6 +53,11 @@ html_theme = 'sphinx_rtd_theme'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+html_css_files = ['css/custom.css']
+
+plantuml = 'java -jar plantuml.jar'
+plantuml_syntax_error_image = True
+plantuml_output_format = 'svg_obj'
 
 breathe_projects = {"concore": "doxygen_out/xml"}
 breathe_default_project = "concore"

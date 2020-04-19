@@ -19,12 +19,15 @@ struct immediate_executor_type {
 
 } // namespace detail
 
+inline namespace v1 {
+
 /**
  * @brief      Executor that executes all the tasks immediately.
- * 
+ *
  * Most executors are storing the tasks for later execution and the enqueueing finishes very fast.
  * This one executes the task during enqueueing, without scheduling it for a later time.
  */
 constexpr auto immediate_executor = detail::immediate_executor_type{};
 
+} // namespace v1
 } // namespace concore

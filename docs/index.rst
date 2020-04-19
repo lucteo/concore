@@ -3,6 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. role:: strike
+   :class: strike
+
 concore documentation
 #####################
 
@@ -14,7 +17,15 @@ We strongly believe that the user should focus on describing the concurrency, no
 
 The library also aims at building highly efficient applications, by trying to maximize the throughput.
 
-`concore` is built around the concept of a tasks. A task is an independent unit of work. Tasks can then be executed by so-called *executors*. With these two main concepts users can construct complex concurrent applications that are safe and efficient.
+*concore* is built around the concept of tasks. A task is an independent unit of work. Tasks can then be executed by so-called *executors*. With these two main concepts, users can construct complex concurrent applications that are safe and efficient.
+
+concore
+    concurrency core
+
+    variation on *concord* -- agreement or harmony between :strike:`people` *threads* or groups (of threads); a chord that is pleasing or satisfactory in itself.
+
+Table of content
+^^^^^^^^^^^^^^^^
 
 .. toctree::
    :maxdepth: 2
