@@ -2,6 +2,8 @@
 
 #include "task.hpp"
 
+#include <functional>
+
 namespace concore {
 
 /**

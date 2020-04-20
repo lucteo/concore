@@ -123,18 +123,14 @@ semaphore::~semaphore() {
 
 void semaphore::wait() {
     CONCORE_PROFILING_SCOPE_C(CONCORE_PROFILING_COLOR_SILVER);
-    char buf[64];
-    sprintf(buf, "this=%p", this);
-    CONCORE_PROFILING_SET_TEXT(buf);
     CONCORE_SEMAPHORE_IMPL_WAIT();
+    CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 void semaphore::signal() {
     CONCORE_PROFILING_FUNCTION();
-    char buf[64];
-    sprintf(buf, "this=%p", this);
-    CONCORE_PROFILING_SET_TEXT(buf);
     CONCORE_SEMAPHORE_IMPL_SIGNAL();
+    CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 binary_semaphore::binary_semaphore() {
@@ -148,19 +144,15 @@ binary_semaphore::~binary_semaphore() {
 }
 
 void binary_semaphore::wait() {
-    CONCORE_PROFILING_FUNCTION();
+    CONCORE_PROFILING_SCOPE_C(CONCORE_PROFILING_COLOR_SILVER);
     CONCORE_BINARY_SEMAPHORE_IMPL_WAIT();
-    char buf[64];
-    sprintf(buf, "this=%p", this);
-    CONCORE_PROFILING_SET_TEXT(buf);
+    CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 void binary_semaphore::signal() {
     CONCORE_PROFILING_FUNCTION();
     CONCORE_BINARY_SEMAPHORE_IMPL_SIGNAL();
-    char buf[64];
-    sprintf(buf, "this=%p", this);
-    CONCORE_PROFILING_SET_TEXT(buf);
+    CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 } // namespace v1

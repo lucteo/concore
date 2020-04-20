@@ -2,8 +2,7 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
-#include "data/concurrent_queue.hpp"
-#include "detail/utils.hpp"
+#include "except_fun_type.hpp"
 
 #include <memory>
 
@@ -125,6 +124,21 @@ public:
      * @return     The executor for *WRITE* types
      */
     writer_type writer() const { return writer_type(impl_); }
+
+    /**
+     * @brief      Sets the exception handler for enqueueing tasks
+     *
+     * @param      except_fun  The function to be called whenever an exception occurs.
+     *
+     * The exception handler set here will be called whenever an exception is thrown while
+     * enqueueing a follow-up task. It will not be called whenever the task itself throws an
+     * exception; that will be handled by the exception handler set in the group of the task.
+     *
+     * Cannot be called in parallel with task enqueueing and execution.
+     *
+     * @see task_group::set_exception_handler
+     */
+    void set_exception_handler(except_fun_t except_fun);
 };
 
 } // namespace v1

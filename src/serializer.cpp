@@ -3,6 +3,7 @@
 #include "concore/spawn.hpp"
 #include "concore/data/concurrent_queue.hpp"
 #include "concore/detail/utils.hpp"
+#include "concore/detail/enqueue_next.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -17,6 +18,8 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     executor_t base_executor_;
     //! The executor to be used when
     executor_t cont_executor_;
+    //! Handler to be called whenever we have an exception while enqueueing the next task
+    except_fun_t except_fun_;
     //! The queue of tasks that wait to be executed
     concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
     //! The number of tasks that are in the queue
@@ -51,9 +54,10 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     }
 
     //! Enqueue the next task to be executed in the given executor.
-    void enqueue_next(const executor_t& executor) {
+    void enqueue_next(executor_t& executor) {
         // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
-        executor([p_this = shared_from_this()]() { p_this->execute_one(); });
+        task t = [p_this = shared_from_this()]() { p_this->execute_one(); };
+        detail::enqueue_next(executor, std::move(t), except_fun_);
     }
 };
 
@@ -61,6 +65,10 @@ serializer::serializer(executor_t base_executor, executor_t cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}
 
 void serializer::operator()(task t) { impl_->enqueue(std::move(t)); }
+
+void serializer::set_exception_handler(except_fun_t except_fun) {
+    impl_->except_fun_ = std::move(except_fun);
+}
 
 } // namespace v1
 } // namespace concore

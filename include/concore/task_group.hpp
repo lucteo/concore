@@ -1,7 +1,7 @@
 #pragma once
 
-#include <functional>
-#include <exception>
+#include "except_fun_type.hpp"
+
 #include <memory>
 
 namespace concore {
@@ -17,11 +17,17 @@ struct task_group_impl;
 //! Structure used by the task system to interact with task_group objects
 struct task_group_access {
     //! Called just before executing a task, to let the task_group know
-    static void on_starting_task(task_group& grp, const task& t);
+    static void on_starting_task(const task_group& grp, const task& t);
     //! Called just after a task is completed without an exception
-    static void on_task_done(task_group& grp, const task& t);
+    static void on_task_done(const task_group& grp, const task& t);
     //! Called when the task throws an exception
-    static void on_task_exception(task_group& grp, const task& t, std::exception_ptr ex);
+    static void on_task_exception(const task_group& grp, const task& t, std::exception_ptr ex);
+
+    //! Called when a task was created in a group; the task starts to be "active"
+    static void on_task_created(task_group& grp);
+    //! Called when a task from the group is destroyed; the task is executed, and it's not "active"
+    //! anymore.
+    static void on_task_destroyed(task_group& grp);
 };
 
 } // namespace detail
@@ -55,7 +61,8 @@ class task;
  * A task_group object can be queried to check if all the tasks in a task_group are done executing.
  * Actually, we are checking whether they are still active (the distinction is small, but can be
  * important in some cases). Whenever all the tasks are done executing (they don't reference the
- * task_group anymore) then the task_group object can tell that. One can easily query this.
+ * task_group anymore) then the task_group object can tell that. One can easily query this property
+ * by calling @ref is_active()
  * 
  * Also, one can spawn a certain number of tasks, associating a task_group object with them and
  * wait for all these tasks to be completed by waiting on the task_group object. This is an active
@@ -149,7 +156,7 @@ public:
      * The given exception function will be called each time a new exception is thrown by a task
      * belonging to this task_group object.
      */
-    void set_exception_handler(std::function<void(std::exception_ptr)> except_fun);
+    void set_exception_handler(except_fun_t except_fun);
 
     /**
      * @brief      Cancels the execution tasks in the group.
@@ -194,18 +201,22 @@ public:
     bool is_cancelled() const;
 
     /**
-     * @brief      Checks whether there are tasks or other task_group objects in this group
+     * @brief      Checks whether there are active tasks in this group.
      *
      * @return     True if active, False otherwise.
      * 
+     * Creating one task into the task group will make the task group active, regardless of whether
+     * the task is executed or not. The group will become non-active whenever all the tasks created
+     * in the group are destroyed.
+     * 
+     * One main assumption of task_groups is that, if a task is created in a task_group, then it is
+     * somehow on the path to execution (i.e., enqueued in some sort of executor).
+     * 
      * This can be used to check when all tasks from a group are completed.
-     * Completed tasks are not stored by the task system, nor by the executors, so they release the
-     * reference to this object. This function returns `true` if no tasks refer to this group.
      * 
-     * For a newly created task_group, this will return `false`, as there are no tasks in it.
+     * If a group has sub-groups which have active tasks, this will return true.
      * 
-     * - TODO: Don't count subgroups
-     * - TODO: make it work hierarchically.
+     * @see task
      */
     bool is_active() const;
 
