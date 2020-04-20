@@ -362,7 +362,7 @@ TEST_CASE("exceptions can occur in chained_task", "[task_graph]") {
     // Start executing the first one
     ct1();
     // Wait for the tasks to complete
-    bounded_wait(grp_wait);
+    REQUIRE(bounded_wait(grp_wait));
     // Ensure both tasks are run
     REQUIRE(task1_executed);
     REQUIRE(task2_executed);
@@ -400,10 +400,35 @@ TEST_CASE("exceptions in task graphs are caught by the group", "[task_graph]") {
     // Start executing the first one
     ct1();
     // Wait for the tasks to complete
-    bounded_wait(grp_wait);
+    REQUIRE(bounded_wait(grp_wait));
     // Ensure both tasks are run
     REQUIRE(task1_executed);
     REQUIRE(task2_executed);
     // Ensure that we caught both exceptions
     REQUIRE(ex_count == 2);
+}
+
+TEST_CASE("chained_task can be created without an executor", "[task_graph]") {
+    auto grp_wait = concore::task_group::create();
+    auto finish_task = concore::task([]() {}, grp_wait);
+
+    // Create two tasks
+    bool task1_executed = false;
+    bool task2_executed = false;
+    auto t1 = concore::task([&]() { task1_executed = true; });
+    auto t2 = concore::task([&]() {
+        task2_executed = true;
+        concore::global_executor(std::move(finish_task));
+    });
+    // Chain them in a task_graph
+    auto ct1 = concore::chained_task(std::move(t1));
+    auto ct2 = concore::chained_task(std::move(t2));
+    concore::add_dependency(ct1, ct2);
+    // Start executing the first one
+    ct1();
+    // Wait for the tasks to complete
+    REQUIRE(bounded_wait(grp_wait));
+    // Ensure both tasks are run
+    REQUIRE(task1_executed);
+    REQUIRE(task2_executed);
 }

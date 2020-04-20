@@ -2,6 +2,7 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
+#include "spawn.hpp"
 #include "profiling.hpp"
 #include "detail/utils.hpp"
 
@@ -36,33 +37,33 @@ class chained_task;
 
 /**
  * @brief      A type of tasks that can be chained with other such tasks to create graphs of tasks.
- * 
+ *
  * This is a wrapper on top of a @ref task, and cannot be directly interchanged with a @ref task.
  * This can directly enqueue the encapsulated @ref task, and also, one can create a @ref task on top
  * of this one (as this defines the call operator, and it's also a functor).
- * 
+ *
  * One can create multiple @ref chained_task objects, then call @ref add_dependency() or@ref
  * add_dependencies() to create dependencies between such task objects. Thus, one can create graphs
  * of tasks from @ref chained_task objects.
- * 
+ *
  * The built graph must be acyclic. Cyclic graphs can lead to execution stalls.
- * 
+ *
  * After building the graph, the user should manually start the execution of the graph by enqueueing
  * a @ref chained_task that has no predecessors. After completion, this will try to enqueue
  * follow-up tasks, and so on, until all the graph is completely executed.
- * 
+ *
  * A chained task will be executed only after all the predecessors have been executed. If a task has
  * three predecessors it will be executed only when the last predecessor completes. Looking from the
  * opposite direction, at the end of the task, the successors are checked; the number of active
  * predecessors is decremented, and, if one drops to zero, that successor will be enqueued.
- * 
+ *
  * The @ref chained_task can be configured with an executor this will be used when enqueueing
  * successor tasks.
- * 
+ *
  * If a task throws an exception, the handler in the associated @ref task_group is called (if set)
  * and the execution of the graph will continue. Similarly, if a task from the graph is canceled,
  * the execution of the graph will continue as if the task wasn't supposed to do anything.
- * 
+ *
  * @see task, add_dependency(), add_dependencies(), task_group
  */
 class chained_task {
@@ -77,25 +78,30 @@ public:
      * @brief      Constructor
      *
      * @param      t         The task to be executed
-     * @param      executor  The executor to be used for the successor tasks
-     * 
+     * @param      executor  The executor to be used for the successor tasks (optional)
+     *
      * This will initialize a valid @ref chained_task. After this constructor, @ref add_dependency()
      * and @ref add_dependencies() can be called to add predecessors and successors of this task.
-     * 
+     *
      * If this tasks tries to start executing successor tasks it will use the given executor.
-     * 
+     *
+     * If no executor is given, the @ref spawn_executor will be used.
+     *
      * @see add_dependency(), add_dependencies(), task
      */
-    chained_task(task t, executor_t executor)
-        : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
+    chained_task(task t, executor_t executor = {})
+        : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {
+        if (!executor)
+            impl_->executor_ = spawn_executor;
+    }
 
     /**
      * @brief      The call operator.
-     * 
+     *
      * This will be called when executing the @ref chained_task. It will execute the task received
      * on constructor and then will check if it needs to start executing successors -- it will try
      * to start executing the successors that don't have any other active predecessors.
-     * 
+     *
      * This will use the executor given at construction to start successor tasks.
      */
     void operator()() {
@@ -127,10 +133,10 @@ private:
  *
  * @param      prev  The task dependent on
  * @param      next  The task that depends on `prev`
- * 
+ *
  * This creates a dependency between the given tasks. It means that `next` will only be executed
  * only after `prev` is completed.
- * 
+ *
  * @see chained_task, add_dependencies()
  */
 inline void add_dependency(chained_task prev, chained_task next) {
@@ -143,12 +149,12 @@ inline void add_dependency(chained_task prev, chained_task next) {
  *
  * @param      prev   The task dependent on
  * @param      nexts  A set of tasks that all depend on `prev`
- * 
+ *
  * This creates dependencies between `prev` and all the tasks in `nexts`. It's like calling @ref
  * add_dependency() multiple times.
- * 
+ *
  * All the tasks in the `nexts` lists will not be started until `prev` is completed.
- * 
+ *
  * @see chained_task, add_dependency()
  */
 inline void add_dependencies(chained_task prev, std::initializer_list<chained_task> nexts) {
@@ -161,12 +167,12 @@ inline void add_dependencies(chained_task prev, std::initializer_list<chained_ta
  *
  * @param      prevs  The list of tasks that `next` is dependent on
  * @param      next   The task that depends on all the `prevs` tasks
- * 
+ *
  * This creates dependencies between all the tasks from `prevs` to the `next` task. It's like
  * calling @ref add_dependenc() multiple times.
- * 
+ *
  * The `next` tasks will not start until all the tasks from the `prevs` list are complete.
- * 
+ *
  * @see chained_task, add_dependency()
  */
 inline void add_dependencies(std::initializer_list<chained_task> prevs, chained_task next) {
