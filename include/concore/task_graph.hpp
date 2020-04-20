@@ -2,9 +2,11 @@
 
 #include "task.hpp"
 #include "executor_type.hpp"
+#include "except_fun_type.hpp"
 #include "spawn.hpp"
 #include "profiling.hpp"
 #include "detail/utils.hpp"
+#include "detail/enqueue_next.hpp"
 
 #include <memory>
 #include <atomic>
@@ -23,10 +25,14 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
     std::atomic<int32_t> pred_count_{0};
     std::vector<chained_task> next_tasks_;
     executor_t executor_;
+    except_fun_t except_fun_;
 
     chained_task_impl(task t, executor_t executor)
         : task_fun_(std::move(t))
-        , executor_(executor) {}
+        , executor_(executor) {
+        if (!executor)
+            executor_ = concore::spawn_executor;
+    }
 };
 
 } // namespace detail
@@ -90,10 +96,7 @@ public:
      * @see add_dependency(), add_dependencies(), task
      */
     chained_task(task t, executor_t executor = {})
-        : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {
-        if (!executor)
-            impl_->executor_ = spawn_executor;
-    }
+        : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
 
     /**
      * @brief      The call operator.
@@ -114,10 +117,25 @@ public:
         for (auto& n : impl_->next_tasks_) {
             if (n.impl_->pred_count_-- == 1) {
                 chained_task next(std::move(n)); // don't keep the ref here anymore
-                impl_->executor_(next);
+                detail::enqueue_next(impl_->executor_, task(next), impl_->except_fun_);
             }
         }
         impl_->next_tasks_.clear();
+    }
+
+    /**
+     * @brief      Sets the exception handler for enqueueing tasks
+     *
+     * @param      except_fun  The function to be called whenever an exception occurs.
+     *
+     * The exception handler set here will be called whenever an exception is thrown while
+     * enqueueing a follow-up task. It will not be called whenever the task itself throws an
+     * exception; that will be handled by the exception handler set in the group of the task.
+     *
+     * @see task_group::set_exception_handler
+     */
+    void set_exception_handler(except_fun_t except_fun) {
+        impl_->except_fun_ = std::move(except_fun);
     }
 
 private:

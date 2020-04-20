@@ -432,3 +432,55 @@ TEST_CASE("chained_task can be created without an executor", "[task_graph]") {
     REQUIRE(task1_executed);
     REQUIRE(task2_executed);
 }
+
+struct throwing_executor {
+    void operator()(concore::task&& t) {
+        concore::spawn(std::move(t));
+        throw std::logic_error("err");
+    }
+};
+
+TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_graph]") {
+    auto grp_wait = concore::task_group::create();
+    auto finish_task = concore::task([]() {}, grp_wait);
+
+    // Crete the tasks
+    bool executed[5] = {false, false, false, false, false};
+    auto t1 = concore::chained_task([&]() { executed[0] = true; }, throwing_executor{});
+    auto t2 = concore::chained_task([&]() { executed[1] = true; }, throwing_executor{});
+    auto t3 = concore::chained_task([&]() { executed[2] = true; }, throwing_executor{});
+    auto t4 = concore::chained_task([&]() { executed[3] = true; }, throwing_executor{});
+    auto t5 = concore::chained_task(
+            [&]() {
+                executed[4] = true;
+                concore::global_executor(std::move(finish_task));
+            },
+            throwing_executor{});
+
+    // Add the dependencies
+    concore::add_dependencies(t1, {t2, t3, t4});
+    concore::add_dependencies({t2, t3, t4}, t5);
+
+    // Set up the exception handlers
+    std::atomic<int> num_ex = 0;
+    concore::except_fun_t ex_handler = [&](std::exception_ptr){ num_ex++; };
+    t1.set_exception_handler(ex_handler);
+    t2.set_exception_handler(ex_handler);
+    t3.set_exception_handler(ex_handler);
+    t4.set_exception_handler(ex_handler);
+    t5.set_exception_handler(ex_handler);
+
+    // Start executing the graph
+    t1();
+    // Wait for the tasks to complete
+    REQUIRE(bounded_wait(grp_wait));
+    // Ensure all tasks are executed
+    REQUIRE(executed[0]);
+    REQUIRE(executed[1]);
+    REQUIRE(executed[2]);
+    REQUIRE(executed[3]);
+    REQUIRE(executed[4]);
+
+    // Ensure that our exception handler is called
+    REQUIRE(num_ex.load() == 4);
+}

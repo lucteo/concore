@@ -1,7 +1,7 @@
 #pragma once
 
-#include <functional>
-#include <exception>
+#include "except_fun_type.hpp"
+
 #include <memory>
 
 namespace concore {
@@ -156,7 +156,7 @@ public:
      * The given exception function will be called each time a new exception is thrown by a task
      * belonging to this task_group object.
      */
-    void set_exception_handler(std::function<void(std::exception_ptr)> except_fun);
+    void set_exception_handler(except_fun_t except_fun);
 
     /**
      * @brief      Cancels the execution tasks in the group.

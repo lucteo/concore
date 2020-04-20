@@ -3,6 +3,7 @@
 #include "concore/spawn.hpp"
 #include "concore/data/concurrent_queue.hpp"
 #include "concore/detail/utils.hpp"
+#include "concore/detail/enqueue_next.hpp"
 
 #include <deque>
 #include <atomic>
@@ -18,6 +19,8 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
     executor_t base_executor_;
     //! The executor to be used when
     executor_t cont_executor_;
+    //! Handler to be called whenever we have an exception while enqueueing the next task
+    except_fun_t except_fun_;
     //! The queue of READ tasks
     concurrent_queue<task, queue_type::multi_prod_multi_cons> read_tasks_;
     //! The queue of WRITE tasks
@@ -126,12 +129,14 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
     }
 
     //! Enqueue the next READ task to be executed in the given executor.
-    void enqueue_next_read(const executor_t& executor) {
-        executor([p_this = shared_from_this()]() { p_this->execute_read(); });
+    void enqueue_next_read(executor_t& executor) {
+        auto t = [p_this = shared_from_this()]() { p_this->execute_read(); };
+        detail::enqueue_next(executor, std::move(t), except_fun_);
     }
     //! Enqueue the next WRITE task to be executed in the given executor.
-    void enqueue_next_write(const executor_t& executor) {
-        executor([p_this = shared_from_this()]() { p_this->execute_write(); });
+    void enqueue_next_write(executor_t& executor) {
+        auto t = [p_this = shared_from_this()]() { p_this->execute_write(); };
+        detail::enqueue_next(executor, std::move(t), except_fun_);
     }
 };
 
@@ -147,6 +152,10 @@ void rw_serializer::writer_type::operator()(task t) { impl_->enqueue_write(std::
 
 rw_serializer::rw_serializer(executor_t base_executor, executor_t cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}
+
+void rw_serializer::set_exception_handler(except_fun_t except_fun) {
+    impl_->except_fun_ = std::move(except_fun);
+}
 
 } // namespace v1
 } // namespace concore
