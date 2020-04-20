@@ -34,6 +34,24 @@ endif()
 string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP concore_BUILD_YEAR "%Y")
 
+# Code Coverage Configuration
+add_library(coverage_config INTERFACE)
+
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # Add required flags (GCC & LLVM/Clang)
+    target_compile_options(coverage_config INTERFACE
+        -O0        # no optimization
+        -g         # generate debug info
+        --coverage # sets all required flags
+    )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
+        target_link_options(coverage_config INTERFACE --coverage)
+    else()
+        target_link_libraries(coverage_config INTERFACE --coverage)
+    endif()
+endif()
+
 # Library options
 option(concore.testing "Compile the concore tests" ON)
 option(concore.profiling "Add profiling info the the library" OFF)
@@ -55,6 +73,7 @@ message(STATUS "Use profiling    : ${concore.profiling}")
 message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
 message(STATUS "Profiling include: ${concore.profiling.include}")
 message(STATUS "Profiling path   : ${concore.profiling.path}")
+message(STATUS "Code coverage    : ${CODE_COVERAGE}")
 message(STATUS)
 
 # Write the version information to 'version.hpp'
@@ -107,6 +126,10 @@ target_link_libraries(concore PUBLIC Threads::Threads)
 if (TARGET concore_profiling)
     target_link_libraries(concore PUBLIC concore_profiling)
 endif()
+
+# Coverage config
+target_link_libraries(concore PUBLIC coverage_config)
+
 
 # Check if Intel TBB can be found
 find_package(tbb QUIET)
