@@ -11,7 +11,7 @@ namespace concore {
 namespace detail {
 
 //! Executed the given tasks. Take care of the task_group interactions
-inline void execute_task(task& t) {
+inline void execute_task(task& t) noexcept {
     const auto& grp = t.get_task_group();
 
     // If the task is canceled, don't do anything

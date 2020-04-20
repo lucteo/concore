@@ -3,6 +3,7 @@
 #include "task.hpp"
 #include "executor_type.hpp"
 #include "profiling.hpp"
+#include "detail/utils.hpp"
 
 #include <memory>
 #include <atomic>
@@ -101,10 +102,7 @@ public:
         CONCORE_PROFILING_SCOPE_N("chained_task.()");
         assert(impl_->pred_count_.load() == 0);
         // Execute the current task
-        try {
-            impl_->task_fun_();
-        } catch (...) {
-        }
+        detail::execute_task(impl_->task_fun_);
 
         // Try to execute the next tasks
         for (auto& n : impl_->next_tasks_) {

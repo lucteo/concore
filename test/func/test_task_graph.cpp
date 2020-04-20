@@ -3,8 +3,9 @@
 #include <concore/global_executor.hpp>
 
 #include "test_common/task_countdown.hpp"
+#include "test_common/task_utils.hpp"
 
-TEST_CASE("one can define a simple linear chain of tasks") {
+TEST_CASE("one can define a simple linear chain of tasks", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 10;
@@ -41,7 +42,7 @@ TEST_CASE("one can define a simple linear chain of tasks") {
         REQUIRE(res[i] == i);
 }
 
-TEST_CASE("chained_task objects are copyable") {
+TEST_CASE("chained_task objects are copyable", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     task_countdown tc{2};
@@ -63,7 +64,7 @@ TEST_CASE("chained_task objects are copyable") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("multiple links between the tasks (same direction) are fine") {
+TEST_CASE("multiple links between the tasks (same direction) are fine", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     task_countdown tc{2};
@@ -82,7 +83,7 @@ TEST_CASE("multiple links between the tasks (same direction) are fine") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("circular dependencies lead to tasks not being executed") {
+TEST_CASE("circular dependencies lead to tasks not being executed", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     task_countdown tc{4};
@@ -132,7 +133,7 @@ TEST_CASE("circular dependencies lead to tasks not being executed") {
     REQUIRE(!executed[3]);
 }
 
-TEST_CASE("a lot of continuations added to a chained_task") {
+TEST_CASE("a lot of continuations added to a chained_task", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 10;
@@ -157,7 +158,7 @@ TEST_CASE("a lot of continuations added to a chained_task") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("a lot of predecessors added to a chained_task") {
+TEST_CASE("a lot of predecessors added to a chained_task", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 10;
@@ -198,7 +199,7 @@ TEST_CASE("a lot of predecessors added to a chained_task") {
     REQUIRE(executed[0]);
 }
 
-TEST_CASE("tree-like structure of chained_tasks") {
+TEST_CASE("tree-like structure of chained_tasks", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 127; // needs to be 2^n-1
@@ -222,7 +223,7 @@ TEST_CASE("tree-like structure of chained_tasks") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("reverse tree-like structure of chained_tasks") {
+TEST_CASE("reverse tree-like structure of chained_tasks", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 127; // needs to be 2^n-1
@@ -248,7 +249,7 @@ TEST_CASE("reverse tree-like structure of chained_tasks") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("hand-crafted graph of chained_tasks") {
+TEST_CASE("hand-crafted graph of chained_tasks", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 18;
@@ -290,7 +291,7 @@ TEST_CASE("hand-crafted graph of chained_tasks") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("a chained_task can be reused after it was run") {
+TEST_CASE("a chained_task can be reused after it was run", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 10;
@@ -321,7 +322,7 @@ TEST_CASE("a chained_task can be reused after it was run") {
         e(tasks[0]);
         REQUIRE(tc.wait_for_all());
         tc.reset(num_tasks);
-        std::this_thread::sleep_for(10ms);   // ensure the task is truly finished
+        std::this_thread::sleep_for(10ms); // ensure the task is truly finished
     }
 
     // Check that all the tasks were run several times
@@ -334,7 +335,75 @@ TEST_CASE("a chained_task can be reused after it was run") {
     REQUIRE(tc.wait_for_all());
     // Wait a bit, so that other tasks have time to run
     std::this_thread::sleep_for(10ms);
-    REQUIRE(cnt[0] == 1+num_runs);
+    REQUIRE(cnt[0] == 1 + num_runs);
     for (int i = 1; i < num_tasks; i++)
         REQUIRE(cnt[i] == num_runs);
+}
+
+TEST_CASE("exceptions can occur in chained_task", "[task_graph]") {
+    auto grp_wait = concore::task_group::create();
+    auto finish_task = concore::task([]() {}, grp_wait);
+
+    // Create two tasks
+    bool task1_executed = false;
+    bool task2_executed = false;
+    auto t1 = concore::task([&]() {
+        task1_executed = true;
+        throw std::logic_error("err");
+    });
+    auto t2 = concore::task([&]() {
+        task2_executed = true;
+        concore::global_executor(std::move(finish_task));
+    });
+    // Chain them in a task_graph
+    auto ct1 = concore::chained_task(std::move(t1), concore::global_executor);
+    auto ct2 = concore::chained_task(std::move(t2), concore::global_executor);
+    concore::add_dependency(ct1, ct2);
+    // Start executing the first one
+    ct1();
+    // Wait for the tasks to complete
+    bounded_wait(grp_wait);
+    // Ensure both tasks are run
+    REQUIRE(task1_executed);
+    REQUIRE(task2_executed);
+}
+
+TEST_CASE("exceptions in task graphs are caught by the group", "[task_graph]") {
+    auto grp_wait = concore::task_group::create();
+    auto finish_task = concore::task([]() {}, grp_wait);
+
+    // Set up a group for checking exceptions
+    int ex_count = 0;
+    auto grp_ex = concore::task_group::create();
+    grp_ex.set_exception_handler([&](std::exception_ptr) { ex_count++; });
+
+    // Create two tasks
+    bool task1_executed = false;
+    bool task2_executed = false;
+    auto t1 = concore::task(
+            [&]() {
+                task1_executed = true;
+                throw std::logic_error("err");
+            },
+            grp_ex);
+    auto t2 = concore::task(
+            [&]() {
+                task2_executed = true;
+                concore::global_executor(std::move(finish_task));
+                throw std::logic_error("err");
+            },
+            grp_ex);
+    // Chain them in a task_graph
+    auto ct1 = concore::chained_task(std::move(t1), concore::global_executor);
+    auto ct2 = concore::chained_task(std::move(t2), concore::global_executor);
+    concore::add_dependency(ct1, ct2);
+    // Start executing the first one
+    ct1();
+    // Wait for the tasks to complete
+    bounded_wait(grp_wait);
+    // Ensure both tasks are run
+    REQUIRE(task1_executed);
+    REQUIRE(task2_executed);
+    // Ensure that we caught both exceptions
+    REQUIRE(ex_count == 2);
 }

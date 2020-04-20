@@ -9,7 +9,7 @@ using namespace std::chrono_literals;
 
 //! Wait for all the task in a group to complete.
 //! Returns true if we all tasks are complete; return false if we timeout
-bool bounded_wait(concore::task_group& grp, std::chrono::milliseconds timeout = 1000ms) {
+inline bool bounded_wait(concore::task_group& grp, std::chrono::milliseconds timeout = 1000ms) {
     auto start = std::chrono::high_resolution_clock::now();
     auto end = start + timeout;
     auto sleep_dur = timeout / 1000;
@@ -23,7 +23,7 @@ bool bounded_wait(concore::task_group& grp, std::chrono::milliseconds timeout = 
 }
 
 //! Enqueue N tasks in the executor, and wait for them to be executed
-bool enqueue_and_wait(concore::executor_t e, concore::task_function f, int num_tasks = 10) {
+inline bool enqueue_and_wait(concore::executor_t e, concore::task_function f, int num_tasks = 10) {
     auto grp = concore::task_group::create();
     for (int i = 0; i < num_tasks; i++)
         e(concore::task{f, grp});
