@@ -262,7 +262,7 @@ TEST_CASE("hand-crafted graph of chained_tasks", "[task_graph]") {
     for (int i = 0; i < num_tasks; i++) {
         tasks.emplace_back([&]() { tc.task_finished(); }, e);
     }
-    //            /-->  6 -\
+    //            /-->  6 -\ .
     //    *-> 1 -*--->  7 --*-> 14 ------*
     //    |       \-->  8 -------------* |
     //    |                             \|

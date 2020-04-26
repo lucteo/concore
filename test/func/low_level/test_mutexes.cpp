@@ -46,7 +46,7 @@ void test_exclusive_access_between_threads(Mtx& mutex, bool try_lock = false) {
 
     std::vector<std::thread> threads{num_threads};
     for (int i = 0; i < num_threads; i++) {
-        threads[i] = std::thread([&counter, &mutex, repetion_count, try_lock]() {
+        threads[i] = std::thread([&counter, &mutex, try_lock]() {
             for (int i = 0; i < repetion_count; i++) {
                 // take the exclusive access
                 if (try_lock) {

@@ -53,7 +53,7 @@ void check_execute_with_exceptions(Creator creat) {
 
     // Create the tasks, and add them to the executor
     for (int i = 0; i < num_tasks; i++) {
-        concore::task t{[&, i]() { throw std::logic_error("something went wrong"); }, grp};
+        concore::task t{[]() { throw std::logic_error("something went wrong"); }, grp};
         executor(std::move(t));
     }
 

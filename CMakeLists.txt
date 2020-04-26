@@ -111,6 +111,13 @@ add_library(concore STATIC ${concore_sourceFiles})
 # Use C++17
 target_compile_features(concore PUBLIC cxx_std_17)
 
+# Turn all warnings
+target_compile_options(concore PRIVATE
+     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+          -Wall>
+     $<$<CXX_COMPILER_ID:MSVC>:
+          /W4>)
+
 # Declare the public include directories
 target_include_directories(concore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>

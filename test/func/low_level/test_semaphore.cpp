@@ -42,7 +42,7 @@ void test_exclusive_access(Sem& sem) {
 
     std::vector<std::thread> threads{num_threads};
     for (int i = 0; i < num_threads; i++) {
-        threads[i] = std::thread([&counter, &sem, repetion_count]() {
+        threads[i] = std::thread([&counter, &sem]() {
             for (int i = 0; i < repetion_count; i++) {
                 // take the exclusive access
                 sem.wait();
