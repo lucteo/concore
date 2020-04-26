@@ -33,10 +33,10 @@ constexpr auto global_executor = detail::executor_with_prio<detail::task_priorit
 
 /**
  * @brief      Task executor that enqueues tasks with *critical* priority.
- * 
+ *
  * Similar to @ref global_executor, but the task is considered to have the *critical* priority.
  * Tasks with critical priority take precedence over all other types of tasks in the task system.
- * 
+ *
  * @see global_executor, global_executor_high_prio, global_executor_normal_prio,
  *      global_executor_low_prio, global_executor_background_prio
  */
@@ -45,10 +45,10 @@ constexpr auto global_executor_critical_prio =
 
 /**
  * @brief      Task executor that enqueues tasks with *high* priority.
- * 
+ *
  * Similar to @ref global_executor, but the task is considered to have the *high* priority.
  * Tasks with high priority take precedence over normal priority tasks.
- * 
+ *
  * @see global_executor, global_executor_critical_prio, global_executor_normal_prio,
  *      global_executor_low_prio, global_executor_background_prio
  */
@@ -57,9 +57,9 @@ constexpr auto global_executor_high_prio =
 
 /**
  * @brief      Task executor that enqueues tasks with *normal* priority.
- * 
+ *
  * Same as global_executor.
- * 
+ *
  * @see global_executor, global_executor_critical_prio, global_executor_high_prio,
  *      global_executor_low_prio, global_executor_background_prio
  */

@@ -43,7 +43,7 @@ struct executor_with_prio {
     }
 };
 
-} // namespace tbb
+} // namespace tbb_d
 } // namespace detail
 
 inline namespace v1 {
@@ -56,7 +56,8 @@ inline namespace v1 {
  *
  * @see        global_executor
  */
-constexpr auto tbb_executor = detail::tbb_d::executor_with_prio<detail::tbb_d::task_priority::normal>{};
+constexpr auto tbb_executor =
+        detail::tbb_d::executor_with_prio<detail::tbb_d::task_priority::normal>{};
 
 /**
  * @brief      Task executor that enqueues tasks in TBB with *high* priority.

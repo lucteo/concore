@@ -25,6 +25,7 @@ static void execute_lots_of_tasks(E executor, benchmark::State& state) {
     executor([problem_size]() { benchmark::DoNotOptimize(bad_fib(problem_size)); });
     std::this_thread::sleep_for(200ms);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         {
             CONCORE_PROFILING_SCOPE_N("perf iter");
@@ -55,6 +56,7 @@ static void BM_execute_lots_of_tasks_manual_threads(benchmark::State& state) {
     std::vector<std::thread> threads{static_cast<size_t>(num_threads)};
     std::this_thread::sleep_for(200ms);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         {
             CONCORE_PROFILING_SCOPE_N("perf iter");

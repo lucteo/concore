@@ -44,13 +44,14 @@ jobs:
         with:
           cc: clang
           cflags: ${{ matrix.cflags }}
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          analyzer: clang-format
+  # Disable clang-format: there are formatting differences between different versions of clang-format
+  # clang-format:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@master
+  #     - uses: docker://lucteo/ghaction-conan-cmake:latest
+  #       with:
+  #         analyzer: clang-format
   clang-analyzers:
     runs-on: ubuntu-latest
     steps:

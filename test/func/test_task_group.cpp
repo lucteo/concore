@@ -235,7 +235,8 @@ TEST_CASE("task_group::is_active doesn't count the sub-groups", "[task_group]") 
     REQUIRE_FALSE(grp3.is_active());
 }
 
-TEST_CASE("task_group::is_active doesn't return true for multiple copies of the group", "[task_group]") {
+TEST_CASE("task_group::is_active doesn't return true for multiple copies of the group",
+        "[task_group]") {
     auto grp = concore::task_group::create();
     auto grp1 = grp;
     auto grp2 = grp;
@@ -250,7 +251,7 @@ TEST_CASE("task_group::is_active also counts the tasks from sub-groups", "[task_
     REQUIRE_FALSE(grpMain.is_active());
     REQUIRE_FALSE(grpSub.is_active());
 
-    auto t1 = concore::task([](){}, grpSub);
+    auto t1 = concore::task([]() {}, grpSub);
     REQUIRE(grpSub.is_active());
     REQUIRE(grpMain.is_active());
 }

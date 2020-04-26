@@ -242,7 +242,7 @@ void task_system::on_task_added() const {
 #if CONCORE_ENABLE_PROFILING
     int val = num_tasks_++;
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
-    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val+1));
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val + 1));
 #endif
 }
 
@@ -250,7 +250,7 @@ void task_system::on_task_removed() const {
 #if CONCORE_ENABLE_PROFILING
     int val = num_tasks_--;
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
-    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val-1));
+    CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val - 1));
 #endif
 }
 

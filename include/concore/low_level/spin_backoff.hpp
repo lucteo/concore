@@ -11,14 +11,14 @@
  * The intent of this macro is to pause the CPU, without consuming energy, while waiting for some
  * other condition to happen. The pause should be sufficiently small so that the current thread will
  * not give up its work quanta.
- * 
+ *
  * This pause should be smaller than the pause caused by @ref CONCORE_LOW_LEVEL_YIELD_PAUSE().
- * 
+ *
  * This is used in *spin* implementations that are waiting for certain conditions to happen, and it
  * is expected that these condition will become true in a very short amount of time.
- * 
+ *
  * The implementation of this uses platform-specific instructions.
- * 
+ *
  * @see CONCORE_LOW_LEVEL_YIELD_PAUSE(), concore::v1::spin_backoff
  */
 #define CONCORE_LOW_LEVEL_SHORT_PAUSE() /*nothing*/
@@ -31,7 +31,7 @@
  * not become true soon enough. Instead of blocking the CPU waiting on this condition, we give up
  * the CPU quanta to be used by other threads; hopefully, by running other threads, that condition
  * can become true.
- * 
+ *
  * @see CONCORE_LOW_LEVEL_SHORT_PAUSE(), concore::v1::spin_backoff
  */
 #define CONCORE_LOW_LEVEL_YIELD_PAUSE() /*nothing*/
@@ -110,7 +110,7 @@ class spin_backoff {
 public:
     /**
      * @brief      Pauses a short while.
-     * 
+     *
      * Calling this multiple times will pause more and more. In the beginning the pauses are short,
      * without yielding the CPU quanta of the current thread. But, after a threshold this attempts
      * to give up the CPU quanta for the current executing thread.

@@ -18,7 +18,8 @@ namespace {
 void check_execute_tasks(concore::executor_t e) {
     int num_tasks = 10;
     std::atomic<int> counter{0};
-    REQUIRE(enqueue_and_wait(e, [&]() { counter++; }, num_tasks));
+    REQUIRE(enqueue_and_wait(
+            e, [&]() { counter++; }, num_tasks));
     REQUIRE(counter == num_tasks);
 }
 

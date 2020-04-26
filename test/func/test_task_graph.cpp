@@ -463,7 +463,7 @@ TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_gr
 
     // Set up the exception handlers
     std::atomic<int> num_ex = 0;
-    concore::except_fun_t ex_handler = [&](std::exception_ptr){ num_ex++; };
+    concore::except_fun_t ex_handler = [&](std::exception_ptr) { num_ex++; };
     t1.set_exception_handler(ex_handler);
     t2.set_exception_handler(ex_handler);
     t3.set_exception_handler(ex_handler);

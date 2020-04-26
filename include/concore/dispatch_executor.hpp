@@ -63,11 +63,11 @@ struct executor_with_prio {
 inline namespace v1 {
 /**
  * @brief      Executor that enqueues task in libdispatch.
- * 
+ *
  * The tasks that are enqueued by this executor will have *normal* priority inside libdispatch.
- * 
+ *
  * This can be used as a bridge between concore and libdispatch.
- * 
+ *
  * @see        global_executor
  */
 constexpr auto dispatch_executor =
@@ -75,16 +75,16 @@ constexpr auto dispatch_executor =
 
 /**
  * @brief      Task executor that enqueues tasks in libdispatch with *high* priority.
- * 
+ *
  * This can be used as a bridge between concore and libdispatch.
  */
 constexpr auto dispatch_executor_high_prio =
         detail::disp::executor_with_prio<detail::disp::task_priority::high>{};
 /**
  * @brief      Task executor that enqueues tasks in libdispatch with *normal* priority.
- * 
+ *
  * Same as @ref dispatch_executor.
- * 
+ *
  * This can be used as a bridge between concore and libdispatch.
  */
 constexpr auto dispatch_executor_normal_prio =
@@ -92,7 +92,7 @@ constexpr auto dispatch_executor_normal_prio =
 
 /**
  * @brief      Task executor that enqueues tasks in libdispatch with *low* priority.
- * 
+ *
  * This can be used as a bridge between concore and libdispatch.
  */
 constexpr auto dispatch_executor_low_prio =

@@ -83,20 +83,20 @@ public:
 
     /**
      * @brief      Decrement the internal count and wait on the count to be positive
-     * 
+     *
      * If the count of the semaphore is positive this will decrement the count and return
      * immediately. On the other hand, if the count is 0, it wait for it to become positive before
      * decrementing it and returning.
-     * 
+     *
      * @see signal()
      */
     void wait();
     /**
      * @brief      Increment the internal count
-     * 
+     *
      * If there are at least one thread that is blocked inside a @ref wait() call, this will wake up
      * a waiting thread.
-     * 
+     *
      * @see wait()
      */
     void signal();
@@ -129,17 +129,17 @@ public:
 
     /**
      * @brief      Wait for the semaphore to be signaled.
-     * 
+     *
      * This will put the binary semaphore in the WAITING state, and wait for a thread to signal it.
      * The call will block until a corresponding thread will signal it.
-     * 
+     *
      * @see signal(0)
      */
     void wait();
 
     /**
      * @brief      Signal the binary semaphore
-     * 
+     *
      * Puts the semaphore in the SIGNALED state. If there is a thread that waits on the semaphore
      * it will wake it.
      */

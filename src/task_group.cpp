@@ -45,7 +45,8 @@ void task_group_access::on_starting_task(const task_group& grp, const task& t) {
 void task_group_access::on_task_done(const task_group& grp, const task& t) {
     g_current_task_group = task_group{};
 }
-void task_group_access::on_task_exception(const task_group& grp, const task& t, std::exception_ptr ex) {
+void task_group_access::on_task_exception(
+        const task_group& grp, const task& t, std::exception_ptr ex) {
     g_current_task_group = task_group{};
     if (grp.impl_ && grp.impl_->except_fun_)
         grp.impl_->except_fun_(ex);

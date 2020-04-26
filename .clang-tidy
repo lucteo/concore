@@ -1,0 +1,11 @@
+---
+Checks: "bugprone-,\
+cppcoreguidelines-,\
+clang-analyzer-,\
+modernize-,\
+performance-,\
+portability-,\
+readability-,\
+-clang-analyzer-security.insecureAPI.rand"
+WarningsAsErrors: True
+HeaderFilterRegex: 'include/concore/.*\.hpp$'
