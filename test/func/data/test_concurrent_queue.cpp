@@ -213,6 +213,7 @@ void test_ctor_dtor() {
     my_obj obj;
     for (int i = 0; i < num_elements; i++) {
         bool res = queue.try_pop(obj);
+        REQUIRE(res);
     }
     REQUIRE(g_num_ctors_.load() == num_elements + 1);
     REQUIRE(g_num_copy_ctors_.load() == 0);

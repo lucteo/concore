@@ -262,7 +262,7 @@ TEST_CASE("hand-crafted graph of chained_tasks", "[task_graph]") {
     for (int i = 0; i < num_tasks; i++) {
         tasks.emplace_back([&]() { tc.task_finished(); }, e);
     }
-    //            /-->  6 -\
+    //            /-->  6 -\ .
     //    *-> 1 -*--->  7 --*-> 14 ------*
     //    |       \-->  8 -------------* |
     //    |                             \|
@@ -463,7 +463,7 @@ TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_gr
 
     // Set up the exception handlers
     std::atomic<int> num_ex = 0;
-    concore::except_fun_t ex_handler = [&](std::exception_ptr){ num_ex++; };
+    concore::except_fun_t ex_handler = [&](std::exception_ptr) { num_ex++; };
     t1.set_exception_handler(ex_handler);
     t2.set_exception_handler(ex_handler);
     t3.set_exception_handler(ex_handler);

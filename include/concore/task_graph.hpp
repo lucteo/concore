@@ -15,7 +15,9 @@
 
 namespace concore {
 
-inline namespace v1 { class chained_task; }
+inline namespace v1 {
+class chained_task;
+}
 
 namespace detail {
 

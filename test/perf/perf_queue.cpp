@@ -89,8 +89,6 @@ void clear(Q& queue) {
         ;
 }
 
-
-
 template <typename Q>
 static void test_push_back_latency(Q& queue, benchmark::State& state) {
     const int num_elements = state.range(0);

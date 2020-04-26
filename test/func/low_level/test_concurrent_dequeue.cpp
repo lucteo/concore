@@ -24,7 +24,7 @@ void test_pushes_then_pops(int fast_size, int num_elements, bool push_front, boo
 
     // Now, we can extract all these elements, in the right order
     for (int i = 0; i < num_elements; i++) {
-        int value;
+        int value = 0;
         if (pop_front)
             REQUIRE(queue.try_pop_front(value));
         else

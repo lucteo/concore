@@ -34,6 +34,24 @@ endif()
 string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP concore_BUILD_YEAR "%Y")
 
+# Code Coverage Configuration
+add_library(coverage_config INTERFACE)
+
+option(CODE_COVERAGE "Enable coverage reporting" OFF)
+if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    # Add required flags (GCC & LLVM/Clang)
+    target_compile_options(coverage_config INTERFACE
+        -O0        # no optimization
+        -g         # generate debug info
+        --coverage # sets all required flags
+    )
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
+        target_link_options(coverage_config INTERFACE --coverage)
+    else()
+        target_link_libraries(coverage_config INTERFACE --coverage)
+    endif()
+endif()
+
 # Library options
 option(concore.testing "Compile the concore tests" ON)
 option(concore.profiling "Add profiling info the the library" OFF)
@@ -55,6 +73,7 @@ message(STATUS "Use profiling    : ${concore.profiling}")
 message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
 message(STATUS "Profiling include: ${concore.profiling.include}")
 message(STATUS "Profiling path   : ${concore.profiling.path}")
+message(STATUS "Code coverage    : ${CODE_COVERAGE}")
 message(STATUS)
 
 # Write the version information to 'version.hpp'
@@ -92,6 +111,13 @@ add_library(concore STATIC ${concore_sourceFiles})
 # Use C++17
 target_compile_features(concore PUBLIC cxx_std_17)
 
+# Turn all warnings
+target_compile_options(concore PRIVATE
+     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
+          -Wall>
+     $<$<CXX_COMPILER_ID:MSVC>:
+          /W4>)
+
 # Declare the public include directories
 target_include_directories(concore PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
@@ -108,6 +134,10 @@ if (TARGET concore_profiling)
     target_link_libraries(concore PUBLIC concore_profiling)
 endif()
 
+# Coverage config
+target_link_libraries(concore PUBLIC coverage_config)
+
+
 # Check if Intel TBB can be found
 find_package(tbb QUIET)
 if(${TBB_tbb_FOUND})
@@ -116,6 +146,55 @@ if(${TBB_tbb_FOUND})
     target_link_libraries(concore PUBLIC TBB::tbb)
     add_definitions(-DCONCORE_USE_TBB=1)
 endif()
+
+# Add target for clang-format
+find_program(CLANG_FORMAT "clang-format")
+if(CLANG_FORMAT)
+    add_custom_target(
+        clang-format
+        COMMAND
+            find ../include/ ../src/ ../test/ -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp'
+            | xargs ${CLANG_FORMAT} -i --style=file
+        # COMMAND
+        #     ${CLANG_FORMAT} --dump-config --style=file
+    )
+endif()
+
+# Add target for clang-tidy
+find_program(CLANG_TIDY "clang-tidy")
+if(CLANG_TIDY)
+    add_custom_target(
+        clang-tidy
+        COMMAND
+            find ../include/ ../src/ ../test/ -name '*.c' -o -name '*.cpp'
+            | xargs ${CLANG_TIDY}
+    )
+endif()
+
+
+if(ENABLE_TIDY)
+    # Search for clang-tidy and clang-apply-replacements
+    find_program(CLANG_TIDY "clang-tidy")
+
+    message(STATUS "Tidy checks are enabled while building")
+
+    set(TIDY_HEADER_FILTER ${CMAKE_SOURCE_DIR}/*)
+
+    # Set extra arguments
+    set(TIDY_FIX 1)
+    set(TIDY_EXTRA_ARGS -quiet;-format-style=file)
+    if (TIDY_FIX)
+        set(TIDY_EXTRA_ARGS ${TIDY_EXTRA_ARGS};-fix)
+    endif()
+
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY};${TIDY_EXTRA_ARGS}"
+        CACHE STRING "" FORCE)
+else()
+    set(CMAKE_CXX_CLANG_TIDY "")
+endif()
+
+# Ensure generation of compile_commands.json; needed for clang-tidy
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)

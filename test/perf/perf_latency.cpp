@@ -83,6 +83,7 @@ static void test_latency(E executor, benchmark::State& state) {
     executor([]() { benchmark::DoNotOptimize(std::thread::hardware_concurrency()); });
     std::this_thread::sleep_for(200ms);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         std::chrono::time_point<std::chrono::high_resolution_clock> end =
@@ -112,6 +113,7 @@ static void test_latency_ser(E executor, benchmark::State& state) {
     executor([]() { benchmark::DoNotOptimize(std::thread::hardware_concurrency()); });
     std::this_thread::sleep_for(200ms);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         std::chrono::time_point<std::chrono::high_resolution_clock> end =
@@ -145,6 +147,7 @@ static void BM_latency_fun_call_1(benchmark::State& state) {
     set_random_ptr_fun();
     std::this_thread::sleep_for(200ms);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         auto start = std::chrono::high_resolution_clock::now();
@@ -167,6 +170,7 @@ static void BM_latency_fun_call_n(benchmark::State& state) {
     set_random_ptr_fun();
     std::this_thread::sleep_for(200ms);
 
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         auto start = std::chrono::high_resolution_clock::now();

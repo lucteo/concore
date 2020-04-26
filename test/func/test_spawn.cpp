@@ -30,7 +30,7 @@ void task_fun(task_countdown& tc, int n) {
 TEST_CASE("spawning tasks from existing tasks") {
     constexpr int num_tasks = 20;
     task_countdown tc{num_tasks};
-    concore::spawn([&tc, num_tasks]() { task_fun(tc, num_tasks - 1); });
+    concore::spawn([&tc]() { task_fun(tc, num_tasks - 1); });
 
     // Wait for all the tasks to complete
     REQUIRE(tc.wait_for_all());
