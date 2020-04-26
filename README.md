@@ -3,6 +3,7 @@ Core abstractions for dealing with concurrency in C++
 
 [![CI](https://github.com/lucteo/concore/workflows/CI/badge.svg)](https://github.com/lucteo/concore/actions)
 [![codecov](https://codecov.io/gh/lucteo/concore/branch/master/graph/badge.svg)](https://codecov.io/gh/lucteo/concore)
+[![Documentation Status](https://readthedocs.org/projects/concore/badge/?version=latest)](https://concore.readthedocs.io/en/latest/?badge=latest)
 
 ## About
 
