@@ -1,5 +1,6 @@
 #include "concore/detail/task_system.hpp"
 #include "concore/detail/utils.hpp"
+#include "concore/init.hpp"
 #include "concore/task_group.hpp"
 
 namespace concore {
@@ -9,15 +10,34 @@ namespace detail {
 //! with the worker thread data
 thread_local worker_thread_data* g_worker_data{nullptr};
 
-task_system::task_system() {
+int get_num_threads(int config_num_threads) {
+    if (config_num_threads > 0)
+        return config_num_threads;
+    int res = static_cast<int>(std::thread::hardware_concurrency());
+    return res > 0 ? res : 4;
+}
+
+task_system::task_system(const init_data& config)
+    : count_(get_num_threads(config.num_workers_))
+    , reserved_slots_(config.reserved_slots_)
+    , workers_data_(static_cast<size_t>(count_))
+    , reserved_worker_slots_(static_cast<size_t>(reserved_slots_)) {
     CONCORE_PROFILING_INIT();
     CONCORE_PROFILING_FUNCTION();
     // Mark all the extra slots as being idle
     for (auto& w : reserved_worker_slots_)
         w.state_.store(worker_thread_data::idle);
     // Start the worker threads
-    for (int i = 0; i < count_; i++)
-        workers_data_[i].thread_ = std::thread([this, i]() { worker_run(i); });
+    std::function<void()> worker_start_fun = config.worker_start_fun_;
+    for (int i = 0; i < count_; i++) {
+        workers_data_[i].thread_ = std::thread([this, i, worker_start_fun]() {
+            // Call the worker start function, to perform user-defined actions on this thread
+            if (worker_start_fun)
+                worker_start_fun();
+            // now actually run the logic for the worker thread
+            worker_run(i);
+        });
+    }
 }
 task_system::~task_system() {
     CONCORE_PROFILING_FUNCTION();
