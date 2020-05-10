@@ -2,6 +2,7 @@
 
 #include "task.hpp"
 #include "detail/task_system.hpp"
+#include "detail/library_data.hpp"
 
 #include <initializer_list>
 
@@ -11,12 +12,12 @@ namespace detail {
 
 //! Defines an executor that can spawn tasks in the current worker queue.
 struct spawn_executor {
-    void operator()(task t) const { detail::task_system::instance().spawn(std::move(t)); }
+    void operator()(task t) const { detail::get_task_system().spawn(std::move(t)); }
 };
 
 //! Similar to a spawn_executor, but doesn't wake other workers
 struct spawn_continuation_executor {
-    void operator()(task t) const { detail::task_system::instance().spawn(std::move(t), false); }
+    void operator()(task t) const { detail::get_task_system().spawn(std::move(t), false); }
 };
 
 } // namespace detail
@@ -46,7 +47,7 @@ inline namespace v1 {
  * the groups of the spawned tasks.
  */
 inline void spawn(task&& t, bool wake_workers = true) {
-    detail::task_system::instance().spawn(std::move(t), wake_workers);
+    detail::get_task_system().spawn(std::move(t), wake_workers);
 }
 
 /**
@@ -67,7 +68,7 @@ inline void spawn(task&& t, bool wake_workers = true) {
 template <typename F>
 inline void spawn(F&& ftor, bool wake_workers = true) {
     auto grp = task_group::current_task_group();
-    detail::task_system::instance().spawn(task(std::forward<F>(ftor), grp), wake_workers);
+    detail::get_task_system().spawn(task(std::forward<F>(ftor), grp), wake_workers);
 }
 
 /**
@@ -94,7 +95,7 @@ inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_worker
     for (auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
         bool cur_wake_workers = (count-- > 0 || wake_workers);
-        detail::task_system::instance().spawn(task(std::move(ftor), grp), cur_wake_workers);
+        detail::get_task_system().spawn(task(std::move(ftor), grp), cur_wake_workers);
     }
 }
 
@@ -116,7 +117,7 @@ inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_worker
  */
 template <typename F>
 inline void spawn_and_wait(F&& ftor) {
-    auto& tsys = detail::task_system::instance();
+    auto& tsys = detail::get_task_system();
     auto worker_data = tsys.enter_worker();
 
     auto grp = task_group::create(task_group::current_task_group());
@@ -142,7 +143,7 @@ inline void spawn_and_wait(F&& ftor) {
  * and add the new tasks in this new group. The waiting is done on this new group.
  */
 inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wake_workers = true) {
-    auto& tsys = detail::task_system::instance();
+    auto& tsys = detail::get_task_system();
     auto worker_data = tsys.enter_worker();
 
     auto grp = task_group::create(task_group::current_task_group());
@@ -172,7 +173,7 @@ inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wa
  *
  * @see spawn(), spawn_and_wait()
  */
-inline void wait(task_group& grp) { detail::task_system::instance().busy_wait_on(grp); }
+inline void wait(task_group& grp) { detail::get_task_system().busy_wait_on(grp); }
 
 /**
  * Executor that spawns tasks instead of enqueueing them.

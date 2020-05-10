@@ -54,6 +54,23 @@
 #define CONCORE_CPP_VERSION 20
 #endif
 
+// Detect the compiler type
+#ifndef CONCORE_CPP_COMPILER
+
+#if defined(__clang__)
+#define CONCORE_CPP_COMPILER_clang 1
+#elif defined(__GNUC__) || defined(__GNUG__)
+#define CONCORE_CPP_COMPILER_gcc 1
+#elif defined(_MSC_VER)
+#define CONCORE_CPP_COMPILER_msvc 1
+#elif defined(__INTEL_COMPILER)
+#define CONCORE_CPP_COMPILER_intel 1
+#endif
+
+#define CONCORE_CPP_COMPILER(X) (CONCORE_CPP_COMPILER_##X)
+
+#endif
+
 // Detect use of pthreads; use it on Linux
 #if !CONCORE_USE_PTHREADS && CONCORE_PLATFORM_LINUX
 #define CONCORE_USE_PTHREADS 1

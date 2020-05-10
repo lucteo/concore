@@ -1,6 +1,7 @@
 #pragma once
 
 #include "detail/task_system.hpp"
+#include "detail/library_data.hpp"
 
 namespace concore {
 
@@ -9,7 +10,7 @@ namespace detail {
 //! Structure that defines an executor for a given priority
 template <task_priority P = task_priority::normal>
 struct executor_with_prio {
-    void operator()(task t) const { task_system::instance().enqueue<int(P)>(std::move(t)); }
+    void operator()(task t) const { get_task_system().enqueue<int(P)>(std::move(t)); }
 };
 
 } // namespace detail

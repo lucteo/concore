@@ -13,6 +13,8 @@
 
 namespace concore {
 
+inline namespace v1 { struct init_data; }
+
 namespace detail {
 
 //! Structure containing the data for a worker thread
@@ -51,14 +53,8 @@ constexpr int num_priorities = 5;
 //! system, and each worker is capable of executing tasks.
 class task_system {
 public:
-    task_system();
+    explicit task_system(const init_data& config);
     ~task_system();
-
-    //! Get the instance of the class -- this is a singleton
-    static task_system& instance() {
-        static task_system inst;
-        return inst;
-    }
 
     template <int P, typename T>
     void enqueue(T&& t) {
@@ -102,15 +98,15 @@ private:
     using task_queue = concurrent_queue<task>;
 
     //! The number of worker threads that we should have
-    const int count_{static_cast<int>(std::thread::hardware_concurrency())};
+    const int count_;
     //! We reserve some extra slots for others threads that could temporary join our task system
-    const int reserved_slots_{4};
+    const int reserved_slots_;
 
     //! The data for each worker thread
-    std::vector<worker_thread_data> workers_data_{static_cast<size_t>(count_)};
+    std::vector<worker_thread_data> workers_data_;
 
     //! Reserved slots, for external threads that call spawn_and_wait
-    std::vector<worker_thread_data> reserved_worker_slots_{static_cast<size_t>(reserved_slots_)};
+    std::vector<worker_thread_data> reserved_worker_slots_;
     //! The number of extra slots that are currently in use; between [0, reserved_slots_]
     std::atomic<int> num_active_extra_slots_{0};
 
