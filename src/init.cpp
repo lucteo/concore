@@ -1,6 +1,7 @@
 #include "concore/init.hpp"
 #include "concore/low_level/spin_mutex.hpp"
 #include "concore/detail/platform.hpp"
+#include "concore/detail/likely.hpp"
 #include "concore/detail/library_data.hpp"
 #include "concore/detail/task_system.hpp"
 
@@ -69,7 +70,7 @@ void do_init(const init_data* config) {
 
 task_system& get_task_system(const init_data* config) {
 #if __IMPL__CONCORE_USE_CXX_ABI
-    if (__cxa_guard_acquire(&g_initialized_guard)) {
+    CONCORE_IF_UNLIKELY(__cxa_guard_acquire(&g_initialized_guard)) {
         try {
             do_init(config);
 
@@ -82,7 +83,7 @@ task_system& get_task_system(const init_data* config) {
     return *g_task_system;
 #else
     auto p = detail::g_task_system.load(std::memory_order_acquire);
-    if (!p) {
+    CONCORE_IF_UNLIKELY(!p) {
         static spin_mutex init_bottleneck;
         try {
             init_bottleneck.lock();
