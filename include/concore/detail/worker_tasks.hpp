@@ -1,60 +1,79 @@
 #pragma once
 
-#include "../task.hpp"
-#include "../profiling.hpp"
-#include "../data/detail/nodes.hpp"
-#include "../low_level/spin_backoff.hpp"
+#include "concore/task.hpp"
+#include "concore/profiling.hpp"
+#include "concore/data/detail/nodes.hpp"
+#include "concore/low_level/spin_mutex.hpp"
 
 #include <atomic>
 #include <cassert>
+#include <mutex>
 
 namespace concore {
 
 namespace detail {
 
-//! A stack for holding the tasks of a worker, that can be used to steal tasks from the bottom.
+/**
+ * @brief      A list of tasks associated with a worker.
+ *
+ * For regular operations on the same worker, this looks like a stack: LIFO order.
+ * For other workers stealing tasks, we steal from the bottom of the stack: FIFO order.
+ *
+ * The main idea is to improve locality for worker threads:
+ *      - the current worker should pick up the last task created (more locale to current work)
+ *      - another worker should steal the further away task possible
+ *
+ * Implemented as a synchronized double-linked list.
+ * Using a node_factory to cache the nodes storage.
+ */
 class worker_tasks {
 public:
-    worker_tasks() = default;
+    worker_tasks() {
+        root_.next_.store(&root_, std::memory_order_relaxed);
+        root_.prev_.store(&root_, std::memory_order_relaxed);
+    }
     worker_tasks(const worker_tasks&) = delete;
     const worker_tasks& operator=(const worker_tasks&) = delete;
 
     //! Pushes a task on the top of the stack
-    //! Cannot be called in parallel with try_pop()
+    //! Cannot be called in parallel with try_pop(), but can be called in parallel with try_steal()
     void push(task&& t) {
         // Get a new node and construct the task in it
-        node_ptr node = factory_.acquire();
-        construct_in_node(node, std::forward<task>(t));
+        auto node = static_cast<bidir_node_ptr>(factory_.acquire());
+        construct_in_bidir_node(node, std::forward<task>(t));
 
-        // Push the new node on top of the stack
-        node_ptr cur_top = lock_aquire(top_);
-        node->next_.store(cur_top, std::memory_order_release);
-        // At this point, 'cur_top' is either a locked node, or null. That means that try_steal
-        // cannot make any changes to it. We can safely replace it with our new head.
-        // When doing this, we also release the lock.
-        top_.store(node, std::memory_order_release);
+        // Insert the task in the front of the list
+        std::lock_guard<spin_mutex> lock{access_bottleneck_};
+        auto cur_first = static_cast<bidir_node_ptr>(root_.next_.load(std::memory_order_relaxed));
+        node->next_.store(cur_first, std::memory_order_relaxed);
+        node->prev_.store(&root_, std::memory_order_relaxed);
+        cur_first->prev_.store(node, std::memory_order_relaxed);
+        root_.next_.store(node, std::memory_order_relaxed);
     }
 
     //! Pops one tasks from the top of the stack
     //! Cannot be called in parallel with push(), but can be called in parallel with try_steal()
     bool try_pop(task& t) {
-        // Lock the top node, so that we can't steal it.
-        node_ptr cur_top = lock_aquire(top_);
-        if (cur_top) {
-            // Now, lock the link to the second node, making sure there is no stealer that is still
-            // looking at the second node
-            node_ptr second = lock_aquire(cur_top->next_);
-            // Ok. Nobody is looking at the first and second nodes; we can safely change the links
-            top_.store(second, std::memory_order_release);
-            lock_release(cur_top->next_);
-
-            // Get the task our of the node and release the node
-            extract_from_node(cur_top, t);
-            factory_.release(cur_top);
-            return true;
+        node_ptr first;
+        // Synchronized access: get the first element from the list
+        {
+            std::lock_guard<spin_mutex> lock{access_bottleneck_};
+            first = root_.next_.load(std::memory_order_relaxed);
+            if (first != &root_) {
+                auto second =
+                        static_cast<bidir_node_ptr>(first->next_.load(std::memory_order_relaxed));
+                root_.next_.store(second, std::memory_order_relaxed);
+                second->prev_.store(&root_, std::memory_order_relaxed);
+            }
         }
-        // No node to be popped
-        return false;
+
+        if (first != &root_) {
+            // Get the task out of the node and release the node
+            extract_from_bidir_node(first, t);
+            factory_.release(first);
+            return true;
+        } else
+            return false;
     }
 
     //! Steal one task from the bottom of the stack.
@@ -62,81 +81,38 @@ public:
     //! Can be run in parallel with push() and try_pop().
     bool try_steal(task& t) {
         CONCORE_PROFILING_FUNCTION();
-        // Lock the top while trying to access the list
-        std::atomic<node_ptr>* link_to_node = &top_;
-        node_ptr cur = lock_aquire(*link_to_node);
-        if (!cur)
-            return false;
 
-        // If we have more elements, traverse the stack, while locking each element in turn
-        while (cur->next_.load(std::memory_order_relaxed)) {
-            auto next = lock_aquire(cur->next_, std::memory_order_relaxed);
-            lock_release(*link_to_node);
-            link_to_node = &cur->next_;
-            cur = next;
+        bidir_node_ptr last;
+        // Synchronized access: get the last element from the list
+        {
+            std::lock_guard<spin_mutex> lock{access_bottleneck_};
+            last = static_cast<bidir_node_ptr>(root_.prev_.load(std::memory_order_relaxed));
+            if (last != &root_) {
+                node_ptr prev_to_last = last->prev_.load(std::memory_order_relaxed);
+                root_.prev_.store(prev_to_last, std::memory_order_relaxed);
+                prev_to_last->next_.store(&root_, std::memory_order_relaxed);
+            }
         }
 
-        // At this point, 'cur' is the last element, and link_to_node is the .next_ link that points
-        // to it. link_to_node is locked.
-        node_ptr stolen_node = cur;
-        link_to_node->store(nullptr, std::memory_order_release);
-        // this will also clear the lock bit
-
-        // Extract the task from the node
-        extract_from_node(stolen_node, t);
-        factory_.release(stolen_node);
-        return true;
+        if (last != &root_) {
+            // Get the task out of the node and release the node
+            extract_from_bidir_node(last, t);
+            factory_.release(last);
+            return true;
+        } else
+            return false;
     }
 
 private:
-    //! The top of the stack
-    std::atomic<node_ptr> top_{nullptr};
+    //! The root node representing the double-linked list of nodes
+    //! First elem == top of the stack, last elem == bottom of the stack
+    detail::bidir_node_base root_;
+
+    //! Bottleneck for synchronizing the access to the double-linked list
+    spin_mutex access_bottleneck_;
 
     //! Object that creates nodes, and keeps track of the freed nodes.
-    node_factory<task> factory_;
-
-    //! Acquire the lock over a node, and return the node pointer (without the lock bit)
-    //! Spins if the node is already locked.
-    //! Doesn't do any locking if the node pointer is null
-    node_ptr lock_aquire(
-            std::atomic<node_ptr>& aptr, std::memory_order order = std::memory_order_acquire) {
-        spin_backoff spinner;
-        node_ptr node = aptr.load(std::memory_order_acquire);
-        while (node) {
-            node = clear_lock_bit(node);
-            node_ptr locked_node = set_lock_bit(node);
-            if (aptr.compare_exchange_weak(node, locked_node))
-                break;
-            spinner.pause();
-        }
-        return node;
-    }
-
-    //! Release the lock we had on a node pointer
-    void lock_release(std::atomic<node_ptr>& aptr) {
-        node_ptr node = aptr.load(std::memory_order_relaxed);
-        if (node) {
-            assert(is_locked(node));
-            aptr.store(clear_lock_bit(node), std::memory_order_release);
-        }
-    }
-
-    static constexpr uintptr_t one = 1;
-
-    //! Sets the lock bit to the given pointer.
-    node_ptr set_lock_bit(node_ptr p) {
-        auto as_num = reinterpret_cast<uintptr_t>(p);
-        return reinterpret_cast<node_ptr>(as_num | one);
-    }
-
-    //! Check if the pointer is locked or not
-    bool is_locked(node_ptr p) { return (reinterpret_cast<uintptr_t>(p) & one) != 0; }
-
-    //! Clear the lock bit from a pointer
-    node_ptr clear_lock_bit(node_ptr p) {
-        auto as_num = reinterpret_cast<uintptr_t>(p);
-        return reinterpret_cast<node_ptr>(as_num & ~one);
-    }
+    node_factory<task, detail::bidir_node_base> factory_;
 };
 
 } // namespace detail

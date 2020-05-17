@@ -1,11 +1,12 @@
 #pragma once
 
 #include "nodes.hpp"
-#include "../../low_level/spin_backoff.hpp"
-#include "../../low_level/spin_mutex.hpp"
+#include "concore/low_level/spin_backoff.hpp"
+#include "concore/low_level/spin_mutex.hpp"
 
 #include <atomic>
 #include <cassert>
+#include <mutex>
 
 namespace concore {
 

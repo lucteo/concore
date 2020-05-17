@@ -50,7 +50,7 @@ TEST_CASE("worker_tasks: stealing gets far away tasks", "[worker_tasks]") {
         tasks.push([&out_location, i]() { out_location = i; });
     }
 
-    // Pop them, and ensure they come up in reverse order
+    // Steal them, and ensure they come up in reverse order
     concore::task extracted_task;
     for (int i = 0; i < num_tasks; i++) {
         REQUIRE(tasks.try_steal(extracted_task));
