@@ -1,35 +1,58 @@
 #pragma once
 
 #include <atomic>
-#include <mutex>
-#include <vector>
 
 namespace concore {
 namespace detail {
 
 struct node_base;
+struct bidir_node_base;
+
+//! A pointer to a node. Can be a single-list node or a doubly-lined node.
 using node_ptr = node_base*;
 
+//! A pointer to a bidirectional node. Used in doubly-lined node.
+using bidir_node_ptr = bidir_node_base*;
+
 //! The base implementation of a singly-linked list node; uses type erasure to save code size.
+//! A double-linked list will also derive from this class.
 struct node_base {
     //! Link to the next node in the list
     std::atomic<node_ptr> next_;
 };
 
+//! Base implementation for a double-linked list node; uses type erasure to save code size.
+struct bidir_node_base : node_base {
+    //! Link to the previous node in the list
+    std::atomic<node_ptr> prev_;
+};
+
 //! A node with data; this will be used for operations that involve the actual data of the node.
-template <typename T>
-struct node : node_base {
+//! This can be used for a single-lined list or for a double-linked list
+template <typename T, typename Base = node_base>
+struct node : Base {
     //! The data of the node
     T value_;
 };
 
-//! Base class for a node factory.
-//! This implements the core acquire() and release() logic, and keeps track of the free list.
-//! It does not allocate memory. This is type-agnostic.
-class node_factory_base {
-protected:
-    node_factory_base() = default;
-    ~node_factory_base() = default;
+/**
+ * @brief      A free list of nodes
+ *
+ * Independent of the actual type of nodes, for reusing generated code.
+ *
+ * User can call @ref acquire() to get one element from the free list, and @ref release() to add
+ * an element to the free file. Allocated elements can be added with @ref use_nodes() method.
+ *
+ * This can be accessed from multiple threads. For example one thread may acquire a node while
+ * another thread releases a node.
+ *
+ * This does not allocate memory, as it's node type-agnostic.
+ * Can be used both for singly-linked and double-linked lists.
+ */
+class node_free_list {
+public:
+    node_free_list() = default;
+    ~node_free_list() = default;
 
     //! Acquire a new node from the free list. This is typically very fast
     //! Returns null, if we don't have any nodes in our free list
@@ -90,15 +113,24 @@ private:
     }
 };
 
-//! A typed node factory.
-//! This will know to construct node<T> objects, with the allocator given in constructor.
-//! Instead of freeing the released nodes, it will chain them to a free list, for later reuse.
-//!
-//! Implemented in terms of node_factory_base, which is type-agnostic.
-template <typename T, typename A = std::allocator<T>>
-class node_factory : node_factory_base {
+/**
+ * @brief      Factory of node objects
+ *
+ * @tparam     T     The content of a node object
+ * @tparam     B     The base class for the node; either a singly-linked or double-linked node
+ * @tparam     A     The allocator used to allocate nodes
+ *
+ * This will try to cache allocated nodes, so that we reduce the amount of allocations needed.
+ * Whenever new nodes are needed, this will allocate a chunk of nodes, and add them to the internal
+ * free list. If there are freed nodes, it will returned those nodes.
+ *
+ * Memory allocated will only be released at the end.
+ */
+template <typename T, typename B = node_base, typename A = std::allocator<T>>
+class node_factory {
 public:
     using allocator_type = A;
+    using node_type = node<T, B>;
 
     explicit node_factory(int num_nodes_per_chunk = 1024, allocator_type a = {})
         : num_nodes_per_chunk_(num_nodes_per_chunk)
@@ -109,15 +141,20 @@ public:
 
     ~node_factory() {
         // Free the allocated chunks
-        for (node_ptr chunk : allocated_chunks_)
-            std::free(chunk);
+        node_ptr chunk = allocated_chunks_;
+        while (chunk) {
+            node_ptr next = chunk->next_;
+            dealloc(static_cast<node_of_node*>(chunk)->value_, num_nodes_per_chunk_);
+            dealloc(chunk, 1);
+            chunk = next;
+        }
     }
 
     //! Acquire a new node from the factory. This is typically very fast
     node_ptr acquire() {
         while (true) {
             // Try to get a free node from the base
-            node_ptr node = node_factory_base::acquire();
+            node_ptr node = free_list_.acquire();
             if (node)
                 return node;
 
@@ -127,7 +164,7 @@ public:
     }
 
     //! Releases a node; chain it to our free list. No memory is freed at this point
-    using node_factory_base::release;
+    void release(node_ptr node) { free_list_.release(node); }
 
 private:
     //! How many nodes do we allocate at once, in a chunk
@@ -135,37 +172,78 @@ private:
     //! The allocator used to allocate memory
     allocator_type allocator_;
 
-    //! All the chunks that we've allocated so far
-    std::vector<node_ptr> allocated_chunks_;
-    //! Used to protect our vector of chunks
-    std::mutex bottleneck_;
+    using node_of_node = node<node_ptr>;
+
+    //! List (single-linked) of chunks we've allocated so far.
+    std::atomic<node_ptr> allocated_chunks_{nullptr};
+
+    //! The list with free nodes, ready to be used
+    node_free_list free_list_;
 
     //! Allocates one chunk of memory, chain the nodes, and add them to our free list
+    //! This may be called in parallel by multiple threads; in this case, we may over-allocate, but
+    //! we would still use all the nodes allocated.
     void allocate_nodes() {
         // Allocate memory for the new chunk
-        typename decltype(allocator_)::template rebind<node<T>>::other node_allocator;
-        node_ptr nodes_array = node_allocator.allocate(num_nodes_per_chunk_);
+        node_ptr nodes_array = alloc<node_type>(num_nodes_per_chunk_);
 
         // Pass it to base to populate the free list
-        node_factory_base::use_nodes(nodes_array, sizeof(node<T>), num_nodes_per_chunk_);
+        free_list_.use_nodes(nodes_array, sizeof(node_type), num_nodes_per_chunk_);
 
-        // Add this to our vector of allocated chunks,
-        std::lock_guard<std::mutex> lock{bottleneck_};
-        allocated_chunks_.push_back(nodes_array);
+        // Add this to our list of allocated chunks (with another allocation)
+        node_of_node* chunk = alloc<node_of_node>(1);
+        chunk->value_ = nodes_array;
+
+        // Atomically add the new chunk to the top of the list
+        auto old_head = allocated_chunks_.load(std::memory_order_acquire);
+        while (true) {
+            chunk->next_ = old_head;
+            if (allocated_chunks_.compare_exchange_weak(old_head, chunk, std::memory_order_acq_rel))
+                break;
+        }
+    }
+
+    template <typename TT>
+    TT* alloc(size_t n) {
+        typename decltype(allocator_)::template rebind<TT>::other a;
+        return a.allocate(n);
+    }
+
+    template <typename TT>
+    void dealloc(TT* p, size_t n) {
+        typename decltype(allocator_)::template rebind<TT>::other a;
+        a.deallocate(p, n);
     }
 };
 
-//! Construct the value inside a node by moving in the given value.
+//! Construct the value inside a sigle-linked node by moving in the given value.
 template <typename T>
 void construct_in_node(node_ptr n, T&& value) {
-    node<T>* typed_node = static_cast<node<T>*>(n);
+    auto typed_node = static_cast<node<T>*>(n);
     new (&typed_node->value_) T(std::forward<T>(value));
 }
 
-//! Extract the value stored in the node into the passed param, and destroys the value in the node.
+//! Construct the value inside a double-linked node by moving in the given value.
+template <typename T>
+void construct_in_bidir_node(node_ptr n, T&& value) {
+    auto typed_node = static_cast<node<T, bidir_node_base>*>(n);
+    new (&typed_node->value_) T(std::forward<T>(value));
+}
+
+//! Extract the value stored in the node (single-linked) into the passed param, and destroys the
+//! value in the node.
 template <typename T>
 void extract_from_node(node_ptr n, T& value) {
-    node<T>* typed_node = static_cast<node<T>*>(n);
+    auto typed_node = static_cast<node<T>*>(n);
+    value = std::move(typed_node->value_);
+    typed_node->value_.~T();
+}
+
+//! Extract the value stored in the node (single-linked) into the passed param, and destroys the
+//! value in the node.
+template <typename T>
+void extract_from_bidir_node(node_ptr n, T& value) {
+    auto typed_node = static_cast<node<T, bidir_node_base>*>(n);
     value = std::move(typed_node->value_);
     typed_node->value_.~T();
 }

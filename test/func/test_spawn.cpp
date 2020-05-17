@@ -13,9 +13,11 @@ TEST_CASE("spawn_executor is copyable") {
     e2 = e1;
 }
 
-TEST_CASE("spawn_executor executes a task") { test_can_execute_a_task(concore::spawn_executor); }
+TEST_CASE("spawn_executor executes a task", "[spawn]") {
+    test_can_execute_a_task(concore::spawn_executor);
+}
 
-TEST_CASE("spawn_executor executes all tasks") {
+TEST_CASE("spawn_executor executes all tasks", "[spawn]") {
     test_can_execute_multiple_tasks(concore::spawn_executor);
 }
 
@@ -27,7 +29,7 @@ void task_fun(task_countdown& tc, int n) {
     tc.task_finished();
 }
 
-TEST_CASE("spawning tasks from existing tasks") {
+TEST_CASE("spawning tasks from existing tasks", "[spawn]") {
     constexpr int num_tasks = 20;
     task_countdown tc{num_tasks};
     concore::spawn([&tc]() { task_fun(tc, num_tasks - 1); });
@@ -36,7 +38,7 @@ TEST_CASE("spawning tasks from existing tasks") {
     REQUIRE(tc.wait_for_all());
 }
 
-TEST_CASE("spawned tasks can be executed by multiple workers") {
+TEST_CASE("spawned tasks can be executed by multiple workers", "[spawn]") {
     CONCORE_PROFILING_FUNCTION();
 
     // This only works if we have multiple cores
@@ -80,4 +82,21 @@ TEST_CASE("spawned tasks can be executed by multiple workers") {
     }
     // fail
     REQUIRE(!"could not find a parallel task execution");
+}
+
+TEST_CASE("a lot of spawning of small tasks works", "[spawn]") {
+    CONCORE_PROFILING_FUNCTION();
+
+    constexpr int num_tasks = 1000;
+    std::atomic<int> count{0};
+
+    // Spawn 1+num_tasks and wait for them to complete
+    concore::spawn_and_wait([&count]() {
+        for (int i = 0; i < num_tasks; i++) {
+            concore::spawn([&count]() { count++; });
+        }
+    });
+
+    // Check that we've executed the right amount of tasks
+    REQUIRE(count.load() == num_tasks);
 }
