@@ -93,6 +93,9 @@ public:
     //! Should be paired 1:1 with enter_worker();
     void exit_worker(worker_thread_data* worker_data);
 
+    //! Returns the number of worker threads we created
+    int num_worker_threads() const { return count_; }
+
 private:
     //! A task queue type
     using task_queue = concurrent_queue<task>;
