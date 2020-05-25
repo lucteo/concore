@@ -283,9 +283,8 @@ inline task get_for_task(RandomIt first, RandomIt last, const UnaryFunction& f, 
         for_hints hints, ...) {
     int granularity = std::max(1, hints.granularity_);
     return task(
-            [first, last, &f, granularity]() {
-                int n = static_cast<int>(last - first);
-                detail::for_naive_partition(first, n, f, granularity);
+            [first, last, &f, grp, granularity]() {
+                detail::for_naive_partition(first, last, f, grp, granularity);
             },
             grp);
 }

@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <forward_list>
 
 using namespace std::chrono_literals;
 
@@ -20,8 +21,7 @@ void test_execute_once(concore::for_hints hints) {
         counts[i] = 0;
 
     // Do the iterations in parallel
-    concore::conc_for(
-            integral_iterator(0), integral_iterator(num_iter),
+    concore::conc_for(integral_iterator(0), integral_iterator(num_iter),
             [=, &counts](int i) {
                 CONCORE_PROFILING_SCOPE_N("iter");
                 CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", i);
@@ -75,8 +75,7 @@ void test_can_cancel(concore::for_hints hints) {
     std::atomic<bool> first = true;
 
     // Do the iterations in parallel
-    concore::conc_for(
-            integral_iterator(0), integral_iterator(1000),
+    concore::conc_for(integral_iterator(0), integral_iterator(1000),
             [&grp, &first](int i) {
                 // Cancel the tasks in the group -- just do it in one task
                 if (first.load()) {
@@ -140,4 +139,23 @@ TEST_CASE("conc_for is a blocking call", "[conc_for]") {
 
     // If we would exit earlier, count would not reach num_iter
     REQUIRE(count.load() == num_iter);
+}
+
+TEST_CASE("conc_for can work with plain forward iterators", "[conc_for]") {
+    constexpr int num_iter = 100;
+    std::atomic<int> counts[num_iter];
+
+    // Prepare the input data
+    std::forward_list<int> elems;
+    for (int i = num_iter - 1; i >= 0; i--) {
+        elems.push_front(i);
+        counts[i] = 0;
+    }
+
+    // Do the iterations in parallel
+    concore::conc_for(elems.begin(), elems.end(), [&counts](int i) { counts[i]++; });
+
+    // Incremented each count once
+    for (int i = 0; i < num_iter; i++)
+        REQUIRE(counts[i].load() == 1);
 }
