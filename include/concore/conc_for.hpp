@@ -17,8 +17,10 @@ inline namespace v1 {
 enum class for_method {
     auto_partition, //!< Automatically partitions the data, trying to maximize locality, and trying
                     //!< to keep the workers busy at the right amount.
-    upfront_partition, //!< Partitions the data upfront, assuming an equal distribution of work.
-    naive_partition,   //!< A naive partition that assumes one task per item.
+    upfront_partition,   //!< Partitions the data upfront, assuming an equal distribution of work.
+    iterative_partition, //!< Partition is done linearly; one task at a given time (for 1 or more
+                         //!< elements)
+    naive_partition,     //!< A naive partition that assumes one task per item.
 };
 
 struct for_hints {
@@ -177,9 +179,8 @@ inline void for_upfront_partition(RandomIt first, int n, const UnaryFunction& f,
     auto wait_grp = task_group::create(grp);
 
     auto& tsys = detail::get_task_system();
-    auto c = tsys.num_worker_threads();
+    int num_tasks = tsys.num_worker_threads() * 2;
 
-    int num_tasks = c * 2;
     if (num_tasks < n) {
         for (int i = 0; i < num_tasks; i++) {
             auto start = first + (n * i / num_tasks);
@@ -192,6 +193,91 @@ inline void for_upfront_partition(RandomIt first, int n, const UnaryFunction& f,
         }
     }
 
+    // Wait for all the spawned tasks to be completed
+    wait(wait_grp);
+}
+
+template <typename It, typename UnaryFunction>
+struct iterative_spawner {
+    It first_;
+    It last_;
+    const UnaryFunction& ftor_;
+    task_group grp_;
+    spin_mutex bottleneck_;
+
+    iterative_spawner(It first, It last, const UnaryFunction& f, task_group grp)
+        : first_(first)
+        , last_(last)
+        , ftor_(f)
+        , grp_(grp) {}
+
+    void spawn_task_1(bool cont = false) {
+        // Atomically take the first element from our range
+        It it = take_1();
+        if (it != last_) {
+            auto t = task(
+                    [this, it]() {
+                        ftor_(*it);
+                        spawn_task_1(true);
+                    },
+                    grp_);
+            spawn(std::move(t), !cont);
+        }
+    }
+
+    void spawn_task_n(int count, bool cont = false) {
+        // Atomically take the first elements from our range
+        auto itp = take_n(count);
+        auto begin = itp.first;
+        auto end = itp.second;
+        if (begin != end) {
+            auto next = begin;
+            next++;
+            // Spawn a task that runs the ftor for the obtained range and spawns the next task
+            auto t = task(
+                    [this, begin, end, count]() {
+                        run_serially(begin, end, ftor_);
+                        spawn_task_n(count, true);
+                    },
+                    grp_);
+            spawn(std::move(t), !cont);
+        }
+    }
+
+    It take_1() {
+        std::lock_guard<spin_mutex> lock(bottleneck_);
+        return first_ == last_ ? last_ : first_++;
+    }
+
+    std::pair<It, It> take_n(int count) {
+        std::lock_guard<spin_mutex> lock(bottleneck_);
+        It begin = first_;
+        It end = begin;
+        for (int i = 0; i < count && end != last_; i++)
+            end++;
+        first_ = end;
+        return std::make_pair(begin, end);
+    }
+};
+
+template <typename It, typename UnaryFunction>
+inline void for_iterative_partition(
+        It first, It last, const UnaryFunction& f, task_group grp, int granularity) {
+    auto wait_grp = task_group::create(grp);
+
+    auto& tsys = detail::get_task_system();
+    int num_tasks = tsys.num_worker_threads() * 2;
+
+    // Spawn the right number of tasks; each task will take 1 or more elements.
+    // After completion, a task will spawn the next task
+    iterative_spawner<It, UnaryFunction> spawner(first, last, f, wait_grp);
+    if (granularity <= 1) {
+        for (int i = 0; i < num_tasks; i++)
+            spawner.spawn_task_1();
+    } else {
+        for (int i = 0; i < num_tasks; i++)
+            spawner.spawn_task_n(granularity);
+    }
     // Wait for all the spawned tasks to be completed
     wait(wait_grp);
 }
@@ -259,6 +345,12 @@ inline task get_for_task(RandomIt first, RandomIt last, const UnaryFunction& f, 
                     detail::for_upfront_partition(first, n, f, grp);
                 },
                 grp);
+    case for_method::iterative_partition:
+        return task(
+                [first, last, &f, grp, granularity]() {
+                    detail::for_iterative_partition(first, last, f, grp, granularity);
+                },
+                grp);
     case for_method::naive_partition:
         return task(
                 [first, last, &f, grp, granularity]() {
@@ -282,11 +374,21 @@ template <typename RandomIt, typename UnaryFunction>
 inline task get_for_task(RandomIt first, RandomIt last, const UnaryFunction& f, task_group grp,
         for_hints hints, ...) {
     int granularity = std::max(1, hints.granularity_);
-    return task(
-            [first, last, &f, grp, granularity]() {
-                detail::for_naive_partition(first, last, f, grp, granularity);
-            },
-            grp);
+    switch (hints.method_) {
+    case for_method::naive_partition:
+        return task(
+                [first, last, &f, grp, granularity]() {
+                    detail::for_naive_partition(first, last, f, grp, granularity);
+                },
+                grp);
+    case for_method::iterative_partition:
+    default:
+        return task(
+                [first, last, &f, grp, granularity]() {
+                    detail::for_iterative_partition(first, last, f, grp, granularity);
+                },
+                grp);
+    }
 }
 
 //! Main implementation of the conc_for algorithm

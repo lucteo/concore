@@ -50,6 +50,19 @@ TEST_CASE("conc_for executes all its iterations exactly once", "[conc_for]") {
         hints.granularity_ = -1;
         test_execute_once(hints);
     }
+    SECTION("using the iterative_partition method") {
+        concore::for_hints hints;
+        hints.method_ = concore::for_method::iterative_partition;
+        test_execute_once(hints);
+        hints.granularity_ = 2;
+        test_execute_once(hints);
+        hints.granularity_ = 10;
+        test_execute_once(hints);
+        hints.granularity_ = 100;
+        test_execute_once(hints);
+        hints.granularity_ = -1;
+        test_execute_once(hints);
+    }
     SECTION("using the naive_partition method") {
         concore::for_hints hints;
         hints.method_ = concore::for_method::naive_partition;
@@ -97,6 +110,19 @@ TEST_CASE("conc_for can be canceled", "[conc_for]") {
     SECTION("using the default auto_partition") {
         concore::for_hints hints;
         hints.method_ = concore::for_method::auto_partition;
+        test_can_cancel(hints);
+        hints.granularity_ = 2;
+        test_can_cancel(hints);
+        hints.granularity_ = 10;
+        test_can_cancel(hints);
+        hints.granularity_ = 100;
+        test_can_cancel(hints);
+        hints.granularity_ = -1;
+        test_can_cancel(hints);
+    }
+    SECTION("using the iterative_partition method") {
+        concore::for_hints hints;
+        hints.method_ = concore::for_method::iterative_partition;
         test_can_cancel(hints);
         hints.granularity_ = 2;
         test_can_cancel(hints);
