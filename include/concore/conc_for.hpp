@@ -12,22 +12,87 @@ inline namespace v1 {
  *
  * Using this would provide a hint the conc_for algorithm on how to partition the input data.
  *
- * The implementation may not follow the given advice.
+ * The implementation may not follow the given advice. Typically the default method (autp_partition)
+ * works good enough, so most users don't need to change this.
  */
 enum class for_method {
-    auto_partition, //!< Automatically partitions the data, trying to maximize locality, and trying
-                    //!< to keep the workers busy at the right amount.
-    upfront_partition,   //!< Partitions the data upfront, assuming an equal distribution of work.
-    iterative_partition, //!< Partition is done linearly; one task at a given time (for 1 or more
-                         //!< elements)
-    naive_partition,     //!< A naive partition that assumes one task per item.
+    /**
+     * Automatically partitions the data, trying to maximize locality.
+     * 
+     * This method tries to create as many tasks as needed to fill the available workers, but tries
+     * not to split the work too much to reduce locality. If only one worker is free to do work,
+     * this method tries to put all the iterations in the task without splitting the work.
+     * 
+     * Whenever new workers can take tasks, this method tries to ensure that the furthest away
+     * elements are taken from the current processing.
+     * 
+     * This method tries as much as possible to keep all the available workers busy, hopefully to
+     * finish this faster. It works well if different iterations take different amounts of time
+     * (work is not balanced).
+     * 
+     * It uses spawning to divide the work. Can be influenced by the granularity level.
+     * 
+     * This is the default method for random-access iterators.
+     */
+    auto_partition,
+    /**
+     * Partitions the data upfront.
+     * 
+     * Instead of partitioning the data on the fly lie the auto_partiion method, this will partition
+     * the data upfront, creating as many tasks as needed to cover all the workers. This can
+     * minimize the task management, but it doesn't necessarily to ensure that all the workers have
+     * tasks to do, especially in unbalanced workloads.
+     * 
+     * Locality is preserved when splitting upfront.
+     * 
+     * This method only works for random-access iterators.
+     */
+    upfront_partition,
+    /**
+     * Partitions the iterations as it advances through them.
+     * 
+     * This partition tries to create a task for each iteration (or, if granularity is > 1, for a
+     * number of iterations), and the tasks are created as the algorithm progresses. Locality is not
+     * preserved, as nearby elements typically end up on different threads. This method tries to
+     * always have tasks to be executed. When a task finished, a new task is spawned.
+     * 
+     * This method works for forward iterators.
+     * 
+     * This is the default method for non-random-access iterators.
+     */
+    iterative_partition, 
+    /**
+     * Naive partition.
+     * 
+     * This creates a task for each iteration (or, depending of granularity, on each group of
+     * iterations). If there are too many elements in the given range, this can spawn too many
+     * tasks.
+     * 
+     * Does not preserve locality, but is ensures that the tasks are filling up the worker threads
+     * in the best possible way.
+     */
+    naive_partition,
 };
 
+/**
+ * @brief      Hints to alter the behavior of a @ref conc_for algorithm
+ * 
+ * The hints in this structure can influence the behavior of the @ref conc_for algorithm, but the
+ * algorithm can decide to ignore these hints.
+ * 
+ * In general, the algorithm performs well on a large variety of cases, so manually giving hints to
+ * it is not usually needed.
+ * 
+ * @see for_method
+ */
 struct for_hints {
     //! The method to be preferred when doing the concurrent for
     for_method method_ = for_method::auto_partition;
-    //! The granularity of the algorithm; if possible no tasks with less than this number of
-    //! elements will be taken.
+    //! The granularity of the algorithm.
+    //! 
+    //! When choosing how many iterations to handle in one task, this parameter can instruct the
+    //! algorithm to not place less than the value here. This can be used when the iterations are
+    //! really small, and the task management overhead can become significant.
     //! Does not apply to the @ref for_method::upfront_partition method
     int granularity_{1};
 };
@@ -414,7 +479,7 @@ inline void conc_for(
 inline namespace v1 {
 
 /**
- * @brief      A concurrent for algorithm
+ * @brief      A concurrent `for` algorithm.
  *
  * @param      first          Iterator pointing to the first element in a collection
  * @param      last           Iterator pointing to the last element in a collection (1 past the end)
@@ -434,8 +499,10 @@ inline namespace v1 {
  *
  * The function does not return until all the iterations are executed. (It may execute other
  * non-related tasks while waiting for the conc_for tasks to complete).
- *
- * If the iterations are not completely independent, this results in undefined behavior.
+ * 
+ * This generates internal tasks by spawning and waiting for those tasks to complete. If the user
+ * spawns other tasks during the execution of an iteration, those tasks would also be waited on.
+ * This can be a method of generating more work in the concurrent `for` loop.
  *
  * One can cancel the execution of the tasks by passing a task_group in, and canceling that
  * task_group.
@@ -443,6 +510,8 @@ inline namespace v1 {
  * One can also provide hints to the implementation to fine-tune the algorithms to better fit the
  * data it operates on. Please note however that the implementation may completely ignore all the
  * hints it was provided.
+ *
+ * @warning    If the iterations are not completely independent, this results in undefined behavior.
  *
  * @see     for_hints, for_method
  */

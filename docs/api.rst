@@ -66,11 +66,20 @@ Serializers
 
 
 
+Algorithms
+----------
+
+`conc_for.hpp`
+^^^^^^^^^^^^^^
+.. doxygenfile:: conc_for.hpp
+
+
+
 Data
 ----
 
 `data/concurrent_queue.hpp`
-^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: concurrent_queue.hpp
 
 
