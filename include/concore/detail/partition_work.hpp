@@ -1,6 +1,10 @@
 #pragma once
 
+#include "concore/task_group.hpp"
+#include "concore/spawn.hpp"
 #include "concore/detail/platform.hpp"
+
+#include <vector>
 
 namespace concore {
 namespace detail {
@@ -12,7 +16,7 @@ namespace detail {
 //     void exec(It elem);
 //     void exec(It first, It last);
 //     static constexpr bool needs_join();
-//     void join(const GenericWorkType last& rhs);
+//     void join(GenericWorkType& rhs);
 // };
 
 /**
@@ -122,7 +126,6 @@ inline void auto_partition_work(
 
     // Join all the work items
     if (work.needs_join()) {
-        // TODO: do this with tasks
         for (int l = max_level; l >= 0; l--)
             work.join(right_work_arr[l]);
     }
@@ -149,21 +152,35 @@ inline void upfront_partition_work(RandomIt first, int n, WorkType& work, task_g
     auto& tsys = detail::get_task_system();
     int num_tasks = tsys.num_worker_threads() * 2;
 
+    int num_iter = num_tasks < n ? num_tasks : n;
+    std::vector<WorkType> work_objs;
+
+    if (work.needs_join()) {
+        work_objs.resize(num_iter-1, work);
+    }
+
     if (num_tasks < n) {
         for (int i = 0; i < num_tasks; i++) {
             auto start = first + (n * i / num_tasks);
             auto end = first + (n * (i + 1) / num_tasks);
-            spawn(task{[&work, start, end] { work.exec(start, end); }, wait_grp});
+            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            spawn(task{[&work_obj, start, end] { work_obj.exec(start, end); }, wait_grp});
         }
     } else {
         for (int i = 0; i < n; i++) {
-            spawn(task{[&work, first, i] { work.exec(first + i); }, wait_grp});
+            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            spawn(task{[&work_obj, first, i] { work_obj.exec(first + i); }, wait_grp});
         }
-    }
+    }        
 
     // Wait for all the spawned tasks to be completed
     wait(wait_grp);
-    // TODO: join
+
+    // Join all the work items
+    if (work.needs_join()) {
+        for ( auto& w: work_objs)
+            work.join(w);
+    }
 }
 
 //! Helper class that can spawn "next" work for a range of elements. Uses locking to access the
@@ -172,31 +189,29 @@ template <typename It, typename WorkType>
 struct iterative_spawner {
     It first_;
     It last_;
-    WorkType& work_;
     task_group grp_;
     spin_mutex bottleneck_;
 
-    iterative_spawner(It first, It last, WorkType& w, task_group grp)
+    iterative_spawner(It first, It last, task_group grp)
         : first_(first)
         , last_(last)
-        , work_(w)
         , grp_(grp) {}
 
-    void spawn_task_1(bool cont = false) {
+    void spawn_task_1(WorkType& work, bool cont = false) {
         // Atomically take the first element from our range
         It it = take_1();
         if (it != last_) {
             auto t = task(
-                    [this, it]() {
-                        work_.exec(it);
-                        spawn_task_1(true);
+                    [this, it, &work]() {
+                        work.exec(it);
+                        spawn_task_1(work, true);
                     },
                     grp_);
             spawn(std::move(t), !cont);
         }
     }
 
-    void spawn_task_n(int count, bool cont = false) {
+    void spawn_task_n(WorkType& work, int count, bool cont = false) {
         // Atomically take the first elements from our range
         auto itp = take_n(count);
         auto begin = itp.first;
@@ -206,9 +221,9 @@ struct iterative_spawner {
             next++;
             // Spawn a task that runs the ftor for the obtained range and spawns the next task
             auto t = task(
-                    [this, begin, end, count]() {
-                        work_.exec(begin, end);
-                        spawn_task_n(count, true);
+                    [this, begin, end, &work, count]() {
+                        work.exec(begin, end);
+                        spawn_task_n(work, count, true);
                     },
                     grp_);
             spawn(std::move(t), !cont);
@@ -254,18 +269,33 @@ inline void iterative_partition_work(
     auto& tsys = detail::get_task_system();
     int num_tasks = tsys.num_worker_threads() * 2;
 
+    std::vector<WorkType> work_objs;
+    if (work.needs_join()) {
+        work_objs.resize(num_tasks-1, work);
+    }
+
     // Spawn the right number of tasks; each task will take 1 or more elements.
     // After completion, a task will spawn the next task
-    iterative_spawner<It, WorkType> spawner(first, last, work, wait_grp);
+    iterative_spawner<It, WorkType> spawner(first, last, wait_grp);
     if (granularity <= 1) {
-        for (int i = 0; i < num_tasks; i++)
-            spawner.spawn_task_1();
+        for (int i = 0; i < num_tasks; i++) {
+            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            spawner.spawn_task_1(work_obj);
+        }
     } else {
-        for (int i = 0; i < num_tasks; i++)
-            spawner.spawn_task_n(granularity);
+        for (int i = 0; i < num_tasks; i++) {
+            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            spawner.spawn_task_n(work_obj, granularity);
+        }
     }
     // Wait for all the spawned tasks to be completed
     wait(wait_grp);
+
+    // Join all the work items
+    if (work.needs_join()) {
+        for ( auto& w: work_objs)
+            work.join(w);
+    }
 }
 
 /**

@@ -19,6 +19,7 @@ set(func_sourceFiles
     "func/test_task_group.cpp"
     "func/test_wait.cpp"
     "func/test_conc_for.cpp"
+    "func/test_conc_reduce.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
     "func/profiling_helper_test.cpp" # Must be last
