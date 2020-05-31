@@ -185,3 +185,53 @@ TEST_CASE("conc_for can work with plain forward iterators", "[conc_for]") {
     for (int i = 0; i < num_iter; i++)
         REQUIRE(counts[i].load() == 1);
 }
+
+namespace {
+void test_exceptions(concore::partition_hints hints) {
+    constexpr int num_iter = 100;
+    std::atomic<int> count = 0;
+
+    // Do the iterations in parallel
+    auto iter_work = [&count](int i) {
+        if (i == 0)
+            throw std::runtime_error("some error");
+        std::this_thread::sleep_for(1ms);
+        if (!concore::task_group::is_current_task_cancelled())
+            count++;
+    };
+    try {
+        concore::conc_for(integral_iterator(0), integral_iterator(num_iter), iter_work, hints);
+        FAIL("Exception was not properly thrown");
+    }
+    catch(const std::runtime_error& ex) {
+        REQUIRE(std::string(ex.what()) == std::string("some error"));
+    }
+    catch(...) {
+        FAIL("Exception does not match");
+    }
+    REQUIRE(count.load() < num_iter);
+}
+}
+
+TEST_CASE("conc_for forwards the exceptions", "[conc_for]") {
+    SECTION("using the default auto_partition") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::auto_partition;
+        test_exceptions(hints);
+    }
+    SECTION("using the iterative_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::iterative_partition;
+        test_exceptions(hints);
+    }
+    SECTION("using the naive_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::naive_partition;
+        test_exceptions(hints);
+    }
+    SECTION("using the upfront_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::upfront_partition;
+        test_exceptions(hints);
+    }
+}

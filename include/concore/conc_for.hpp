@@ -4,6 +4,7 @@
 #include "concore/task_group.hpp"
 #include "concore/spawn.hpp"
 #include "concore/detail/partition_work.hpp"
+#include "concore/detail/except_utils.hpp"
 
 namespace concore {
 
@@ -106,12 +107,19 @@ inline void conc_for(
     if (!grp)
         grp = task_group::current_task_group();
     auto wait_grp = task_group::create(grp);
-    auto t = get_for_task(first, last, f, wait_grp, hints,
-            typename std::iterator_traits<Iter>::iterator_category());
+    std::exception_ptr thrown_exception;
+    install_except_propagation_handler(thrown_exception, wait_grp);
+
+    auto iter_cat = typename std::iterator_traits<Iter>::iterator_category();
+    auto t = get_for_task(first, last, f, wait_grp, hints, iter_cat);
     tsys.spawn(std::move(t), false);
     tsys.busy_wait_on(wait_grp);
 
     tsys.exit_worker(worker_data);
+
+    // If we have an exception, re-throw it
+    if (thrown_exception)
+        std::rethrow_exception(thrown_exception);
 }
 
 } // namespace detail

@@ -100,29 +100,39 @@ inline void auto_partition_work(
     // Now, left-to-right start executing the given functor
     // At each step, update the corresponding atomic to make sure other tasks are not executing the
     // same tasks If right-hand tasks did not start, steal iterations from them
-    int our_max = end;
-    int i = 0;
-    while (i < n) {
-        // Run as many iterations as we can
-        work.exec(first + i, first + our_max);
-        i = our_max;
-        if (our_max >= n)
-            break;
-        // If we can, try to steal some more from the right-hand task
-        int lvl_end = end_values[level];
-        int steal_end = std::min(our_max + granularity, lvl_end);
-        int old_val = our_max;
-        if (!split_values[level].compare_exchange_strong(
-                    old_val, steal_end, std::memory_order_acq_rel))
-            break;
-        our_max = steal_end;
-        // If we consumed everything from the right-side, move one level up
-        if (our_max >= lvl_end)
-            level--;
+    std::exception_ptr thrown_exception;
+    try {
+        int our_max = end;
+        int i = 0;
+        while (i < n) {
+            // Run as many iterations as we can
+            work.exec(first + i, first + our_max);
+            i = our_max;
+            if (our_max >= n)
+                break;
+            // If we can, try to steal some more from the right-hand task
+            int lvl_end = end_values[level];
+            int steal_end = std::min(our_max + granularity, lvl_end);
+            int old_val = our_max;
+            if (!split_values[level].compare_exchange_strong(
+                        old_val, steal_end, std::memory_order_acq_rel))
+                break;
+            our_max = steal_end;
+            // If we consumed everything from the right-side, move one level up
+            if (our_max >= lvl_end)
+                level--;
+        }        
+    }
+    catch(...) {
+        thrown_exception = std::current_exception();
+        wait_grp.cancel();
     }
 
     // Wait for all the spawned tasks to be completed
     wait(wait_grp);
+
+    if (thrown_exception)
+        std::rethrow_exception(thrown_exception);
 
     // Join all the work items
     if (work.needs_join()) {

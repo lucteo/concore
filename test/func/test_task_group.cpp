@@ -264,3 +264,27 @@ TEST_CASE("an empty group cannot be active", "[task_group]") {
     REQUIRE_FALSE(grp1.is_active());
     REQUIRE_FALSE(grp2.is_active());
 }
+
+TEST_CASE("higher level except handler is called, if the child doesn't have one", "[task_group]") {
+    auto grpTop = concore::task_group::create();
+    auto grpChild1 = concore::task_group::create(grpTop);
+    auto grpChild2 = concore::task_group::create(grpTop);
+    int cnt_ex_top = 0;
+    int cnt_ex_child1 = 0;
+    grpTop.set_exception_handler([&](std::exception_ptr) { cnt_ex_top++; });
+    grpChild1.set_exception_handler([&](std::exception_ptr) { cnt_ex_child1++; });
+
+    // Run a task in each group
+    concore::spawn(concore::task([]{throw 1;}, grpTop));
+    concore::wait(grpTop);
+    REQUIRE(cnt_ex_top == 1);
+    REQUIRE(cnt_ex_child1 == 0);
+    concore::spawn(concore::task([]{throw 1;}, grpChild1));
+    concore::wait(grpTop);
+    REQUIRE(cnt_ex_top == 1);
+    REQUIRE(cnt_ex_child1 == 1);
+    concore::spawn(concore::task([]{throw 1;}, grpChild2));
+    concore::wait(grpTop);
+    REQUIRE(cnt_ex_top == 2);
+    REQUIRE(cnt_ex_child1 == 1);
+}

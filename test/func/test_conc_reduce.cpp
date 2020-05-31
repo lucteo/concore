@@ -74,7 +74,52 @@ void test_can_cancel(concore::partition_hints hints) {
         return id + i;
     };
     auto reduction = [](int lhs, int rhs) -> int { return lhs + rhs; };
-    concore::conc_reduce(integral_iterator(0), integral_iterator(1000), 0, op, reduction, grp, hints);
+    concore::conc_reduce(
+            integral_iterator(0), integral_iterator(1000), 0, op, reduction, grp, hints);
+}
+void test_exceptions_op(concore::partition_hints hints) {
+    constexpr int num_iter = 100;
+    int res = 0;
+    int not_expected = (num_iter - 1) * num_iter / 2;
+
+    auto op = [](int id, int i) -> int {
+        if (i == 0)
+            throw std::runtime_error("some error");
+        return id + i;
+    };
+    auto reduction = [](int lhs, int rhs) -> int { return lhs + rhs; };
+    try {
+        res = concore::conc_reduce(
+                integral_iterator(0), integral_iterator(num_iter), 0, op, reduction, hints);
+        FAIL("Exception was not properly thrown");
+    } catch (const std::runtime_error& ex) {
+        REQUIRE(std::string(ex.what()) == std::string("some error"));
+    } catch (...) {
+        FAIL("Exception does not match");
+    }
+    REQUIRE(res < not_expected);
+}
+void test_exceptions_reduce(concore::partition_hints hints) {
+    constexpr int num_iter = 100;
+    int res = 0;
+    int not_expected = (num_iter - 1) * num_iter / 2;
+
+    auto op = [](int id, int i) -> int { return id + i; };
+    auto reduction = [](int lhs, int rhs) -> int {
+        if (lhs != 0)
+            throw std::runtime_error("some error");
+        return lhs + rhs;
+    };
+    try {
+        res = concore::conc_reduce(
+                integral_iterator(0), integral_iterator(num_iter), 0, op, reduction, hints);
+        FAIL("Exception was not properly thrown");
+    } catch (const std::runtime_error& ex) {
+        REQUIRE(std::string(ex.what()) == std::string("some error"));
+    } catch (...) {
+        FAIL("Exception does not match");
+    }
+    REQUIRE(res < not_expected);
 }
 
 } // namespace
@@ -236,4 +281,50 @@ TEST_CASE("conc_reduce can work with plain forward iterators", "[conc_reduce]") 
 
     auto expected = num_iter * (num_iter - 1) / 2;
     REQUIRE(res == expected);
+}
+
+TEST_CASE("conc_reduce forwards the exceptions in the binary operation", "[conc_for]") {
+    SECTION("using the default auto_partition") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::auto_partition;
+        test_exceptions_op(hints);
+    }
+    SECTION("using the iterative_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::iterative_partition;
+        test_exceptions_op(hints);
+    }
+    SECTION("using the naive_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::naive_partition;
+        test_exceptions_op(hints);
+    }
+    SECTION("using the upfront_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::upfront_partition;
+        test_exceptions_op(hints);
+    }
+}
+
+TEST_CASE("conc_reduce forwards the exceptions in the reduce operation", "[conc_for]") {
+    SECTION("using the default auto_partition") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::auto_partition;
+        test_exceptions_reduce(hints);
+    }
+    SECTION("using the iterative_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::iterative_partition;
+        test_exceptions_reduce(hints);
+    }
+    SECTION("using the naive_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::naive_partition;
+        test_exceptions_reduce(hints);
+    }
+    SECTION("using the upfront_partition method") {
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::upfront_partition;
+        test_exceptions_reduce(hints);
+    }
 }
