@@ -1,6 +1,7 @@
 [requires]
 Catch2/2.11.0@catchorg/stable
 benchmark/1.5.0
+rapidcheck/20200131
 
 [generators]
 cmake

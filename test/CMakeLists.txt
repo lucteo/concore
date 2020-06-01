@@ -32,9 +32,10 @@ if (TARGET concore_profiling)
     target_link_libraries(test.concore concore_profiling)
 endif()
 
-# The tests depend on Catch2
+# The tests depend on Catch2, rapidcheck
 find_package(Catch2 REQUIRED)
 target_link_libraries(test.concore CONAN_PKG::Catch2)
+target_link_libraries(test.concore CONAN_PKG::rapidcheck)
 
 # Discover the Catch2 test built by the application
 include(CTest)
