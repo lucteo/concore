@@ -165,7 +165,7 @@ inline void upfront_partition_work(RandomIt first, int n, WorkType& work, task_g
     int num_iter = num_tasks < n ? num_tasks : n;
     std::vector<WorkType> work_objs;
 
-    if (work.needs_join()) {
+    if (work.needs_join() && num_iter > 1) {
         work_objs.resize(num_iter-1, work);
     }
 

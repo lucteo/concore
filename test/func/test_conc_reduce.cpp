@@ -17,7 +17,6 @@ using concore::integral_iterator;
 
 TEST_CASE("conc_reduce is equivalent to std::accumulate (vector)", "[conc_reduce]") {
     PROPERTY([](concore::partition_hints hints, std::vector<short> v) {
-        RC_PRE(!v.empty());
         // Do the iterations in parallel
         auto op = [](int id, int i) -> int { return id + i; };
         auto reduction = [](int lhs, int rhs) -> int { return lhs + rhs; };
