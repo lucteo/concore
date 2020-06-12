@@ -10,7 +10,6 @@ namespace concore {
 
 namespace detail {
 
-//! Work unit that just applies the functor to the elements, given to the partition work functions.
 template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
 struct conc_reduce_work {
     Value value_;

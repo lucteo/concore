@@ -140,6 +140,13 @@ public:
         impl_->except_fun_ = std::move(except_fun);
     }
 
+    /**
+     * @brief      Bool conversion operator.
+     *
+     * Indicates if this is a valid chained task.
+     */
+    explicit operator bool() const noexcept { return static_cast<bool>(impl_); }
+
 private:
     std::shared_ptr<detail::chained_task_impl> impl_;
 
