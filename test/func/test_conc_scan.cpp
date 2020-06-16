@@ -5,10 +5,11 @@
 #include <concore/integral_iterator.hpp>
 
 #include <forward_list>
+#include <numeric>
 
 using concore::integral_iterator;
 
-TEST_CASE("conc_scan is equivalent to std::inclusive_scan (vector)", "[conc_scan]") {
+TEST_CASE("conc_scan is equivalent to std::partial_sum (vector)", "[conc_scan]") {
     PROPERTY([](concore::partition_hints hints) {
         const auto v = *rc::gen::container<std::vector<int>>(rc::gen::inRange(0, 1000));
         std::vector<int> res1(v.size(), 0);
@@ -18,15 +19,15 @@ TEST_CASE("conc_scan is equivalent to std::inclusive_scan (vector)", "[conc_scan
         auto op = [](int id, int i) -> int { return id + i; };
         concore::conc_scan(v.begin(), v.end(), res1.begin(), 0, op, hints);
 
-        // Run std::inclusive_scan
-        std::inclusive_scan(v.begin(), v.end(), res2.begin(), op);
+        // Run std::partial_sum
+        std::partial_sum(v.begin(), v.end(), res2.begin(), op);
 
         // check the result
         RC_ASSERT(res1 == res2);
     });
 }
 
-TEST_CASE("conc_scan is equivalent to std::inclusive_scan (forward_list)", "[conc_scan]") {
+TEST_CASE("conc_scan is equivalent to std::partial_sum (forward_list)", "[conc_scan]") {
     PROPERTY([](concore::partition_hints hints) {
         const auto v = *rc::gen::container<std::forward_list<int>>(rc::gen::inRange(0, 1000));
         int sz = std::distance(v.begin(), v.end());
@@ -37,8 +38,8 @@ TEST_CASE("conc_scan is equivalent to std::inclusive_scan (forward_list)", "[con
         auto op = [](int id, int i) -> int { return id + i; };
         concore::conc_scan(v.begin(), v.end(), res1.begin(), 0, op, hints);
 
-        // Run std::inclusive_scan
-        std::inclusive_scan(v.begin(), v.end(), res2.begin(), op);
+        // Run std::partial_sum
+        std::partial_sum(v.begin(), v.end(), res2.begin(), op);
 
         // check the result
         RC_ASSERT(res1 == res2);
@@ -85,8 +86,8 @@ TEST_CASE("conc_scan on non-commutative operations (static)", "[conc_scan]") {
     auto op = [](std::string lhs, std::string rhs) -> std::string { return lhs + rhs; };
     concore::conc_scan(v.begin(), v.end(), res1.begin(), std::string{}, op);
 
-    // Run std::inclusive_scan
-    std::inclusive_scan(v.begin(), v.end(), res2.begin(), op);
+    // Run std::partial_sum
+    std::partial_sum(v.begin(), v.end(), res2.begin(), op);
 
     // check the result
     CHECK(res1 == res2);
@@ -101,8 +102,8 @@ TEST_CASE("conc_scan on non-commutative operations", "[conc_scan]") {
         auto op = [](std::string lhs, std::string rhs) -> std::string { return lhs + rhs; };
         concore::conc_scan(v.begin(), v.end(), res1.begin(), std::string{}, op);
 
-        // Run std::inclusive_scan
-        std::inclusive_scan(v.begin(), v.end(), res2.begin(), op);
+        // Run std::partial_sum
+        std::partial_sum(v.begin(), v.end(), res2.begin(), op);
 
         // check the result
         RC_ASSERT(res1 == res2);
