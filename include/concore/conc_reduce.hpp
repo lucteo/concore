@@ -39,63 +39,56 @@ struct conc_reduce_work {
 //! Constructs a task to implement conc_reduce algorithm, based on the hinted algorithm.
 //! This is used if the range uses random-access iterators.
 template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
-inline task get_reduce_task(Value& res, It first, It last, Value identity, const BinaryOp& op,
-        const ReductionFunc& reduction, task_group grp, partition_hints hints,
+inline task_function get_reduce_task_fun(Value& res, It first, It last, Value identity,
+        const BinaryOp& op, const ReductionFunc& reduction, task_group grp, partition_hints hints,
         std::random_access_iterator_tag) {
     int granularity = std::max(1, hints.granularity_);
     switch (hints.method_) {
     case partition_method::upfront_partition:
-        return task(
-                [&res, first, last, identity, &op, &reduction, grp]() {
-                    int n = static_cast<int>(last - first);
-                    conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                            std::move(identity), op, reduction);
-                    detail::upfront_partition_work(first, n, work, grp);
-                    res = std::move(work.value_);
-                },
-                grp);
+        return [&res, first, last, identity, &op, &reduction, grp]() {
+            int n = static_cast<int>(last - first);
+            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
+                    std::move(identity), op, reduction);
+            detail::upfront_partition_work(first, n, work, grp);
+            res = std::move(work.value_);
+        };
     case partition_method::naive_partition: // naive cannot be efficiently implemented for reduce
     case partition_method::iterative_partition:
-        return task(
-                [&res, first, last, identity, &op, &reduction, grp, granularity]() {
-                    conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                            std::move(identity), op, reduction);
-                    detail::iterative_partition_work(first, last, work, grp, granularity);
-                    res = std::move(work.value_);
-                },
-                grp);
+        return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
+            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
+                    std::move(identity), op, reduction);
+            detail::iterative_partition_work(first, last, work, grp, granularity);
+            res = std::move(work.value_);
+        };
     case partition_method::auto_partition:
     default:
-        return task(
-                [&res, first, last, identity, &op, &reduction, grp, granularity]() {
-                    int n = static_cast<int>(last - first);
-                    conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                            std::move(identity), op, reduction);
-                    detail::auto_partition_work(first, n, work, grp, granularity);
-                    res = std::move(work.value_);
-                },
-                grp);
+        return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
+            int n = static_cast<int>(last - first);
+            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
+                    std::move(identity), op, reduction);
+            detail::auto_partition_work(first, n, work, grp, granularity);
+            res = std::move(work.value_);
+        };
     }
 }
 
 //! Constructs a task to implement conc_reduce algorithm, based on the hinted algorithm.
 //! This is used if the range DOES NOT use random-access iterators.
 template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
-inline task get_reduce_task(Value& res, It first, It last, Value identity, const BinaryOp& op,
-        const ReductionFunc& reduction, task_group grp, partition_hints hints, ...) {
+inline task_function get_reduce_task_fun(Value& res, It first, It last, Value identity,
+        const BinaryOp& op, const ReductionFunc& reduction, task_group grp, partition_hints hints,
+        ...) {
     int granularity = std::max(1, hints.granularity_);
     switch (hints.method_) {
     case partition_method::naive_partition: // naive cannot be efficiently implemented for reduce
     case partition_method::iterative_partition:
     default:
-        return task(
-                [&res, first, last, identity, &op, &reduction, grp, granularity]() {
-                    conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                            std::move(identity), op, reduction);
-                    detail::iterative_partition_work(first, last, work, grp, granularity);
-                    res = std::move(work.value_);
-                },
-                grp);
+        return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
+            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
+                    std::move(identity), op, reduction);
+            detail::iterative_partition_work(first, last, work, grp, granularity);
+            res = std::move(work.value_);
+        };
     }
 }
 
@@ -103,9 +96,6 @@ inline task get_reduce_task(Value& res, It first, It last, Value identity, const
 template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
 inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,
         const ReductionFunc& reduction, task_group grp, partition_hints hints) {
-    auto& tsys = detail::get_task_system();
-    auto worker_data = tsys.enter_worker();
-
     if (!grp)
         grp = task_group::current_task_group();
     auto wait_grp = task_group::create(grp);
@@ -114,11 +104,10 @@ inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,
 
     Value res;
     auto iter_cat = typename std::iterator_traits<It>::iterator_category();
-    auto t = get_reduce_task(res, first, last, identity, op, reduction, wait_grp, hints, iter_cat);
-    tsys.spawn(std::move(t), false);
-    tsys.busy_wait_on(wait_grp);
-
-    tsys.exit_worker(worker_data);
+    auto tf = get_reduce_task_fun(
+            res, first, last, identity, op, reduction, wait_grp, hints, iter_cat);
+    spawn(std::move(tf), wait_grp, false);
+    wait(wait_grp);
 
     // If we have an exception, re-throw it
     if (thrown_exception)

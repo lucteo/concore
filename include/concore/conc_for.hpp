@@ -34,66 +34,54 @@ struct conc_for_work {
 //! Constructs a task to implement conc_for algorithm, based on the hinted algorithm.
 //! This is used if the range uses random-access iterators.
 template <typename RandomIt, typename UnaryFunction>
-inline task get_for_task(RandomIt first, RandomIt last, const UnaryFunction& f, task_group grp,
-        partition_hints hints, std::random_access_iterator_tag) {
+inline task_function get_for_task_fun(RandomIt first, RandomIt last, const UnaryFunction& f,
+        task_group grp, partition_hints hints, std::random_access_iterator_tag) {
     int granularity = std::max(1, hints.granularity_);
     switch (hints.method_) {
     case partition_method::upfront_partition:
-        return task(
-                [first, last, &f, grp]() {
-                    int n = static_cast<int>(last - first);
-                    conc_for_work<RandomIt, UnaryFunction> work(f);
-                    detail::upfront_partition_work(first, n, work, grp);
-                },
-                grp);
+        return [first, last, &f, grp]() {
+            int n = static_cast<int>(last - first);
+            conc_for_work<RandomIt, UnaryFunction> work(f);
+            detail::upfront_partition_work(first, n, work, grp);
+        };
     case partition_method::iterative_partition:
-        return task(
-                [first, last, &f, grp, granularity]() {
-                    conc_for_work<RandomIt, UnaryFunction> work(f);
-                    detail::iterative_partition_work(first, last, work, grp, granularity);
-                },
-                grp);
+        return [first, last, &f, grp, granularity]() {
+            conc_for_work<RandomIt, UnaryFunction> work(f);
+            detail::iterative_partition_work(first, last, work, grp, granularity);
+        };
     case partition_method::naive_partition:
-        return task(
-                [first, last, &f, grp, granularity]() {
-                    conc_for_work<RandomIt, UnaryFunction> work(f);
-                    detail::naive_partition_work(first, last, work, grp, granularity);
-                },
-                grp);
+        return [first, last, &f, grp, granularity]() {
+            conc_for_work<RandomIt, UnaryFunction> work(f);
+            detail::naive_partition_work(first, last, work, grp, granularity);
+        };
     case partition_method::auto_partition:
     default:
-        return task(
-                [first, last, &f, grp, granularity]() {
-                    int n = static_cast<int>(last - first);
-                    conc_for_work<RandomIt, UnaryFunction> work(f);
-                    detail::auto_partition_work(first, n, work, grp, granularity);
-                },
-                grp);
+        return [first, last, &f, grp, granularity]() {
+            int n = static_cast<int>(last - first);
+            conc_for_work<RandomIt, UnaryFunction> work(f);
+            detail::auto_partition_work(first, n, work, grp, granularity);
+        };
     }
 }
 
 //! Constructs a task to implement conc_for algorithm, based on the hinted algorithm.
 //! This is used if the range DOES NOT use random-access iterators.
 template <typename It, typename UnaryFunction>
-inline task get_for_task(It first, It last, const UnaryFunction& f, task_group grp,
-        partition_hints hints, ...) {
+inline task_function get_for_task_fun(
+        It first, It last, const UnaryFunction& f, task_group grp, partition_hints hints, ...) {
     int granularity = std::max(1, hints.granularity_);
     switch (hints.method_) {
     case partition_method::naive_partition:
-        return task(
-                [first, last, &f, grp, granularity]() {
-                    conc_for_work<It, UnaryFunction> work(f);
-                    detail::naive_partition_work(first, last, work, grp, granularity);
-                },
-                grp);
+        return [first, last, &f, grp, granularity]() {
+            conc_for_work<It, UnaryFunction> work(f);
+            detail::naive_partition_work(first, last, work, grp, granularity);
+        };
     case partition_method::iterative_partition:
     default:
-        return task(
-                [first, last, &f, grp, granularity]() {
-                    conc_for_work<It, UnaryFunction> work(f);
-                    detail::iterative_partition_work(first, last, work, grp, granularity);
-                },
-                grp);
+        return [first, last, &f, grp, granularity]() {
+            conc_for_work<It, UnaryFunction> work(f);
+            detail::iterative_partition_work(first, last, work, grp, granularity);
+        };
     }
 }
 
@@ -101,9 +89,6 @@ inline task get_for_task(It first, It last, const UnaryFunction& f, task_group g
 template <typename Iter, typename UnaryFunction>
 inline void conc_for(
         Iter first, Iter last, const UnaryFunction& f, task_group grp, partition_hints hints) {
-    auto& tsys = detail::get_task_system();
-    auto worker_data = tsys.enter_worker();
-
     if (!grp)
         grp = task_group::current_task_group();
     auto wait_grp = task_group::create(grp);
@@ -111,11 +96,9 @@ inline void conc_for(
     install_except_propagation_handler(thrown_exception, wait_grp);
 
     auto iter_cat = typename std::iterator_traits<Iter>::iterator_category();
-    auto t = get_for_task(first, last, f, wait_grp, hints, iter_cat);
-    tsys.spawn(std::move(t), false);
-    tsys.busy_wait_on(wait_grp);
-
-    tsys.exit_worker(worker_data);
+    auto tf = get_for_task_fun(first, last, f, wait_grp, hints, iter_cat);
+    spawn(std::move(tf), wait_grp, false);
+    wait(wait_grp);
 
     // If we have an exception, re-throw it
     if (thrown_exception)
@@ -164,7 +147,8 @@ inline namespace v1 {
  * @see     partition_hints, partition_method
  */
 template <typename It, typename UnaryFunction>
-inline void conc_for(It first, It last, const UnaryFunction& f, task_group grp, partition_hints hints) {
+inline void conc_for(
+        It first, It last, const UnaryFunction& f, task_group grp, partition_hints hints) {
     detail::conc_for(first, last, f, grp, hints);
 }
 //! \overload

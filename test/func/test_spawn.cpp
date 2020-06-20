@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/spawn.hpp>
+#include <concore/init.hpp>
 #include <concore/executor_type.hpp>
 
 #include "test_common/common_executor_tests.hpp"
@@ -99,4 +100,48 @@ TEST_CASE("a lot of spawning of small tasks works", "[spawn]") {
 
     // Check that we've executed the right amount of tasks
     REQUIRE(count.load() == num_tasks);
+}
+
+TEST_CASE("wait does work on the calling thread", "[spawn]") {
+    CONCORE_PROFILING_FUNCTION();
+
+    // For this test we need exactly 1 worker thread
+    concore::shutdown();
+    concore::init_data config;
+    config.num_workers_ = 1;
+    concore::init(config);
+
+    std::atomic<bool> can_finish{false};
+    std::atomic<int> count{0};
+
+    auto grp = concore::task_group::create();
+
+    // Enqueue a task that will wait run for as long as the can_finish is not set
+    concore::spawn(
+            [&] {
+                while (!can_finish.load())
+                    std::this_thread::sleep_for(1ms);
+                count++;
+            },
+            grp);
+
+    // Enqueue the second task that will unblock the first one
+    concore::spawn(
+            [&] {
+                can_finish = true;
+                count++;
+            },
+            grp);
+
+    // At this point, no task should be finished
+    std::this_thread::sleep_for(3ms);
+    REQUIRE(count.load() == 0);
+
+    // Wait for the group to complete.
+    // As this thread joins the workers, the two tasks will be executed
+    concore::wait(grp);
+    REQUIRE(count.load() == 2);
+
+    // Reset the number of workers
+    concore::shutdown();
 }
