@@ -147,6 +147,17 @@ public:
      */
     explicit operator bool() const noexcept { return static_cast<bool>(impl_); }
 
+    /**
+     * @brief      Clear all the dependencies that go from this task
+     * 
+     * This is useful for constructing and destroying task graphs manually.
+     */
+    void clear_next() {
+        for (auto& n : impl_->next_tasks_)
+            n.impl_->pred_count_--;
+        impl_->next_tasks_.clear();
+    }
+
 private:
     std::shared_ptr<detail::chained_task_impl> impl_;
 
