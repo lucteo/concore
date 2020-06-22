@@ -73,6 +73,22 @@ Algorithms
 ^^^^^^^^^^^^^^
 .. doxygenfile:: conc_for.hpp
 
+`conc_reduce.hpp`
+^^^^^^^^^^^^^^^^^
+.. doxygenfile:: conc_reduce.hpp
+
+`conc_scan.hpp`
+^^^^^^^^^^^^^^^
+.. doxygenfile:: conc_scan.hpp
+
+`conc_sort.hpp`
+^^^^^^^^^^^^^^^
+.. doxygenfile:: conc_sort.hpp
+
+`partition_hints.hpp`
+^^^^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: partition_hints.hpp
+
 
 
 Data
