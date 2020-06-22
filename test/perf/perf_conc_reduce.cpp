@@ -167,23 +167,23 @@ static void BM_string_tbb_parallel_reduce(benchmark::State& state) {
 }
 #endif
 
-#if CONCORE_USE_OPENMP
-static void BM_string_omp_reduce(benchmark::State& state) {
-    const int data_size = state.range(0);
-    std::vector<std::string> data = generate_string_test_data(data_size);
+// #if CONCORE_USE_OPENMP
+// static void BM_string_omp_reduce(benchmark::State& state) {
+//     const int data_size = state.range(0);
+//     std::vector<std::string> data = generate_string_test_data(data_size);
 
-    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
-    for (auto _ : state) {
-        CONCORE_PROFILING_SCOPE_N("test iter");
-        std::string sum;
-#pragma omp parallel for reduction(+ : sum)
-        for (int idx = 0; idx < data_size; idx++) {
-            sum += data[idx];
-        };
-        benchmark::DoNotOptimize(sum);
-    }
-}
-#endif
+//     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+//     for (auto _ : state) {
+//         CONCORE_PROFILING_SCOPE_N("test iter");
+//         std::string sum;
+// #pragma omp parallel for reduction(+ : sum)
+//         for (int idx = 0; idx < data_size; idx++) {
+//             sum += data[idx];
+//         };
+//         benchmark::DoNotOptimize(sum);
+//     }
+// }
+// #endif
 
 static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
@@ -206,8 +206,8 @@ BENCHMARK_CASE2(BM_string_conc_reduce);
 #if CONCORE_USE_TBB
 BENCHMARK_CASE2(BM_string_tbb_parallel_reduce);
 #endif
-#if CONCORE_USE_OPENMP
-BENCHMARK_CASE2(BM_string_omp_reduce);
-#endif
+// #if CONCORE_USE_OPENMP
+// BENCHMARK_CASE2(BM_string_omp_reduce);
+// #endif
 
 BENCHMARK_MAIN();

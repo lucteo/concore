@@ -15,6 +15,8 @@
 #endif
 
 #include <benchmark/benchmark.h>
+#include <algorithm>
+#include <math.h>
 
 using concore::integral_iterator;
 
@@ -217,6 +219,7 @@ BENCHMARK_CASE(BM_simple_tbb_parallel_for);
 BENCHMARK_CASE(BM_simple_omp_for);
 #endif
 
+#if CONCORE_USE_GLM
 BENCHMARK_PAUSE();
 BENCHMARK_CASE(BM_fresnel_std_for_each);
 BENCHMARK_CASE(BM_fresnel_conc_for);
@@ -226,5 +229,6 @@ BENCHMARK_CASE(BM_fresnel_tbb_parallel_for);
 #if CONCORE_USE_OPENMP
 BENCHMARK_CASE(BM_fresnel_omp_for);
 #endif
+#endif // CONCORE_USE_GLM
 
 BENCHMARK_MAIN();
