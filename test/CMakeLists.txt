@@ -51,6 +51,29 @@ target_compile_options(test.concore PUBLIC
      $<$<CXX_COMPILER_ID:MSVC>:
           /W4>)
 
+# Check for OpenMP
+find_package(OpenMP QUIET)
+if(OpenMP_CXX_FOUND)
+    message(STATUS "OpenMP was also found on the system")
+    message(STATUS)
+    add_definitions(-DCONCORE_USE_OPENMP=1)
+endif()
+
+# Check if glm (OpenGL Mathematics) can be found
+find_package(glm QUIET)
+if(${glm_FOUND})
+    find_path(glm_inc_dir NAMES "glm/vec4.hpp" HINTS ${GLM_INCLUDE_DIRS})
+    if(EXISTS ${glm_inc_dir})
+        message(STATUS "glm was also found on the system")
+        message(STATUS)
+        add_definitions(-DCONCORE_USE_GLM=1)
+    elseif()
+        set(${glm_FOUND} 0)
+    endif()
+    
+endif()
+
+
 ###################
 # Performance tests
 
@@ -65,4 +88,19 @@ endfunction()
 def_perf_test(perf.executors "perf/perf_executors.cpp")
 def_perf_test(perf.latency "perf/perf_latency.cpp")
 def_perf_test(perf.queue "perf/perf_queue.cpp")
+def_perf_test(perf.conc_for "perf/perf_conc_for.cpp")
+def_perf_test(perf.conc_reduce "perf/perf_conc_reduce.cpp")
+def_perf_test(perf.conc_scan "perf/perf_conc_scan.cpp")
+def_perf_test(perf.conc_sort "perf/perf_conc_sort.cpp")
+
+if(${glm_FOUND} AND EXISTS ${glm_inc_dir})
+    target_link_libraries(perf.conc_for glm::glm)
+    target_include_directories(perf.conc_for PRIVATE ${glm_inc_dir})
+endif()
+if(${OpenMP_CXX_FOUND})
+    target_link_libraries(perf.conc_for OpenMP::OpenMP_CXX)
+    target_link_libraries(perf.conc_reduce OpenMP::OpenMP_CXX)
+    target_link_libraries(perf.conc_scan OpenMP::OpenMP_CXX)
+    target_link_libraries(perf.conc_sort OpenMP::OpenMP_CXX)
+endif()
 

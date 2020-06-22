@@ -16,8 +16,8 @@ static constexpr int size_threshold = 60;
 
 template <typename It, typename Comp>
 inline int median3(It it, int l, int m, int r, const Comp& comp) {
-    return comp(it[l], it[m]) ? (comp(it[m], it[r]) ? m : (comp(it[l], it[r] ? r : l)))
-                              : (comp(it[r], it[m]) ? m : (comp(it[l], it[l] ? r : l)));
+    return comp(it[l], it[m]) ? (comp(it[m], it[r]) ? m : (comp(it[l], it[r]) ? r : l))
+                              : (comp(it[r], it[m]) ? m : (comp(it[l], it[l]) ? r : l));
 }
 
 template <typename It, typename Comp>
