@@ -111,6 +111,8 @@ add_library(concore STATIC ${concore_sourceFiles})
 
 # Use C++17
 target_compile_features(concore PUBLIC cxx_std_17)
+# Prevent linking errors towards CXX11 ABI (visible when linking with rapidcheck)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
 
 # Turn all warnings
 target_compile_options(concore PRIVATE

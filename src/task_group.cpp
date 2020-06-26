@@ -48,8 +48,16 @@ void task_group_access::on_task_done(const task_group& grp, const task& t) {
 void task_group_access::on_task_exception(
         const task_group& grp, const task& t, std::exception_ptr ex) {
     g_current_task_group = task_group{};
-    if (grp.impl_ && grp.impl_->except_fun_)
-        grp.impl_->except_fun_(ex);
+    // Recurse up to find a group that has a exception handler fun
+    // Stop when we find the first one
+    auto pimpl = grp.impl_;
+    while (pimpl) {
+        if (pimpl && pimpl->except_fun_) {
+            pimpl->except_fun_(ex);
+            return;
+        }
+        pimpl = pimpl->parent_;
+    }
 }
 
 void task_group_access::on_task_created(task_group& grp) {
@@ -83,7 +91,7 @@ task_group task_group::create(const task_group& parent) {
     return res;
 }
 
-void task_group::set_exception_handler(std::function<void(std::exception_ptr)> except_fun) {
+void task_group::set_exception_handler(except_fun_t except_fun) {
     assert(impl_);
     impl_->except_fun_ = std::move(except_fun);
 }

@@ -72,6 +72,28 @@ inline void spawn(F&& ftor, bool wake_workers = true) {
 }
 
 /**
+ * @brief      Spawn one task, given a functor to be executed.
+ *
+ * @param      ftor          The ftor to be executed
+ * @param      grp           The group in which the task should be executed.
+ * @param      wake_workers  True if we should wake other workers for this task
+ *
+ * @tparam     F             The type of the functor
+ *
+ * This is similar to the @ref spawn(task&&, bool) function, but it takes directly a functor and a
+ * task group instead of a task.
+ *
+ * If the current task has a group associated, the new task will inherit that group.
+ *
+ * @see spawn(task&&, bool)
+ */
+template <typename F>
+inline void spawn(F&& ftor, task_group grp, bool wake_workers = true) {
+    detail::get_task_system().spawn(task(std::forward<F>(ftor), std::move(grp)), wake_workers);
+}
+
+
+/**
  * @brief      Spawn multiple tasks, given the functors to be executed.
  *
  * @param      ftors         A list of functors to be executed
@@ -91,6 +113,31 @@ inline void spawn(F&& ftor, bool wake_workers = true) {
  */
 inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_workers = true) {
     auto grp = task_group::current_task_group();
+    int count = static_cast<int>(ftors.size());
+    for (auto& ftor : ftors) {
+        // wake_workers applies only to the last element; otherwise pass true
+        bool cur_wake_workers = (count-- > 0 || wake_workers);
+        detail::get_task_system().spawn(task(std::move(ftor), grp), cur_wake_workers);
+    }
+}
+
+/**
+ * @brief      Spawn multiple tasks, given the functors to be executed.
+ *
+ * @param      ftors         A list of functors to be executed
+ * @param      grp           The group in which the functors are to be executed
+ * @param      wake_workers  True if we should wake other workers for the last task
+ *
+ * This is similar to the other two @ref spawn() functions, but it takes a series of functions to be
+ * executed. Tasks will be created for all these functions and spawn accordingly.
+ *
+ * The `wake_workers` will control whether to wake threads for the last task or not. For the others
+ * tasks, it is assumed that we always want to wake other workers to attempt to get as many tasks as
+ * possible from the current worker task list.
+ *
+ * @ref spawn(task&&, bool), spawn_and_wait()
+ */
+inline void spawn(std::initializer_list<task_function>&& ftors, task_group grp, bool wake_workers = true) {
     int count = static_cast<int>(ftors.size());
     for (auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
@@ -173,7 +220,12 @@ inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wa
  *
  * @see spawn(), spawn_and_wait()
  */
-inline void wait(task_group& grp) { detail::get_task_system().busy_wait_on(grp); }
+inline void wait(task_group& grp) {
+    auto& tsys = detail::get_task_system();
+    auto worker_data = tsys.enter_worker();
+    detail::get_task_system().busy_wait_on(grp);
+    tsys.exit_worker(worker_data);
+}
 
 /**
  * Executor that spawns tasks instead of enqueueing them.

@@ -131,6 +131,11 @@ TEST_CASE("circular dependencies lead to tasks not being executed", "[task_graph
     REQUIRE(!executed[1]);
     REQUIRE(!executed[2]);
     REQUIRE(!executed[3]);
+
+    // Clear the tasks
+    t2.clear_next();
+    t3.clear_next();
+    t4.clear_next();
 }
 
 TEST_CASE("a lot of continuations added to a chained_task", "[task_graph]") {

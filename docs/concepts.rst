@@ -319,3 +319,20 @@ So far we mentioned that there is only one global queue. There are in fact multi
 
 All the operations related to task extraction are designed to be fast. The library does not traverse all the tasks when choosing the next task to be executed.
 
+Extra concore features
+----------------------
+
+Algorithms
+^^^^^^^^^^
+
+Concore provices a couple concurrent algorithms that of general use:
+
+* :cpp:func:`conc_for() <concore::v1::conc_for>`
+* :cpp:func:`conc_reduce() <concore::v1::conc_reduce>`
+* :cpp:func:`conc_scan() <concore::v1::conc_scan>`
+* :cpp:func:`conc_sort() <concore::v1::conc_sort>`
+
+A concurrent application typically means much more than transforming some STL algorithms to concurrent algorithms. Moreover, the performance of the concurrent algorithms and the performance gain in multi-threaded environments depends a lot on the type of data they operate on. Therefore, concore doesn't focus on providing an exhaustive list of concurrent algorithms like Parallel STL.
+
+Probably the most useful of the algorithms is :cpp:func:`conc_for() <concore::v1::conc_for>`, which is highly useful for expressing embarrassing parallel problems.
+

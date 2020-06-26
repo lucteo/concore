@@ -140,6 +140,24 @@ public:
         impl_->except_fun_ = std::move(except_fun);
     }
 
+    /**
+     * @brief      Bool conversion operator.
+     *
+     * Indicates if this is a valid chained task.
+     */
+    explicit operator bool() const noexcept { return static_cast<bool>(impl_); }
+
+    /**
+     * @brief      Clear all the dependencies that go from this task
+     * 
+     * This is useful for constructing and destroying task graphs manually.
+     */
+    void clear_next() {
+        for (auto& n : impl_->next_tasks_)
+            n.impl_->pred_count_--;
+        impl_->next_tasks_.clear();
+    }
+
 private:
     std::shared_ptr<detail::chained_task_impl> impl_;
 
