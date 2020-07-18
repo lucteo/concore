@@ -45,11 +45,11 @@ inline task_function get_reduce_task_fun(Value& res, It first, It last, Value id
     int granularity = std::max(1, hints.granularity_);
     switch (hints.method_) {
     case partition_method::upfront_partition:
-        return [&res, first, last, identity, &op, &reduction, grp]() {
+        return [&res, first, last, identity, &op, &reduction, grp, hints]() {
             int n = static_cast<int>(last - first);
             conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
                     std::move(identity), op, reduction);
-            detail::upfront_partition_work(first, n, work, grp);
+            detail::upfront_partition_work(first, n, work, grp, hints);
             res = std::move(work.value_);
         };
     case partition_method::naive_partition: // naive cannot be efficiently implemented for reduce

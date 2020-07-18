@@ -15,6 +15,8 @@ template <typename It, typename UnaryFunction>
 struct conc_for_work {
     const UnaryFunction* ftor_{nullptr};
 
+    using iterator = It;
+
     conc_for_work() = default;
     conc_for_work(const conc_for_work&) = default;
     conc_for_work& operator=(const conc_for_work&) = default;
@@ -30,6 +32,27 @@ struct conc_for_work {
     static constexpr bool needs_join() { return false; }
     void join(conc_for_work&) {}
 };
+template <typename UnaryFunction>
+struct conc_for_work_int {
+    const UnaryFunction* ftor_{nullptr};
+
+    using iterator = int;
+
+    conc_for_work_int() = default;
+    conc_for_work_int(const conc_for_work_int&) = default;
+    conc_for_work_int& operator=(const conc_for_work_int&) = default;
+
+    explicit conc_for_work_int(const UnaryFunction& f)
+        : ftor_(&f) {}
+
+    void exec(int elem) { (*ftor_)(elem); }
+    void exec(int first, int last) {
+        for (; first != last; first++)
+            (*ftor_)(first);
+    }
+    static constexpr bool needs_join() { return false; }
+    void join(conc_for_work_int&) {}
+};
 
 //! Constructs a task to implement conc_for algorithm, based on the hinted algorithm.
 //! This is used if the range uses random-access iterators.
@@ -37,12 +60,16 @@ template <typename RandomIt, typename UnaryFunction>
 inline task_function get_for_task_fun(RandomIt first, RandomIt last, const UnaryFunction& f,
         task_group grp, partition_hints hints, std::random_access_iterator_tag) {
     int granularity = std::max(1, hints.granularity_);
+    int n = static_cast<int>(last - first);
+    int max_tasks_per_worker = hints.max_tasks_per_worker_ > 0 ? hints.max_tasks_per_worker_ : 20;
+    auto hi_limit = detail::get_task_system().num_worker_threads() * max_tasks_per_worker;
+    if (n > hi_limit)
+        granularity = std::max(granularity, n/hi_limit);
     switch (hints.method_) {
     case partition_method::upfront_partition:
-        return [first, last, &f, grp]() {
-            int n = static_cast<int>(last - first);
+        return [first, n, &f, grp, hints]() {
             conc_for_work<RandomIt, UnaryFunction> work(f);
-            detail::upfront_partition_work(first, n, work, grp);
+            detail::upfront_partition_work(first, n, work, grp, hints);
         };
     case partition_method::iterative_partition:
         return [first, last, &f, grp, granularity]() {
@@ -56,10 +83,9 @@ inline task_function get_for_task_fun(RandomIt first, RandomIt last, const Unary
         };
     case partition_method::auto_partition:
     default:
-        return [first, last, &f, grp, granularity]() {
-            int n = static_cast<int>(last - first);
+        return [first, n, &f, grp, granularity]() {
             conc_for_work<RandomIt, UnaryFunction> work(f);
-            detail::auto_partition_work(first, n, work, grp, granularity);
+            detail::auto_partition_work2(first, n, work, granularity);
         };
     }
 }
@@ -85,6 +111,40 @@ inline task_function get_for_task_fun(
     }
 }
 
+template <typename UnaryFunction>
+inline task_function get_for_task_fun_int(
+        int first, int last, const UnaryFunction& f, const task_group& grp, partition_hints hints) {
+    int granularity = std::max(1, hints.granularity_);
+    int n = static_cast<int>(last - first);
+    int max_tasks_per_worker = hints.max_tasks_per_worker_ > 0 ? hints.max_tasks_per_worker_ : 20;
+    auto hi_limit = detail::get_task_system().num_worker_threads() * max_tasks_per_worker;
+    if (n > hi_limit)
+        granularity = std::max(granularity, n/hi_limit);
+    switch (hints.method_) {
+    case partition_method::upfront_partition:
+        return [first, n, &f, grp, hints]() {
+            conc_for_work_int<UnaryFunction> work(f);
+            detail::upfront_partition_work(first, n, work, grp, hints);
+        };
+    // case partition_method::iterative_partition:
+    //     return [first, last, &f, grp, granularity]() {
+    //         conc_for_work_int<UnaryFunction> work(f);
+    //         detail::iterative_partition_work(first, last, work, grp, granularity);
+    //     };
+    // case partition_method::naive_partition:
+    //     return [first, last, &f, grp, granularity]() {
+    //         conc_for_work_int<UnaryFunction> work(f);
+    //         detail::naive_partition_work(first, last, work, grp, granularity);
+    //     };
+    case partition_method::auto_partition:
+    default:
+        return [first, n, &f, &grp, granularity]() {
+            conc_for_work_int<UnaryFunction> work(f);
+            detail::auto_partition_work2(first, n, work, granularity);
+        };
+    }
+}
+
 //! Main implementation of the conc_for algorithm
 template <typename Iter, typename UnaryFunction>
 inline void conc_for(
@@ -97,6 +157,25 @@ inline void conc_for(
 
     auto iter_cat = typename std::iterator_traits<Iter>::iterator_category();
     auto tf = get_for_task_fun(first, last, f, wait_grp, hints, iter_cat);
+    spawn(std::move(tf), wait_grp, false);
+    wait(wait_grp);
+
+    // If we have an exception, re-throw it
+    if (thrown_exception)
+        std::rethrow_exception(thrown_exception);
+}
+
+//! Main implementation of the conc_for algorithm
+template <typename UnaryFunction>
+inline void conc_for_int(
+        int first, int last, const UnaryFunction& f, task_group grp, partition_hints hints) {
+    if (!grp)
+        grp = task_group::current_task_group();
+    auto wait_grp = task_group::create(grp);
+    std::exception_ptr thrown_exception;
+    install_except_propagation_handler(thrown_exception, wait_grp);
+
+    auto tf = get_for_task_fun_int(first, last, f, wait_grp, hints);
     spawn(std::move(tf), wait_grp, false);
     wait(wait_grp);
 
@@ -165,6 +244,28 @@ inline void conc_for(It first, It last, const UnaryFunction& f, partition_hints 
 template <typename It, typename UnaryFunction>
 inline void conc_for(It first, It last, const UnaryFunction& f) {
     detail::conc_for(first, last, f, {}, {});
+}
+
+//! \overload
+template <typename UnaryFunction>
+inline void conc_for(
+        int first, int last, const UnaryFunction& f, task_group grp, partition_hints hints) {
+    detail::conc_for_int(first, last, f, grp, hints);
+}
+//! \overload
+template <typename UnaryFunction>
+inline void conc_for(int first, int last, const UnaryFunction& f, task_group grp) {
+    detail::conc_for_int(first, last, f, grp, {});
+}
+//! \overload
+template <typename UnaryFunction>
+inline void conc_for(int first, int last, const UnaryFunction& f, partition_hints hints) {
+    detail::conc_for_int(first, last, f, {}, hints);
+}
+//! \overload
+template <typename UnaryFunction>
+inline void conc_for(int first, int last, const UnaryFunction& f) {
+    detail::conc_for_int(first, last, f, {}, {});
 }
 
 } // namespace v1

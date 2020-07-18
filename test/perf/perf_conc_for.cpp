@@ -34,6 +34,11 @@ void generate_simple_test_data(int size, std::vector<float>& data) {
     std::generate(data.begin(), data.end(), [] { return rand_float() * 3.14159f; });
 }
 
+float simple_transform(float in) {
+    return sqrt(sin(in)) * sqrt(cos(in)) + sqrt(sin(2 * in)) * sqrt(cos(2 * in)) +
+           sqrt(sin(3 * in)) * sqrt(cos(3 * in)) + sqrt(sin(4 * in)) * sqrt(cos(4 * in));
+}
+
 static void BM_simple_std_for_each(benchmark::State& state) {
     const int data_size = state.range(0);
 
@@ -45,7 +50,7 @@ static void BM_simple_std_for_each(benchmark::State& state) {
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         std::for_each(integral_iterator(0), integral_iterator(data_size),
-                [&](int idx) { out_vec[idx] = sin(data[idx]) * cos(data[idx]); });
+                [&](int idx) { out_vec[idx] = simple_transform(data[idx]); });
     }
 }
 
@@ -59,8 +64,26 @@ static void BM_simple_conc_for(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        concore::conc_for(integral_iterator(0), integral_iterator(data_size),
-                [&](int idx) { out_vec[idx] = sin(data[idx]) * cos(data[idx]); });
+        concore::conc_for(
+                0, data_size, [&](int idx) { out_vec[idx] = simple_transform(data[idx]); });
+    }
+}
+
+static void BM_simple_conc_for_upfront(benchmark::State& state) {
+    const int data_size = state.range(0);
+
+    std::vector<float> data;
+    std::vector<float> out_vec(data_size);
+    generate_simple_test_data(data_size, data);
+
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+    for (auto _ : state) {
+        CONCORE_PROFILING_SCOPE_N("test iter");
+        concore::partition_hints hints;
+        hints.method_ = concore::partition_method::upfront_partition;
+        hints.tasks_per_worker_ = 10;
+        concore::conc_for(
+                0, data_size, [&](int idx) { out_vec[idx] = simple_transform(data[idx]); }, hints);
     }
 }
 
@@ -76,7 +99,7 @@ static void BM_simple_tbb_parallel_for(benchmark::State& state) {
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         tbb::parallel_for(
-                0, data_size, 1, [&](int idx) { out_vec[idx] = sin(data[idx]) * cos(data[idx]); });
+                0, data_size, 1, [&](int idx) { out_vec[idx] = simple_transform(data[idx]); });
     }
 }
 #endif
@@ -94,7 +117,7 @@ static void BM_simple_omp_for(benchmark::State& state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
 #pragma omp parallel for
         for (int idx = 0; idx < data_size; idx++) {
-            out_vec[idx] = sin(data[idx]) * cos(data[idx]);
+            out_vec[idx] = simple_transform(data[idx]);
         };
     }
 }
@@ -160,9 +183,25 @@ static void BM_fresnel_conc_for(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
+        concore::conc_for(0, data_size,
+                [&](int idx) { out_vec[idx] = fresnel(incidence[idx], normals[idx], 1.0f); });
+    }
+}
+
+static void BM_fresnel_conc_for_upfront(benchmark::State& state) {
+    const int data_size = state.range(0);
+
+    vec_array incidence, normals;
+    std::vector<float> out_vec(data_size);
+    generate_fresnel_test_data(data_size, incidence, normals);
+
+    // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
+    for (auto _ : state) {
+        CONCORE_PROFILING_SCOPE_N("test iter");
         concore::partition_hints hints;
-        hints.granularity_ = data_size / 120;
-        concore::conc_for(integral_iterator(0), integral_iterator(data_size),
+        hints.method_ = concore::partition_method::upfront_partition;
+        hints.tasks_per_worker_ = 10;
+        concore::conc_for(0, data_size,
                 [&](int idx) { out_vec[idx] = fresnel(incidence[idx], normals[idx], 1.0f); },
                 hints);
     }
@@ -208,10 +247,11 @@ static void BM_fresnel_omp_for(benchmark::State& state) {
 static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
-#define BENCHMARK_CASE(fun) BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Arg(1000'000);
+#define BENCHMARK_CASE(fun) BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Arg(10'000'000);
 
 BENCHMARK_CASE(BM_simple_std_for_each);
 BENCHMARK_CASE(BM_simple_conc_for);
+BENCHMARK_CASE(BM_simple_conc_for_upfront);
 #if CONCORE_USE_TBB
 BENCHMARK_CASE(BM_simple_tbb_parallel_for);
 #endif
@@ -223,6 +263,7 @@ BENCHMARK_CASE(BM_simple_omp_for);
 BENCHMARK_PAUSE();
 BENCHMARK_CASE(BM_fresnel_std_for_each);
 BENCHMARK_CASE(BM_fresnel_conc_for);
+BENCHMARK_CASE(BM_fresnel_conc_for_upfront);
 #if CONCORE_USE_TBB
 BENCHMARK_CASE(BM_fresnel_tbb_parallel_for);
 #endif

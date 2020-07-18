@@ -96,7 +96,25 @@ struct partition_hints {
     //! really small, and the task management overhead can become significant.
     //! 
     //! Does not apply to the @ref partition_method::upfront_partition method
-    int granularity_{1};
+    int granularity_{-1};
+
+    //! The number of tasks to create per worker
+    //!
+    //! If this is set, we try to divide the work so that we have this number of tasks per worker.
+    //! To be used with upfront partition.
+    //! 
+    //! If, for example, this is set to 10, and we have 8 workers, then the upfront partition will
+    //! create maximum 80 tasks.
+    int tasks_per_worker_{-1};
+
+    //! The maximum tasks to create for a worker
+    //!
+    //! Whenever this is set, we ensure that we don't break the work into too many tasks. It has a
+    //! similar effect to setting the granularity.
+    //! 
+    //! If, for example, this is set to 10, and we have 8 workers, then the upfront partition will
+    //! create maximum 80 tasks.
+    int max_tasks_per_worker_{-1};
 };
 
 } // namespace v1
