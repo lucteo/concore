@@ -4,8 +4,8 @@
 #include "concore/task_group.hpp"
 #include "concore/spawn.hpp"
 #include "concore/detail/partition_work.hpp"
+#include "concore/detail/algo_utils.hpp"
 #include "concore/detail/except_utils.hpp"
-#include "concore/detail/iterator_type.hpp"
 
 namespace concore {
 
@@ -27,35 +27,9 @@ struct conc_for_work {
 
     void exec(It first, It last) {
         for (; first != last; first++)
-            (*ftor_)(*first);
+            (*ftor_)(safe_dereference(first, nullptr));
     }
 };
-template <typename It, typename UnaryFunction>
-struct conc_for_work_int {
-    const UnaryFunction* ftor_{nullptr};
-
-    using iterator = It;
-
-    conc_for_work_int() = default;
-    conc_for_work_int(const conc_for_work_int&) = default;
-    conc_for_work_int& operator=(const conc_for_work_int&) = default;
-
-    explicit conc_for_work_int(const UnaryFunction& f)
-        : ftor_(&f) {}
-
-    void exec(It first, It last) {
-        for (; first != last; first++)
-            (*ftor_)(first);
-    }
-};
-
-inline int compute_granularity(int n, partition_hints hints) {
-    int granularity = std::max(1, hints.granularity_);
-    int max_tasks_per_worker = hints.tasks_per_worker_ > 0 ? hints.tasks_per_worker_ : 20;
-    int min_granularity =
-            n / (detail::get_task_system().num_worker_threads() * max_tasks_per_worker);
-    return std::max(granularity, min_granularity);
-}
 
 // Case where we have random-access iterators
 template <typename WorkType>
@@ -85,7 +59,7 @@ inline void do_conc_for(typename WorkType::iterator first, typename WorkType::it
         break;
     }
 }
-// Integral case: behave as we have random-access iteratos
+// Integral case: behave as we have random-access iterators
 template <typename WorkType>
 inline void do_conc_for(typename WorkType::iterator first, typename WorkType::iterator last,
         WorkType& work, const task_group& grp, partition_hints hints, no_iterator_tag) {
@@ -133,16 +107,9 @@ inline void conc_for_impl(typename WorkType::iterator first, typename WorkType::
 }
 
 template <typename It, typename UnaryFunction>
-inline void conc_for_fun(It first, It last, const UnaryFunction& f, const task_group& grp,
-        partition_hints hints, ...) {
+inline void conc_for_fun(
+        It first, It last, const UnaryFunction& f, const task_group& grp, partition_hints hints) {
     detail::conc_for_work<It, UnaryFunction> work(f);
-    conc_for_impl(first, last, work, grp, hints);
-}
-
-template <typename It, typename UnaryFunction>
-inline void conc_for_fun(It first, It last, const UnaryFunction& f, const task_group& grp,
-        partition_hints hints, no_iterator_tag) {
-    detail::conc_for_work_int<It, UnaryFunction> work(f);
     conc_for_impl(first, last, work, grp, hints);
 }
 
@@ -211,26 +178,22 @@ inline namespace v1 {
 template <typename It, typename UnaryFunction>
 inline void conc_for(
         It first, It last, const UnaryFunction& f, const task_group& grp, partition_hints hints) {
-    auto iter_cat = typename detail::iterator_type<It>::iterator_category();
-    detail::conc_for_fun(first, last, f, grp, hints, iter_cat);
+    detail::conc_for_fun(first, last, f, grp, hints);
 }
 //! \overload
 template <typename It, typename UnaryFunction>
 inline void conc_for(It first, It last, const UnaryFunction& f, const task_group& grp) {
-    auto iter_cat = typename detail::iterator_type<It>::iterator_category();
-    detail::conc_for_fun(first, last, f, grp, {}, iter_cat);
+    detail::conc_for_fun(first, last, f, grp, {});
 }
 //! \overload
 template <typename It, typename UnaryFunction>
 inline void conc_for(It first, It last, const UnaryFunction& f, partition_hints hints) {
-    auto iter_cat = typename detail::iterator_type<It>::iterator_category();
-    detail::conc_for_fun(first, last, f, {}, hints, iter_cat);
+    detail::conc_for_fun(first, last, f, {}, hints);
 }
 //! \overload
 template <typename It, typename UnaryFunction>
 inline void conc_for(It first, It last, const UnaryFunction& f) {
-    auto iter_cat = typename detail::iterator_type<It>::iterator_category();
-    detail::conc_for_fun(first, last, f, {}, {}, iter_cat);
+    detail::conc_for_fun(first, last, f, {}, {});
 }
 
 //! \overload

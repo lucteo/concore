@@ -4,119 +4,116 @@
 #include "concore/task_group.hpp"
 #include "concore/spawn.hpp"
 #include "concore/detail/partition_work.hpp"
+#include "concore/detail/algo_utils.hpp"
 #include "concore/detail/except_utils.hpp"
 
 namespace concore {
 
 namespace detail {
 
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
+template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
 struct conc_reduce_work {
+    using iterator = It;
+
     Value value_;
     const BinaryOp* func_{nullptr};
-    const ReductionFunc* reduction_{nullptr};
+    const ReductionOp* reduction_{nullptr};
 
     conc_reduce_work() = default;
     conc_reduce_work(const conc_reduce_work&) = default;
     conc_reduce_work& operator=(const conc_reduce_work&) = default;
 
-    conc_reduce_work(Value id, const BinaryOp& func, const ReductionFunc& reduction)
+    conc_reduce_work(Value id, const BinaryOp& func, const ReductionOp& reduction)
         : value_(id)
         , func_(&func)
         , reduction_(&reduction) {}
 
-    void exec(It elem) { value_ = (*func_)(std::move(value_), *elem); }
     void exec(It first, It last) {
         for (; first != last; first++)
-            value_ = (*func_)(std::move(value_), *first);
+            value_ = (*func_)(std::move(value_), safe_dereference(first, nullptr));
     }
-    static constexpr bool needs_join() { return true; }
     void join(conc_reduce_work& rhs) {
         value_ = (*reduction_)(std::move(value_), std::move(rhs.value_));
     }
 };
 
-//! Constructs a task to implement conc_reduce algorithm, based on the hinted algorithm.
-//! This is used if the range uses random-access iterators.
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
-inline task_function get_reduce_task_fun(Value& res, It first, It last, Value identity,
-        const BinaryOp& op, const ReductionFunc& reduction, task_group grp, partition_hints hints,
+// Case where we have random-access iterators
+template <typename WorkType>
+inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, const task_group& grp, partition_hints hints,
         std::random_access_iterator_tag) {
-    int granularity = std::max(1, hints.granularity_);
+
+    int n = static_cast<int>(last - first);
+    if (n == 0)
+        return;
+    int granularity = compute_granularity(n, hints);
     switch (hints.method_) {
-    case partition_method::upfront_partition:
-        return [&res, first, last, identity, &op, &reduction, grp, hints]() {
-            int n = static_cast<int>(last - first);
-            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                    std::move(identity), op, reduction);
-            int tasks_per_worker = hints.tasks_per_worker_ > 0 ? hints.tasks_per_worker_ : 2;
-            detail::upfront_partition_work<true>(first, n, work, grp, tasks_per_worker);
-            res = std::move(work.value_);
-        };
+    case partition_method::upfront_partition: {
+        int tasks_per_worker = hints.tasks_per_worker_ > 0 ? hints.tasks_per_worker_ : 2;
+        detail::upfront_partition_work<true>(first, n, work, grp, tasks_per_worker);
+        break;
+    }
     case partition_method::naive_partition: // naive cannot be efficiently implemented for reduce
     case partition_method::iterative_partition:
-        return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
-            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                    std::move(identity), op, reduction);
-            detail::iterative_partition_work<true>(first, last, work, grp, granularity);
-            res = std::move(work.value_);
-        };
+        detail::iterative_partition_work<true>(first, last, work, grp, granularity);
+        break;
     case partition_method::auto_partition:
     default:
-        return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
-            int n = static_cast<int>(last - first);
-            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                    std::move(identity), op, reduction);
-            detail::auto_partition_work(first, n, work, grp, granularity);
-            res = std::move(work.value_);
-        };
+        detail::auto_partition_work<true>(first, n, work, grp, granularity);
+        // detail::auto_partition_work2(first, n, work, granularity);
+        break;
     }
 }
-
-//! Constructs a task to implement conc_reduce algorithm, based on the hinted algorithm.
-//! This is used if the range DOES NOT use random-access iterators.
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
-inline task_function get_reduce_task_fun(Value& res, It first, It last, Value identity,
-        const BinaryOp& op, const ReductionFunc& reduction, task_group grp, partition_hints hints,
-        ...) {
+// Integral case: behave as we have random-access iterators
+template <typename WorkType>
+inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, const task_group& grp, partition_hints hints, no_iterator_tag) {
+    do_conc_reduce(first, last, work, grp, hints, std::random_access_iterator_tag());
+}
+// Forward iterators case
+template <typename WorkType>
+inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, const task_group& grp, partition_hints hints, ...) {
     int granularity = std::max(1, hints.granularity_);
-    switch (hints.method_) {
-    case partition_method::naive_partition: // naive cannot be efficiently implemented for reduce
-    case partition_method::iterative_partition:
-    default:
-        return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
-            conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
-                    std::move(identity), op, reduction);
-            detail::iterative_partition_work<true>(first, last, work, grp, granularity);
-            res = std::move(work.value_);
-        };
-    }
+    detail::iterative_partition_work<true>(first, last, work, grp, granularity);
 }
 
-//! Main implementation of the conc_reduce algorithm
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
-inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,
-        const ReductionFunc& reduction, task_group grp, partition_hints hints) {
-    if (!grp)
-        grp = task_group::current_task_group();
-    auto wait_grp = task_group::create(grp);
+template <typename WorkType>
+inline void conc_reduce_impl(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, const task_group& grp, partition_hints hints) {
+
+    auto wait_grp = task_group::create(grp ? grp : task_group::current_task_group());
     std::exception_ptr thrown_exception;
     install_except_propagation_handler(thrown_exception, wait_grp);
 
-    Value res;
-    auto iter_cat = typename std::iterator_traits<It>::iterator_category();
-    auto tf = get_reduce_task_fun(
-            res, first, last, identity, op, reduction, wait_grp, hints, iter_cat);
-    spawn(std::move(tf), wait_grp, false);
+    // Make sure that all the spawned tasks will have this group
+    auto old_grp = task_group::set_current_task_group(wait_grp);
+
+    // Start the work with the appropriate method, and wait for it to finish
+    try {
+        auto it_cat =
+                typename detail::iterator_type<typename WorkType::iterator>::iterator_category();
+        do_conc_reduce(first, last, work, wait_grp, hints, it_cat);
+    } catch (...) {
+        detail::task_group_access::on_task_exception(wait_grp, std::current_exception());
+    }
     wait(wait_grp);
+
+    // Restore the old task group
+    task_group::set_current_task_group(old_grp);
 
     // If we have an exception, re-throw it
     if (thrown_exception)
         std::rethrow_exception(thrown_exception);
-
-    return res;
 }
 
+template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
+inline Value conc_reduce_fun(It first, It last, Value identity, const BinaryOp& op,
+        const ReductionOp& reduction, task_group grp, partition_hints hints) {
+    detail::conc_reduce_work<It, Value, BinaryOp, ReductionOp> work(identity, op, reduction);
+    conc_reduce_impl(first, last, work, grp, hints);
+    return work.value_;
+}
 } // namespace detail
 
 inline namespace v1 {
@@ -158,28 +155,53 @@ inline namespace v1 {
  *
  * @see     partition_hints, partition_method
  */
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
+template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
 inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,
-        const ReductionFunc& reduction, task_group grp, partition_hints hints) {
-    return detail::conc_reduce(first, last, identity, op, reduction, grp, hints);
+        const ReductionOp& reduction, task_group grp, partition_hints hints) {
+    return detail::conc_reduce_fun(first, last, identity, op, reduction, grp, hints);
 }
 //! \overload
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
+template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
 inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,
-        const ReductionFunc& reduction, task_group grp) {
-    return detail::conc_reduce(first, last, identity, op, reduction, grp, {});
+        const ReductionOp& reduction, task_group grp) {
+    return detail::conc_reduce_fun(first, last, identity, op, reduction, grp, {});
 }
 //! \overload
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
+template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
 inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,
-        const ReductionFunc& reduction, partition_hints hints) {
-    return detail::conc_reduce(first, last, identity, op, reduction, {}, hints);
+        const ReductionOp& reduction, partition_hints hints) {
+    return detail::conc_reduce_fun(first, last, identity, op, reduction, {}, hints);
 }
 //! \overload
-template <typename It, typename Value, typename BinaryOp, typename ReductionFunc>
+template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
 inline Value conc_reduce(
-        It first, It last, Value identity, const BinaryOp& op, const ReductionFunc& reduction) {
-    return detail::conc_reduce(first, last, identity, op, reduction, {}, {});
+        It first, It last, Value identity, const BinaryOp& op, const ReductionOp& reduction) {
+    return detail::conc_reduce_fun(first, last, identity, op, reduction, {}, {});
+}
+
+//! \overload
+template <typename WorkType>
+inline void conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, const task_group& grp, partition_hints hints) {
+    detail::conc_reduce_impl(first, last, work, grp, hints);
+}
+//! \overload
+template <typename WorkType>
+inline void conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, const task_group& grp) {
+    detail::conc_reduce_impl(first, last, work, grp, {});
+}
+//! \overload
+template <typename WorkType>
+inline void conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
+        WorkType& work, partition_hints hints) {
+    detail::conc_reduce_impl(first, last, work, {}, hints);
+}
+//! \overload
+template <typename WorkType>
+inline void conc_reduce(
+        typename WorkType::iterator first, typename WorkType::iterator last, WorkType& work) {
+    detail::conc_reduce_impl(first, last, work, {}, {});
 }
 
 } // namespace v1

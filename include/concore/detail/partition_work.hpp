@@ -196,7 +196,7 @@ inline void auto_partition_work2(
  *
  * This only works for random-access iterators.
  */
-template <typename RandomIt, typename WorkType>
+template <bool needs_join, typename RandomIt, typename WorkType>
 inline void auto_partition_work(
         RandomIt first, int n, WorkType& work, const task_group& grp, int granularity) {
     if (n <= granularity) {
@@ -237,7 +237,7 @@ inline void auto_partition_work(
             }
             // Recursively divide the remaining interval
             if (cur_split < end)
-                auto_partition_work(
+                auto_partition_work<needs_join>(
                         first + cur_split, end - cur_split, right_work, grp, granularity);
         };
         spawn(task{fun_second_half, wait_grp});
@@ -286,7 +286,7 @@ inline void auto_partition_work(
         std::rethrow_exception(thrown_exception);
 
     // Join all the work items
-    if (work.needs_join()) {
+    if (needs_join) {
         for (int l = max_level; l >= 0; l--)
             work.join(right_work_arr[l]);
     }
