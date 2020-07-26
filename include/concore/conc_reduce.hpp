@@ -40,8 +40,7 @@ struct conc_reduce_work {
 // Case where we have random-access iterators
 template <typename WorkType>
 inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
-        WorkType& work, const task_group& grp, partition_hints hints,
-        std::random_access_iterator_tag) {
+        WorkType& work, task_group& grp, partition_hints hints, std::random_access_iterator_tag) {
 
     int n = static_cast<int>(last - first);
     if (n == 0)
@@ -67,13 +66,13 @@ inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType:
 // Integral case: behave as we have random-access iterators
 template <typename WorkType>
 inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
-        WorkType& work, const task_group& grp, partition_hints hints, no_iterator_tag) {
+        WorkType& work, task_group& grp, partition_hints hints, no_iterator_tag) {
     do_conc_reduce(first, last, work, grp, hints, std::random_access_iterator_tag());
 }
 // Forward iterators case
 template <typename WorkType>
 inline void do_conc_reduce(typename WorkType::iterator first, typename WorkType::iterator last,
-        WorkType& work, const task_group& grp, partition_hints hints, ...) {
+        WorkType& work, task_group& grp, partition_hints hints, ...) {
     int granularity = std::max(1, hints.granularity_);
     detail::iterative_partition_work<true>(first, last, work, grp, granularity);
 }

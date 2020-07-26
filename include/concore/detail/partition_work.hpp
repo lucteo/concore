@@ -308,18 +308,15 @@ inline void auto_partition_work(
  */
 template <bool needs_join, typename RandomIt, typename WorkType>
 inline void upfront_partition_work(
-        RandomIt first, int n, WorkType& work, task_group grp, int tasks_per_worker) {
-    auto wait_grp = task_group::create(grp);
-
+        RandomIt first, int n, WorkType& work, task_group& wait_grp, int tasks_per_worker) {
     auto& tsys = detail::get_task_system();
     int num_tasks = tsys.num_worker_threads() * tasks_per_worker;
 
     int num_iter = num_tasks < n ? num_tasks : n;
     std::vector<WorkType> work_objs;
 
-    if (needs_join && num_iter > 1) {
+    if (needs_join && num_iter > 1)
         work_objs.resize(num_iter - 1, work);
-    }
 
     if (num_tasks < n) {
         for (int i = 0; i < num_tasks; i++) {
@@ -426,16 +423,13 @@ struct iterative_spawner {
  */
 template <bool needs_join, typename It, typename WorkType>
 inline void iterative_partition_work(
-        It first, It last, WorkType& work, task_group grp, int granularity) {
-    auto wait_grp = task_group::create(grp);
-
+        It first, It last, WorkType& work, task_group& wait_grp, int granularity) {
     auto& tsys = detail::get_task_system();
     int num_tasks = tsys.num_worker_threads() * 2;
 
     std::vector<WorkType> work_objs;
-    if (needs_join) {
+    if (needs_join && num_tasks > 1)
         work_objs.resize(num_tasks - 1, work);
-    }
 
     // Spawn the right number of tasks; each task will take 1 or more elements.
     // After completion, a task will spawn the next task
