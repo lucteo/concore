@@ -14,11 +14,14 @@ namespace detail {
 // template <typename It>
 // struct GenericWorkType {
 //     using iterator = It;
-//     void exec(It elem);
 //     void exec(It first, It last);
-//     static constexpr bool needs_join();
-//     void join(GenericWorkType& rhs); // if needs_join() returns true
 // };
+
+template <typename It>
+It it_next(It it) {
+    it++;
+    return it;
+}
 
 namespace auto_part {
 
@@ -303,18 +306,18 @@ inline void auto_partition_work(
  *
  * This only works for random-access iterators.
  */
-template <typename RandomIt, typename WorkType>
-inline void upfront_partition_work(RandomIt first, int n, WorkType& work, task_group grp, partition_hints hints) {
+template <bool needs_join, typename RandomIt, typename WorkType>
+inline void upfront_partition_work(
+        RandomIt first, int n, WorkType& work, task_group grp, int tasks_per_worker) {
     auto wait_grp = task_group::create(grp);
 
     auto& tsys = detail::get_task_system();
-    int num = hints.tasks_per_worker_ > 0 ? hints.tasks_per_worker_ : 2;
-    int num_tasks = tsys.num_worker_threads() * num;
+    int num_tasks = tsys.num_worker_threads() * tasks_per_worker;
 
     int num_iter = num_tasks < n ? num_tasks : n;
     std::vector<WorkType> work_objs;
 
-    if (work.needs_join() && num_iter > 1) {
+    if (needs_join && num_iter > 1) {
         work_objs.resize(num_iter - 1, work);
     }
 
@@ -322,13 +325,14 @@ inline void upfront_partition_work(RandomIt first, int n, WorkType& work, task_g
         for (int i = 0; i < num_tasks; i++) {
             auto start = first + (n * i / num_tasks);
             auto end = first + (n * (i + 1) / num_tasks);
-            auto& work_obj = (work.needs_join() && i > 0) ? work_objs[i - 1] : work;
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
             spawn(task{[&work_obj, start, end] { work_obj.exec(start, end); }, wait_grp});
         }
     } else {
         for (int i = 0; i < n; i++) {
-            auto& work_obj = (work.needs_join() && i > 0) ? work_objs[i - 1] : work;
-            spawn(task{[&work_obj, first, i] { work_obj.exec(first + i); }, wait_grp});
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
+            spawn(task{
+                    [&work_obj, first, i] { work_obj.exec(first + i, first + i + 1); }, wait_grp});
         }
     }
 
@@ -336,7 +340,7 @@ inline void upfront_partition_work(RandomIt first, int n, WorkType& work, task_g
     wait(wait_grp);
 
     // Join all the work items
-    if (work.needs_join()) {
+    if constexpr (needs_join) {
         for (auto& w : work_objs)
             work.join(w);
     }
@@ -362,7 +366,7 @@ struct iterative_spawner {
         if (it != last_) {
             auto t = task(
                     [this, it, &work]() {
-                        work.exec(it);
+                        work.exec(it, it_next(it));
                         spawn_task_1(work, true);
                     },
                     grp_);
@@ -420,7 +424,7 @@ struct iterative_spawner {
  *
  * This can work for forward iterators too.
  */
-template <typename It, typename WorkType>
+template <bool needs_join, typename It, typename WorkType>
 inline void iterative_partition_work(
         It first, It last, WorkType& work, task_group grp, int granularity) {
     auto wait_grp = task_group::create(grp);
@@ -429,7 +433,7 @@ inline void iterative_partition_work(
     int num_tasks = tsys.num_worker_threads() * 2;
 
     std::vector<WorkType> work_objs;
-    if (work.needs_join()) {
+    if (needs_join) {
         work_objs.resize(num_tasks - 1, work);
     }
 
@@ -438,12 +442,12 @@ inline void iterative_partition_work(
     iterative_spawner<It, WorkType> spawner(first, last, wait_grp);
     if (granularity <= 1) {
         for (int i = 0; i < num_tasks; i++) {
-            auto& work_obj = (work.needs_join() && i > 0) ? work_objs[i - 1] : work;
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
             spawner.spawn_task_1(work_obj);
         }
     } else {
         for (int i = 0; i < num_tasks; i++) {
-            auto& work_obj = (work.needs_join() && i > 0) ? work_objs[i - 1] : work;
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
             spawner.spawn_task_n(work_obj, granularity);
         }
     }
@@ -451,7 +455,7 @@ inline void iterative_partition_work(
     wait(wait_grp);
 
     // Join all the work items
-    if (work.needs_join()) {
+    if constexpr (needs_join) {
         for (auto& w : work_objs)
             work.join(w);
     }
@@ -468,15 +472,15 @@ inline void iterative_partition_work(
  * create tasks for every element.
  *
  * This method also works for forward iterators, not just for random-access iterators.
+ *
+ * This method doesn't work in reduce scenarios.
  */
 template <typename It, typename WorkType>
 inline void naive_partition_work(
-        It first, It last, WorkType& work, task_group grp, int granularity) {
-    auto wait_grp = task_group::create(grp);
-
+        It first, It last, WorkType& work, const task_group& wait_grp, int granularity) {
     if (granularity <= 1) {
         for (; first != last; first++) {
-            spawn(task{[&work, first]() { work.exec(first); }, wait_grp});
+            spawn(task{[&work, first]() { work.exec(first, it_next(first)); }, wait_grp});
         }
     } else {
         auto it = first;
@@ -492,8 +496,6 @@ inline void naive_partition_work(
             it = ite;
         }
     }
-    // Wait for all the spawned tasks to be completed
-    wait(wait_grp);
 }
 
 } // namespace detail

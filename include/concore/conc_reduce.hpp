@@ -49,7 +49,8 @@ inline task_function get_reduce_task_fun(Value& res, It first, It last, Value id
             int n = static_cast<int>(last - first);
             conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
                     std::move(identity), op, reduction);
-            detail::upfront_partition_work(first, n, work, grp, hints);
+            int tasks_per_worker = hints.tasks_per_worker_ > 0 ? hints.tasks_per_worker_ : 2;
+            detail::upfront_partition_work<true>(first, n, work, grp, tasks_per_worker);
             res = std::move(work.value_);
         };
     case partition_method::naive_partition: // naive cannot be efficiently implemented for reduce
@@ -57,7 +58,7 @@ inline task_function get_reduce_task_fun(Value& res, It first, It last, Value id
         return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
             conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
                     std::move(identity), op, reduction);
-            detail::iterative_partition_work(first, last, work, grp, granularity);
+            detail::iterative_partition_work<true>(first, last, work, grp, granularity);
             res = std::move(work.value_);
         };
     case partition_method::auto_partition:
@@ -86,7 +87,7 @@ inline task_function get_reduce_task_fun(Value& res, It first, It last, Value id
         return [&res, first, last, identity, &op, &reduction, grp, granularity]() {
             conc_reduce_work<It, Value, BinaryOp, ReductionFunc> work(
                     std::move(identity), op, reduction);
-            detail::iterative_partition_work(first, last, work, grp, granularity);
+            detail::iterative_partition_work<true>(first, last, work, grp, granularity);
             res = std::move(work.value_);
         };
     }
