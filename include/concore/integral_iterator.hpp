@@ -24,6 +24,7 @@ class integral_iterator : public std::iterator<std::random_access_iterator_tag, 
 
 public:
     using difference_type = T;
+    using reference = T;    // non-standard behavior to allow integrals to behave like iterators
 
     integral_iterator() = default;
     ~integral_iterator() = default;

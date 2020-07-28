@@ -39,14 +39,13 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     }
 };
 
-void task_group_access::on_starting_task(const task_group& grp, const task& t) {
+void task_group_access::on_starting_task(const task_group& grp) {
     g_current_task_group = grp;
 }
-void task_group_access::on_task_done(const task_group& grp, const task& t) {
+void task_group_access::on_task_done(const task_group& grp) {
     g_current_task_group = task_group{};
 }
-void task_group_access::on_task_exception(
-        const task_group& grp, const task& t, std::exception_ptr ex) {
+void task_group_access::on_task_exception(const task_group& grp, std::exception_ptr ex) {
     g_current_task_group = task_group{};
     // Recurse up to find a group that has a exception handler fun
     // Stop when we find the first one
@@ -112,6 +111,12 @@ task_group task_group::current_task_group() { return detail::g_current_task_grou
 bool task_group::is_current_task_cancelled() { return detail::g_current_task_group.is_cancelled(); }
 
 bool task_group::is_active() const { return impl_ && impl_->num_active_tasks_ > 0; }
+
+task_group task_group::set_current_task_group(const task_group& grp) {
+    task_group res = detail::g_current_task_group;
+    detail::g_current_task_group = grp;
+    return res;
+}
 
 } // namespace v1
 

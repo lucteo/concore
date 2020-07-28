@@ -17,11 +17,11 @@ struct task_group_impl;
 //! Structure used by the task system to interact with task_group objects
 struct task_group_access {
     //! Called just before executing a task, to let the task_group know
-    static void on_starting_task(const task_group& grp, const task& t);
+    static void on_starting_task(const task_group& grp);
     //! Called just after a task is completed without an exception
-    static void on_task_done(const task_group& grp, const task& t);
+    static void on_task_done(const task_group& grp);
     //! Called when the task throws an exception
-    static void on_task_exception(const task_group& grp, const task& t, std::exception_ptr ex);
+    static void on_task_exception(const task_group& grp, std::exception_ptr ex);
 
     //! Called when a task was created in a group; the task starts to be "active"
     static void on_task_created(task_group& grp);
@@ -250,6 +250,21 @@ public:
      * @see current_task_group()
      */
     static bool is_current_task_cancelled();
+
+    /**
+     * @brief      Sets the task group for the current worker.
+     *
+     * @param      grp   The new group to be set for the current worker.
+     * 
+     * @return     The previous set task group (if any).
+     * 
+     * This is used by implementation of certain algorithms to speed up the use of task groups. Not
+     * intended to be heavily used. To be used with care.
+     * 
+     * In general, after setting a task group, one may want to restore the old task group. This is
+     * why the function returns the previous task_group object.
+     */
+    static task_group set_current_task_group(const task_group& grp);
 
 private:
     //! Implementation detail of a task group object. Note that the implementation details can be

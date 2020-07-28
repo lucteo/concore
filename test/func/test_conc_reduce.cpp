@@ -4,7 +4,6 @@
 #include "arb_partition_hints.hpp"
 #include <concore/integral_iterator.hpp>
 #include <concore/profiling.hpp>
-#include <concore/init.hpp>
 
 #include <thread>
 #include <atomic>

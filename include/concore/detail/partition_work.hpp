@@ -3,6 +3,7 @@
 #include "concore/task_group.hpp"
 #include "concore/spawn.hpp"
 #include "concore/detail/platform.hpp"
+#include "concore/detail/algo_utils.hpp"
 
 #include <vector>
 
@@ -13,11 +14,184 @@ namespace detail {
 //
 // template <typename It>
 // struct GenericWorkType {
-//     void exec(It elem);
+//     using iterator = It;
 //     void exec(It first, It last);
-//     static constexpr bool needs_join();
-//     void join(GenericWorkType& rhs);
+//
+//     // for reduce:
+//     void join(conc_reduce_work& rhs);
 // };
+
+namespace auto_part {
+
+template <typename WorkType, bool needs_join>
+struct work_interval {
+    using iterator = typename WorkType::iterator;
+
+    std::atomic<int> ref_count_;
+    const iterator first_;
+    const int count_;
+    std::atomic<int> start_idx_;
+    WorkType work_;
+    const int granularity_;
+    work_interval* parent_;
+    work_interval* next_;
+
+    work_interval(iterator first, int start_idx, int cnt, WorkType work, int granularity)
+        : ref_count_(1)
+        , first_(first)
+        , count_(cnt)
+        , start_idx_(start_idx)
+        , work_(std::move(work))
+        , granularity_(granularity)
+        , parent_(nullptr)
+        , next_(nullptr) {}
+
+    void run(int start_idx = 0);
+    void run_as_right();
+    void release();
+};
+
+template <typename WorkType, bool needs_join>
+void work_interval<WorkType, needs_join>::run(int start_idx) {
+    auto first = first_ + start_idx;
+    int n = count_ - start_idx;
+
+    if (n <= granularity_) {
+        // Cannot split anymore; just execute work
+        work_.exec(first, first + n);
+        return;
+    }
+
+    static constexpr int max_num_splits = 32;
+    work_interval* right_intervals[max_num_splits] = {0};
+
+    // Iterate down, at each step splitting the range into half; stop when we reached the desired
+    // granularity
+    int level = 0;
+    int end = n;
+    while (end > granularity_) {
+        // Current interval: [first, first+end)
+
+        // Spawn a task to handle the right side
+        int start_right = (end + 1) / 2;
+        auto right = new work_interval(
+                first_, start_idx + start_right, start_idx + end, work_, granularity_);
+        right->ref_count_++;
+        right_intervals[level] = right;
+        if constexpr (!needs_join)
+            spawn([right]() { right->run_as_right(); });
+
+        // Recurse down in the left side of the interval
+        level++;
+        end = start_right;
+    }
+    level--;
+    int max_level = level;
+
+    if constexpr (needs_join) {
+        // Set the connections between intervals, so that we join in the proper order
+        // Larger intervals (levels closer to zero) will wait for smaller intervals to complete
+        // As the connections are made, also start the tasks
+        ref_count_ += max_level + 1;
+        for (int l = 0; l < max_level; l++) {
+            right_intervals[l + 1]->next_ = right_intervals[l];
+            right_intervals[l]->ref_count_++;
+        }
+        for (int l = 0; l <= max_level; l++) {
+            auto cur = right_intervals[l];
+            cur->parent_ = this;
+            spawn([cur]() { cur->run_as_right(); });
+        }
+    }
+
+    std::exception_ptr thrown_exception;
+
+    // Now, left-to-right start executing the work
+    // At each step, update the corresponding atomic to make sure other tasks are not executing the
+    // same tasks. If right-hand tasks did not start, steal iterations from them
+    int our_max = end;
+    int i = 0;
+    while (i < n) {
+        // Run as many iterations as we can
+        work_.exec(first + i, first + our_max);
+        i = our_max;
+        if (our_max == n)
+            break;
+        // If we can, try to steal some more from the right-hand task
+        work_interval& right = *right_intervals[level];
+        int lvl_end = right.count_;
+        int steal_end = std::min(our_max + granularity_, lvl_end);
+        int old_val = our_max;
+        if (!right.start_idx_.compare_exchange_strong(
+                    old_val, steal_end, std::memory_order_acq_rel))
+            break;
+        our_max = steal_end;
+        assert(our_max <= lvl_end);
+        assert(our_max <= n);
+        // If we consumed everything from the right-side, move one level up
+        if (our_max == lvl_end)
+            level--;
+    }
+
+    // Ensure that we release all the non-null levels
+    // To prevent race conditions, this needs to be done after we've done touching 'work_'
+    for (int lvl = max_level; lvl >= 0; lvl--)
+        right_intervals[lvl]->release();
+
+    // The logic of joining and, deleting intervals:
+    // - general considerations:
+    //      - we use manually-counted shared pointers (ref_count_)
+    //      - whenever the counter decrements to zero, we delete the interval
+    //      - if we need to join, we do the join before deleting the interval
+    // - when we don't need a join:
+    //      - in general we have a ref_count_ of 2:
+    //          - one in the parent, and one in the task that is running the interval
+    // - when we need a join:
+    //      - we have rec_count_ of 3, plus the number of sub-intervals
+    //          - 1 in the parent
+    //          - one the task that is running
+    //          - one the task that need to join before the current one (smaller right interval)
+    //          - and also, each children keeps a reference to the parent
+    //      - the joins are executed in the order of deleting the intervals, so we control it
+    //      - we want that smaller intervals are joining before larger ones
+}
+
+template <typename WorkType, bool needs_join>
+void work_interval<WorkType, needs_join>::run_as_right() {
+    // Pick up where the previous part ended
+    int cur_start = start_idx_.load(std::memory_order_relaxed);
+    while (cur_start < count_) {
+        if (start_idx_.compare_exchange_weak(cur_start, -1, std::memory_order_acq_rel))
+            break;
+    }
+    // Run if there is remaining work to do
+    if (cur_start < count_) {
+        run(cur_start);
+    }
+    release();
+}
+
+template <typename WorkType, bool needs_join>
+void work_interval<WorkType, needs_join>::release() {
+    if (ref_count_-- == 1) {
+        // We are done with this interval; now it's the time to join the result in the parent work
+        if constexpr (needs_join) {
+            if (parent_)
+                parent_->work_.join(work_);
+
+            // Release the parent and the next interval that needs to be joined in the parent
+            if (parent_)
+                parent_->release();
+            if (next_)
+                next_->release();
+        }
+
+        // Completely done; delete the interval
+        // Similar to shared_ptr destructor
+        delete this;
+    }
+}
+} // namespace auto_part
 
 /**
  * @brief      The default work partitioning algorithm, that tries to maximize locality.
@@ -44,101 +218,13 @@ namespace detail {
  *
  * This only works for random-access iterators.
  */
-template <typename RandomIt, typename WorkType>
-inline void auto_partition_work(
-        RandomIt first, int n, WorkType& work, task_group grp, int granularity) {
-    if (n <= granularity) {
-        // Cannot split anymore; just execute work
-        work.exec(first, first + n);
-        return;
-    }
-
-    // We assume we can't have more than 2^32 elements, so we can have max 32 half-way splits
-    static constexpr int max_num_splits = 32;
-    // Preallocate data on the stack
-    int end_values[max_num_splits];
-    std::atomic<int> split_values[max_num_splits];
-    WorkType right_work_arr[max_num_splits];
-
-    auto wait_grp = task_group::create(grp);
-
-    // Iterate down, at each step splitting the range into half; stop when we reached the desired
-    // granularity
-    int level = 0;
-    int end = n;
-    while (end > granularity) {
-        // Current interval: [*first, *first+end)
-
-        // Spawn a task for the second half our our current interval
-        int cur_mid = (end + 1) / 2;
-        end_values[level] = end;
-        split_values[level].store(cur_mid, std::memory_order_relaxed);
-        std::atomic<int>& split = split_values[level];
-        WorkType& right_work = right_work_arr[level];
-        right_work = work;
-        auto fun_second_half = [first, end, &split, &right_work, grp, granularity]() {
-            // Pick up where the first part ended
-            int cur_split = split.load(std::memory_order_relaxed);
-            while (cur_split < end) {
-                if (split.compare_exchange_weak(cur_split, -1, std::memory_order_acq_rel))
-                    break;
-            }
-            // Recursively divide the remaining interval
-            if (cur_split < end)
-                auto_partition_work(
-                        first + cur_split, end - cur_split, right_work, grp, granularity);
-        };
-        spawn(task{fun_second_half, wait_grp});
-
-        // Now, handle in the current task the first half of the range
-        level++;
-        end = cur_mid;
-    }
-    level--;
-    int max_level = level;
-
-    // Now, left-to-right start executing the given functor
-    // At each step, update the corresponding atomic to make sure other tasks are not executing the
-    // same tasks If right-hand tasks did not start, steal iterations from them
-    std::exception_ptr thrown_exception;
-    try {
-        int our_max = end;
-        int i = 0;
-        while (i < n) {
-            // Run as many iterations as we can
-            work.exec(first + i, first + our_max);
-            i = our_max;
-            if (our_max >= n)
-                break;
-            // If we can, try to steal some more from the right-hand task
-            int lvl_end = end_values[level];
-            int steal_end = std::min(our_max + granularity, lvl_end);
-            int old_val = our_max;
-            if (!split_values[level].compare_exchange_strong(
-                        old_val, steal_end, std::memory_order_acq_rel))
-                break;
-            our_max = steal_end;
-            // If we consumed everything from the right-side, move one level up
-            if (our_max >= lvl_end)
-                level--;
-        }        
-    }
-    catch(...) {
-        thrown_exception = std::current_exception();
-        wait_grp.cancel();
-    }
-
-    // Wait for all the spawned tasks to be completed
-    wait(wait_grp);
-
-    if (thrown_exception)
-        std::rethrow_exception(thrown_exception);
-
-    // Join all the work items
-    if (work.needs_join()) {
-        for (int l = max_level; l >= 0; l--)
-            work.join(right_work_arr[l]);
-    }
+template <bool needs_join, typename WorkType>
+inline void auto_partition_work(typename WorkType::iterator first, int n, WorkType& work,
+        task_group& grp, int granularity) {
+    auto_part::work_interval<WorkType, needs_join> all(first, 0, n, std::move(work), granularity);
+    all.run();
+    wait(grp);
+    work = std::move(all.work_);
 }
 
 /**
@@ -155,40 +241,39 @@ inline void auto_partition_work(
  *
  * This only works for random-access iterators.
  */
-template <typename RandomIt, typename WorkType>
-inline void upfront_partition_work(RandomIt first, int n, WorkType& work, task_group grp) {
-    auto wait_grp = task_group::create(grp);
-
+template <bool needs_join, typename RandomIt, typename WorkType>
+inline void upfront_partition_work(
+        RandomIt first, int n, WorkType& work, task_group& wait_grp, int tasks_per_worker) {
     auto& tsys = detail::get_task_system();
-    int num_tasks = tsys.num_worker_threads() * 2;
+    int num_tasks = tsys.num_worker_threads() * tasks_per_worker;
 
     int num_iter = num_tasks < n ? num_tasks : n;
     std::vector<WorkType> work_objs;
 
-    if (work.needs_join() && num_iter > 1) {
-        work_objs.resize(num_iter-1, work);
-    }
+    if (needs_join && num_iter > 1)
+        work_objs.resize(num_iter - 1, work);
 
     if (num_tasks < n) {
         for (int i = 0; i < num_tasks; i++) {
             auto start = first + (n * i / num_tasks);
             auto end = first + (n * (i + 1) / num_tasks);
-            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
             spawn(task{[&work_obj, start, end] { work_obj.exec(start, end); }, wait_grp});
         }
     } else {
         for (int i = 0; i < n; i++) {
-            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
-            spawn(task{[&work_obj, first, i] { work_obj.exec(first + i); }, wait_grp});
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
+            spawn(task{
+                    [&work_obj, first, i] { work_obj.exec(first + i, first + i + 1); }, wait_grp});
         }
-    }        
+    }
 
     // Wait for all the spawned tasks to be completed
     wait(wait_grp);
 
     // Join all the work items
-    if (work.needs_join()) {
-        for ( auto& w: work_objs)
+    if constexpr (needs_join) {
+        for (auto& w : work_objs)
             work.join(w);
     }
 }
@@ -213,7 +298,7 @@ struct iterative_spawner {
         if (it != last_) {
             auto t = task(
                     [this, it, &work]() {
-                        work.exec(it);
+                        work.exec(it, it_next(it));
                         spawn_task_1(work, true);
                     },
                     grp_);
@@ -264,37 +349,34 @@ struct iterative_spawner {
  *
  * As two tasks can finish at the same time, the access to the range that remains to be covered is
  * protected with a spin mutex.
- * 
+ *
  * This may not be as locality-aware as it can be, as consecutive elements are taken by different
  * threads. This tries to limit the number of tasks that are in flight (as opposed to naive
  * implementation).
- * 
+ *
  * This can work for forward iterators too.
  */
-template <typename It, typename WorkType>
+template <bool needs_join, typename It, typename WorkType>
 inline void iterative_partition_work(
-        It first, It last, WorkType& work, task_group grp, int granularity) {
-    auto wait_grp = task_group::create(grp);
-
+        It first, It last, WorkType& work, task_group& wait_grp, int granularity) {
     auto& tsys = detail::get_task_system();
     int num_tasks = tsys.num_worker_threads() * 2;
 
     std::vector<WorkType> work_objs;
-    if (work.needs_join()) {
-        work_objs.resize(num_tasks-1, work);
-    }
+    if (needs_join && num_tasks > 1)
+        work_objs.resize(num_tasks - 1, work);
 
     // Spawn the right number of tasks; each task will take 1 or more elements.
     // After completion, a task will spawn the next task
     iterative_spawner<It, WorkType> spawner(first, last, wait_grp);
     if (granularity <= 1) {
         for (int i = 0; i < num_tasks; i++) {
-            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
             spawner.spawn_task_1(work_obj);
         }
     } else {
         for (int i = 0; i < num_tasks; i++) {
-            auto& work_obj = (work.needs_join() && i>0) ? work_objs[i-1] : work;
+            auto& work_obj = (needs_join && i > 0) ? work_objs[i - 1] : work;
             spawner.spawn_task_n(work_obj, granularity);
         }
     }
@@ -302,8 +384,8 @@ inline void iterative_partition_work(
     wait(wait_grp);
 
     // Join all the work items
-    if (work.needs_join()) {
-        for ( auto& w: work_objs)
+    if constexpr (needs_join) {
+        for (auto& w : work_objs)
             work.join(w);
     }
 }
@@ -319,15 +401,15 @@ inline void iterative_partition_work(
  * create tasks for every element.
  *
  * This method also works for forward iterators, not just for random-access iterators.
+ *
+ * This method doesn't work in reduce scenarios.
  */
 template <typename It, typename WorkType>
 inline void naive_partition_work(
-        It first, It last, WorkType& work, task_group grp, int granularity) {
-    auto wait_grp = task_group::create(grp);
-
+        It first, It last, WorkType& work, const task_group& wait_grp, int granularity) {
     if (granularity <= 1) {
         for (; first != last; first++) {
-            spawn(task{[&work, first]() { work.exec(first); }, wait_grp});
+            spawn(task{[&work, first]() { work.exec(first, it_next(first)); }, wait_grp});
         }
     } else {
         auto it = first;
@@ -343,8 +425,6 @@ inline void naive_partition_work(
             it = ite;
         }
     }
-    // Wait for all the spawned tasks to be completed
-    wait(wait_grp);
 }
 
 } // namespace detail

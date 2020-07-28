@@ -19,11 +19,11 @@ inline void execute_task(task& t) noexcept {
         return;
 
     try {
-        detail::task_group_access::on_starting_task(grp, t);
+        detail::task_group_access::on_starting_task(grp);
         t();
-        detail::task_group_access::on_task_done(grp, t);
+        detail::task_group_access::on_task_done(grp);
     } catch (...) {
-        detail::task_group_access::on_task_exception(grp, t, std::current_exception());
+        detail::task_group_access::on_task_exception(grp, std::current_exception());
     }
 }
 
