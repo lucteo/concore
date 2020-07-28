@@ -40,6 +40,13 @@ inline T safe_dereference(T it, ...) {
     return it;
 }
 
+//! Returns the next iterator of the given iterator
+template <typename It>
+It it_next(It it) {
+    it++;
+    return it;
+}
+
 
 
 inline int compute_granularity(int n, partition_hints hints) {

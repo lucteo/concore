@@ -1,10 +1,6 @@
 #pragma once
 
-#include "concore/partition_hints.hpp"
-#include "concore/task_group.hpp"
-#include "concore/spawn.hpp"
 #include "concore/detail/partition_work.hpp"
-#include "concore/detail/algo_utils.hpp"
 #include "concore/detail/except_utils.hpp"
 
 namespace concore {
@@ -54,7 +50,7 @@ inline void do_conc_for(typename WorkType::iterator first, typename WorkType::it
         break;
     case partition_method::auto_partition:
     default:
-        detail::auto_partition_work2(first, n, work, granularity);
+        detail::auto_partition_work<false>(first, n, work, grp, granularity);
         break;
     }
 }
