@@ -12,7 +12,7 @@ namespace concore {
 
 namespace detail {
 
-static constexpr int size_threshold = 60;
+static constexpr int size_threshold = 500;
 
 template <typename It, typename Comp>
 inline int median3(It it, int l, int m, int r, const Comp& comp) {
