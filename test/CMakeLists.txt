@@ -14,6 +14,7 @@ set(func_sourceFiles
     "func/test_init.cpp"
     "func/test_global_executor.cpp"
     "func/test_spawn.cpp"
+    "func/test_finish_task.cpp"
     "func/test_serializers.cpp"
     "func/test_task_graph.cpp"
     "func/test_task_group.cpp"
