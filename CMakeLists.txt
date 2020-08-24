@@ -85,6 +85,7 @@ set(concore_sourceFiles
     "src/low_level/semaphore.cpp"
     "src/init.cpp"
     "src/n_serializer.cpp"
+    "src/pipeline.cpp"
     "src/rw_serializer.cpp"
     "src/serializer.cpp"
     "src/task_group.cpp"

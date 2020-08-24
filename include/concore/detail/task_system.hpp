@@ -96,6 +96,16 @@ public:
     //! Returns the number of worker threads we created
     int num_worker_threads() const { return count_; }
 
+    //! Tests if there are tasks currently executing in our task system. This also counts any
+    //! external threads that also join the task system.
+    bool is_active() const { return num_tasks_.load() > 0 || num_active_workers_.load() > 0; }
+
+    //! Returns the number of active tasks that are tracked by the task system. This includes the
+    //! tasks that are currently executing, and does not include the tasks on the waiting lists of
+    //! structures like serialiers. It also doesn't include the tasks spawned into the local worker
+    //! queues.
+    int num_active_tasks() const { return num_tasks_.load(); }
+
 private:
     //! A task queue type
     using task_queue = concurrent_queue<task>;
@@ -125,6 +135,10 @@ private:
     //! The number of tasks that we currently have enqueued in the task system
     mutable std::atomic<int> num_tasks_{0};
 
+    //! The number of active workers; this allows us to quickly check if there is any work in the
+    //! system.
+    mutable std::atomic<int> num_active_workers_{0};
+
     //! The run procedure for a worker thread
     void worker_run(int worker_idx);
 
@@ -143,6 +157,11 @@ private:
 
     //! Execute the given task
     void execute_task(task& t) const;
+
+    //! Called whenever a worker becomes active
+    void on_worker_active() const;
+    //! Called whenever a worker becomes inactive
+    void on_worker_inactive() const;
 
     //! Called when a task was added in the task system
     void on_task_added() const;
