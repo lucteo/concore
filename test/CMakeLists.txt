@@ -14,6 +14,7 @@ set(func_sourceFiles
     "func/test_init.cpp"
     "func/test_global_executor.cpp"
     "func/test_spawn.cpp"
+    "func/test_finish_task.cpp"
     "func/test_serializers.cpp"
     "func/test_task_graph.cpp"
     "func/test_task_group.cpp"
@@ -22,6 +23,7 @@ set(func_sourceFiles
     "func/test_conc_reduce.cpp"
     "func/test_conc_scan.cpp"
     "func/test_conc_sort.cpp"
+    "func/test_pipeline.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
     "func/profiling_helper_test.cpp" # Must be last

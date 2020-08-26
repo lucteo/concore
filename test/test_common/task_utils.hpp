@@ -2,6 +2,8 @@
 
 #include <concore/task_group.hpp>
 #include <concore/executor_type.hpp>
+#include <concore/detail/library_data.hpp>
+#include <concore/detail/task_system.hpp>
 
 #include <chrono>
 
@@ -15,6 +17,21 @@ inline bool bounded_wait(concore::task_group& grp, std::chrono::milliseconds tim
     auto sleep_dur = timeout / 1000;
     while (std::chrono::high_resolution_clock::now() < end) {
         if (!grp.is_active())
+            return true;
+        std::this_thread::sleep_for(sleep_dur);
+        sleep_dur = sleep_dur * 16 / 10;
+    }
+    return false;
+}
+
+//! Wait for all the task in the system to complete.
+//! Returns true if we all tasks are complete; return false if we timeout
+inline bool bounded_wait(std::chrono::milliseconds timeout = 1000ms) {
+    auto start = std::chrono::high_resolution_clock::now();
+    auto end = start + timeout;
+    auto sleep_dur = timeout / 1000;
+    while (std::chrono::high_resolution_clock::now() < end) {
+        if (!concore::detail::get_task_system().is_active())
             return true;
         std::this_thread::sleep_for(sleep_dur);
         sleep_dur = sleep_dur * 16 / 10;

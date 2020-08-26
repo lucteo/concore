@@ -73,6 +73,8 @@ void task_system::spawn(task&& t, bool wake_workers) {
 void task_system::busy_wait_on(task_group& grp) {
     worker_thread_data* data = g_worker_data;
 
+    on_worker_active();
+
     using namespace std::chrono_literals;
     auto min_pause = 1us;
     auto max_pause = 10'000us;
@@ -93,6 +95,8 @@ void task_system::busy_wait_on(task_group& grp) {
         std::this_thread::sleep_for(cur_pause);
         cur_pause = std::min(cur_pause * 16 / 10, max_pause);
     }
+
+    on_worker_inactive();
 }
 
 worker_thread_data* task_system::enter_worker() {
@@ -113,10 +117,11 @@ worker_thread_data* task_system::enter_worker() {
                 return &data;
             }
         }
-    } else
-
+    } else {
         // Couldn't find any empty slot; decrement the counter back and return
         num_active_extra_slots_--;
+    }
+
     return nullptr;
 }
 
@@ -133,6 +138,7 @@ void task_system::exit_worker(worker_thread_data* worker_data) {
 void task_system::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
     g_worker_data = &workers_data_[worker_idx];
+    on_worker_active();
     while (true) {
         if (done_)
             return;
@@ -141,6 +147,7 @@ void task_system::worker_run(int worker_idx) {
             try_sleep(worker_idx);
         }
     }
+    on_worker_inactive();
 }
 
 bool task_system::try_extract_execute_task(worker_thread_data& worker_data) {
@@ -186,11 +193,13 @@ bool task_system::try_extract_execute_task(worker_thread_data& worker_data) {
 }
 
 void task_system::try_sleep(int worker_idx) {
+    on_worker_inactive();
     auto& data = workers_data_[worker_idx];
     data.state_.store(worker_thread_data::waiting);
     if (before_sleep(worker_idx)) {
         data.has_data_.wait();
     }
+    on_worker_active();
     data.state_.store(worker_thread_data::running);
 }
 
@@ -254,8 +263,28 @@ void task_system::wakeup_workers() {
 void task_system::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
 
-    on_task_removed();
     detail::execute_task(t);
+    on_task_removed();
+}
+
+void task_system::on_worker_active() const {
+#if CONCORE_ENABLE_PROFILING
+    int val = num_active_workers_++;
+    CONCORE_PROFILING_PLOT("# concore active workers", int64_t(val));
+    CONCORE_PROFILING_PLOT("# concore active workers", int64_t(val + 1));
+#else
+    num_active_workers_++;
+#endif
+}
+
+void task_system::on_worker_inactive() const {
+#if CONCORE_ENABLE_PROFILING
+    int val = num_active_workers_--;
+    CONCORE_PROFILING_PLOT("# concore active workers", int64_t(val));
+    CONCORE_PROFILING_PLOT("# concore active workers", int64_t(val - 1));
+#else
+    num_active_workers_--;
+#endif
 }
 
 void task_system::on_task_added() const {
@@ -263,6 +292,8 @@ void task_system::on_task_added() const {
     int val = num_tasks_++;
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val + 1));
+#else
+    num_tasks_++;
 #endif
 }
 
@@ -271,6 +302,8 @@ void task_system::on_task_removed() const {
     int val = num_tasks_--;
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val - 1));
+#else
+    num_tasks_--;
 #endif
 }
 
