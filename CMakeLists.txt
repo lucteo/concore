@@ -128,9 +128,7 @@ else()
 endif()
 
 # Prevent linking errors with CXX11 or older ABI (visible when linking with rapidcheck)
-if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=1")
-endif()
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=1")
 
 # Turn all warnings
 target_compile_options(concore PRIVATE
