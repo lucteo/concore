@@ -53,6 +53,7 @@ if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
 endif()
 
 # Library options
+option(concore.use2020 "Use 2020 preview features" OFF)
 option(concore.testing "Compile the concore tests" ON)
 option(concore.profiling "Add profiling info the the library" OFF)
 option(concore.profiling.tracy "Use Tracy library for profiling" OFF)
@@ -68,6 +69,7 @@ message(STATUS "  major ver      : ${concore_MAJOR_VERSION}")
 message(STATUS "  minor ver      : ${concore_MINOR_VERSION}")
 message(STATUS "Build date       : ${concore_BUILD_DATE}")
 message(STATUS "Build year       : ${concore_BUILD_YEAR}")
+message(STATUS "Use C++ 2020     : ${concore.use2020}")
 message(STATUS "Use testing      : ${concore.testing}")
 message(STATUS "Use profiling    : ${concore.profiling}")
 message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
@@ -110,10 +112,25 @@ endif()
 # The concore library target
 add_library(concore STATIC ${concore_sourceFiles})
 
-# Use C++17
-target_compile_features(concore PUBLIC cxx_std_17)
-# Prevent linking errors towards CXX11 ABI (visible when linking with rapidcheck)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=0")
+# Set the right C++ standard
+if (concore.use2020)
+    target_compile_features(concore PUBLIC cxx_std_20)
+
+    # Additional flags to turn on experimental features
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
+    endif()
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmodules")
+    endif()
+else()
+    target_compile_features(concore PUBLIC cxx_std_17)
+endif()
+
+# Prevent linking errors with CXX11 or older ABI (visible when linking with rapidcheck)
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=1")
+endif()
 
 # Turn all warnings
 target_compile_options(concore PRIVATE
@@ -121,6 +138,7 @@ target_compile_options(concore PRIVATE
           -Wall>
      $<$<CXX_COMPILER_ID:MSVC>:
           /W4>)
+
 
 # Declare the public include directories
 target_include_directories(concore PUBLIC

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 namespace concore {
 namespace detail {
@@ -205,13 +206,13 @@ private:
 
     template <typename TT>
     TT* alloc(size_t n) {
-        typename decltype(allocator_)::template rebind<TT>::other a;
+        typename std::allocator_traits<decltype(allocator_)>::template rebind_alloc<TT> a;
         return a.allocate(n);
     }
 
     template <typename TT>
     void dealloc(TT* p, size_t n) {
-        typename decltype(allocator_)::template rebind<TT>::other a;
+        typename std::allocator_traits<decltype(allocator_)>::template rebind_alloc<TT> a;
         a.deallocate(p, n);
     }
 };

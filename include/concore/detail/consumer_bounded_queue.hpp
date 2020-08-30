@@ -116,7 +116,7 @@ struct consumer_bounded_queue {
 
 private:
     //! The maximum number of active items
-    int max_active_;
+    uint32_t max_active_;
     //! Queue of items that are waiting (or not yet extracted)
     concurrent_queue<T, queue_type::multi_prod_multi_cons> waiting_;
     //! The count of items in our queue (active & total)

@@ -65,6 +65,8 @@
 #define CONCORE_CPP_COMPILER_msvc 1
 #elif defined(__INTEL_COMPILER)
 #define CONCORE_CPP_COMPILER_intel 1
+#else
+#define CONCORE_CPP_COMPILER_UNKNOWN 1
 #endif
 
 #define CONCORE_CPP_COMPILER(X) (CONCORE_CPP_COMPILER_##X)
@@ -74,11 +76,15 @@
 // Detect use of pthreads; use it on Linux
 #if !CONCORE_USE_PTHREADS && CONCORE_PLATFORM_LINUX
 #define CONCORE_USE_PTHREADS 1
+#else
+#define CONCORE_USE_PTHREADS 0
 #endif
 
 // Detect the use of libdispatch; use it on Apple
 #if !CONCORE_USE_PTHREADS && CONCORE_PLATFORM_APPLE
 #define CONCORE_USE_LIBDISPATCH 1
+#else
+#define CONCORE_USE_LIBDISPATCH 0
 #endif
 
 #endif

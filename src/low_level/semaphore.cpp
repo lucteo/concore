@@ -13,10 +13,10 @@
 
 #define CONCORE_SEMAPHORE_IMPL_CTOR(start_count)                                                   \
     static_assert(sizeof(sem_t) <= sizeof(sem_), "Did not find the right size of sem_t");          \
-    int ret = sem_init(reinterpret_cast<sem_t*>(&sem_), 0, start_count);                           \
+    [[maybe_unused]] int ret = sem_init(reinterpret_cast<sem_t*>(&sem_), 0, start_count);          \
     assert(!ret);
 #define CONCORE_SEMAPHORE_IMPL_DTOR()                                                              \
-    int ret = sem_destroy(reinterpret_cast<sem_t*>(&sem_));                                        \
+    [[maybe_unused]] int ret = sem_destroy(reinterpret_cast<sem_t*>(&sem_));                       \
     assert(!ret);
 
 #define CONCORE_SEMAPHORE_IMPL_WAIT()                                                              \
@@ -39,11 +39,12 @@
 #define CONCORE_SEMAPHORE_IMPL_CTOR(start_count)                                                   \
     static_assert(                                                                                 \
             sizeof(semaphore_t) == sizeof(sem_), "Did not find the right size of semaphore_t");    \
-    auto ret = semaphore_create(mach_task_self(), reinterpret_cast<semaphore_t*>(&sem_),           \
-            SYNC_POLICY_FIFO, start_count);                                                        \
+    [[maybe_unused]] auto ret = semaphore_create(mach_task_self(),                                 \
+            reinterpret_cast<semaphore_t*>(&sem_), SYNC_POLICY_FIFO, start_count);                 \
     assert(ret == err_none);
 #define CONCORE_SEMAPHORE_IMPL_DTOR()                                                              \
-    auto ret = semaphore_destroy(mach_task_self(), *reinterpret_cast<semaphore_t*>(&sem_));        \
+    [[maybe_unused]] auto ret =                                                                    \
+            semaphore_destroy(mach_task_self(), *reinterpret_cast<semaphore_t*>(&sem_));           \
     assert(ret == err_none);
 
 #define CONCORE_SEMAPHORE_IMPL_WAIT()                                                              \
