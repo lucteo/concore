@@ -2,6 +2,17 @@
 name: CI
 on: push
 jobs:
+  new-build:
+    name: Build the library with various compilers
+    strategy:
+        matrix:
+          cc: [ gcc, clang ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: lucteo/action-cxx-toolkit@v1
+        with:
+          cc: ${{ matrix.cc }}
+          checks: build test install
   build:
     strategy:
         matrix:
