@@ -22,14 +22,14 @@ jobs:
           cc: ${{ matrix.cc }}
           conanflags: -s compiler.libcxx=libstdc++11
           checks: build test
-  # static-checks:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@master
-  #     - uses: lucteo/action-cxx-toolkit@master
-  #       with:
-  #         cc: ${{ matrix.cc }}
-  #         checks: clang-tidy cppcheck iwyu
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: lucteo/action-cxx-toolkit@master
+        with:
+          cc: gcc-9
+          checks: clang-tidy
   # clang-format:
   #   runs-on: ubuntu-latest
   #   steps:

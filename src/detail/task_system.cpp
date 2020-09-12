@@ -101,8 +101,7 @@ void task_system::busy_wait_on(task_group& grp) {
 
 worker_thread_data* task_system::enter_worker() {
     // Check if we already have an attached worker; if yes, no need for a new one
-    worker_thread_data* data = g_worker_data;
-    if (data)
+    if (g_worker_data)
         return nullptr;
 
     // Ok, so this is called from an external thread. Try to occupy a free slot
@@ -181,8 +180,8 @@ bool task_system::try_extract_execute_task(worker_thread_data& worker_data) {
 
     // If we have extra workers joining our task system, try stealing tasks from them too
     if (num_active_extra_slots_.load(std::memory_order_acquire) > 0) {
-        for (auto& worker_data : reserved_worker_slots_) {
-            if (worker_data.local_tasks_.try_steal(t)) {
+        for (auto& wd : reserved_worker_slots_) {
+            if (wd.local_tasks_.try_steal(t)) {
                 execute_task(t);
                 return true;
             }

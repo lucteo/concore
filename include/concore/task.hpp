@@ -93,7 +93,7 @@ public:
      * the functor must be valid at that time.
      */
     template <typename T>
-    task(T&& ftor)
+    task(T&& ftor) // cppcheck-suppress noExplicitConstructor
         : fun_(std::forward<T>(ftor)) {}
 
     /**

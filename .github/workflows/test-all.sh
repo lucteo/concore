@@ -11,7 +11,7 @@ set -e
 ${CURDIR}/test-gcc.sh
 ${CURDIR}/test-clang.sh
 ${CURDIR}/test-clang-7.sh
-# ${CURDIR}/test-static-checks.sh
+${CURDIR}/test-static-checks.sh
 # ${CURDIR}/test-clang-format.sh
 # ${CURDIR}/test-sanitizer.sh
 

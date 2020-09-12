@@ -1,19 +1,24 @@
 #pragma once
 
-#include "../task.hpp"
-#include "../profiling.hpp"
-#include "../low_level/semaphore.hpp"
-#include "../data/concurrent_queue.hpp"
+#include "concore/task.hpp"
+#include "concore/profiling.hpp"
+#include "concore/low_level/semaphore.hpp"
+#include "concore/data/concurrent_queue.hpp"
 #include "worker_tasks.hpp"
 
 #include <array>
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <utility>
 
 namespace concore {
 
-inline namespace v1 { struct init_data; }
+inline namespace v1 {
+class task;
+class task_group;
+struct init_data;
+} // namespace v1
 
 namespace detail {
 
