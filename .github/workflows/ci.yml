@@ -9,6 +9,7 @@ jobs:
           cc: [ gcc, clang ]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@master
       - uses: lucteo/action-cxx-toolkit@v1
         with:
           cc: ${{ matrix.cc }}
