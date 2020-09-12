@@ -3,10 +3,11 @@ name: CI
 on: push
 jobs:
   new-build:
-    name: Build the library with various compilers
+    name: Build
     strategy:
         matrix:
-          cc: [ gcc, clang ]
+          # cc: [ gcc, clang ]
+          cc: [ gcc ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
@@ -14,60 +15,60 @@ jobs:
         with:
           cc: ${{ matrix.cc }}
           checks: build test install
-  build:
-    strategy:
-        matrix:
-          cc: [ gcc, clang ]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          cc: ${{ matrix.cc }}
-  coverage:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          coverage: codecov
-          cmakeflags: -DCODE_COVERAGE=ON
-  valgrind:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          ctestflags: '-D ExperimentalMemCheck'
-  clang-sanitizers:
-    name: build with clang -fsanitize
-    strategy:
-        matrix:
-          cflags:
-            - -fsanitize=address
-            - -fsanitize=memory
-            - -fsanitize=undefined
-            - -fsanitize=dataflow
-            - -fsanitize=safe-stack
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          cc: clang
-          cflags: ${{ matrix.cflags }}
-  # Disable clang-format: there are formatting differences between different versions of clang-format
-  # clang-format:
+  # build:
+  #   strategy:
+  #       matrix:
+  #         cc: [ gcc, clang ]
   #   runs-on: ubuntu-latest
   #   steps:
   #     - uses: actions/checkout@master
   #     - uses: docker://lucteo/ghaction-conan-cmake:latest
   #       with:
-  #         analyzer: clang-format
-  clang-analyzers:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          analyzer: clang-tidy
+  #         cc: ${{ matrix.cc }}
+  # coverage:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@master
+  #     - uses: docker://lucteo/ghaction-conan-cmake:latest
+  #       with:
+  #         coverage: codecov
+  #         cmakeflags: -DCODE_COVERAGE=ON
+  # valgrind:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@master
+  #     - uses: docker://lucteo/ghaction-conan-cmake:latest
+  #       with:
+  #         ctestflags: '-D ExperimentalMemCheck'
+  # clang-sanitizers:
+  #   name: build with clang -fsanitize
+  #   strategy:
+  #       matrix:
+  #         cflags:
+  #           - -fsanitize=address
+  #           - -fsanitize=memory
+  #           - -fsanitize=undefined
+  #           - -fsanitize=dataflow
+  #           - -fsanitize=safe-stack
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@master
+  #     - uses: docker://lucteo/ghaction-conan-cmake:latest
+  #       with:
+  #         cc: clang
+  #         cflags: ${{ matrix.cflags }}
+  # # Disable clang-format: there are formatting differences between different versions of clang-format
+  # # clang-format:
+  # #   runs-on: ubuntu-latest
+  # #   steps:
+  # #     - uses: actions/checkout@master
+  # #     - uses: docker://lucteo/ghaction-conan-cmake:latest
+  # #       with:
+  # #         analyzer: clang-format
+  # clang-analyzers:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@master
+  #     - uses: docker://lucteo/ghaction-conan-cmake:latest
+  #       with:
+  #         analyzer: clang-tidy
