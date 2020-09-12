@@ -13,7 +13,7 @@
 #include <benchmark/benchmark.h>
 #include <thread>
 
-static uint64_t bad_fib(uint64_t n) { return n < 2 ?: bad_fib(n - 1) + bad_fib(n - 2); }
+static uint64_t bad_fib(uint64_t n) { return n < 2 ? n : bad_fib(n - 1) + bad_fib(n - 2); }
 
 template <typename E>
 static void execute_lots_of_tasks(E executor, benchmark::State& state) {

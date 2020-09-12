@@ -357,8 +357,10 @@ static void BM_fresnel_omp_for(benchmark::State& state) {
 #endif
 #endif // CONCORE_USE_GLM
 
+#if CONCORE_USE_GLM
 static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
+#endif
 
 #define BENCHMARK_CASE(fun) BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Arg(1'000'000);
 

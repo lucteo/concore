@@ -6,9 +6,9 @@ realpath() {
 CURDIR=$(realpath $(dirname "$0"))
 source ${CURDIR}/_test_common.sh
 
-startTest "GCC compilation"
+startTest "clang-format test"
 
 # Run docker with action-cxx-toolkit to check our code
-docker run ${DOCKER_RUN_PARAMS} -e INPUT_CC='gcc' -e INPUT_CHECKS='build test install warnings' action-cxx-toolkit
+docker run ${DOCKER_RUN_PARAMS} -e INPUT_CHECKS='clang-format' action-cxx-toolkit
 status=$?
 printStatus $status
