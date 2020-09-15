@@ -255,12 +255,12 @@ public:
      * @brief      Sets the task group for the current worker.
      *
      * @param      grp   The new group to be set for the current worker.
-     * 
+     *
      * @return     The previous set task group (if any).
-     * 
+     *
      * This is used by implementation of certain algorithms to speed up the use of task groups. Not
      * intended to be heavily used. To be used with care.
-     * 
+     *
      * In general, after setting a task group, one may want to restore the old task group. This is
      * why the function returns the previous task_group object.
      */

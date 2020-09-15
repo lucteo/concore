@@ -94,7 +94,7 @@ struct partition_hints {
     //! When choosing how many iterations to handle in one task, this parameter can instruct the
     //! algorithm to not place less than the value here. This can be used when the iterations are
     //! really small, and the task management overhead can become significant.
-    //! 
+    //!
     //! Does not apply to the @ref partition_method::upfront_partition method
     int granularity_{-1};
 
@@ -102,7 +102,7 @@ struct partition_hints {
     //!
     //! Whenever this is set, we ensure that we don't break the work into too many tasks. It has a
     //! similar effect to setting the granularity.
-    //! 
+    //!
     //! If, for example, this is set to 10, and we have 8 workers, then the upfront partition will
     //! create maximum 80 tasks. The auto partition will not create more than 80 tasks.
     int tasks_per_worker_{-1};

@@ -11,8 +11,8 @@ TEST_CASE("conc_sort properly sorts a given range", "[conc_sort]") {
     std::vector<int> v;
     static constexpr int num_elem = 1000;
     v.reserve(num_elem);
-    for (int i=num_elem-1; i>=0; i--)
-        v.push_back(i/10);
+    for (int i = num_elem - 1; i >= 0; i--)
+        v.push_back(i / 10);
 
     concore::conc_sort(v.begin(), v.end());
     CHECK(std::is_sorted(v.begin(), v.end()));

@@ -30,13 +30,14 @@ jobs:
         with:
           cc: gcc-9
           checks: clang-tidy
-  # clang-format:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@master
-  #     - uses: lucteo/action-cxx-toolkit@master
-  #       with:
-  #         checks: clang-format
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: lucteo/action-cxx-toolkit@master
+        with:
+          checks: clang-format
+          clangformatdirs: src include test
   # sanitizer:
   #   runs-on: ubuntu-latest
   #   steps:

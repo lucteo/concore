@@ -28,7 +28,7 @@ public:
 //! Safe-dereference an iterator or an integral value.
 //! If the given type is an iterator, it will dereference it the standard way; if, not, this will
 //! return the given type; therefore we can "safely dereference" integral numbers.
-//! 
+//!
 //! Usage: safe_dereference(it, nullptr);
 //! The second parameter is mandatory.
 template <typename T>
@@ -46,8 +46,6 @@ It it_next(It it) {
     it++;
     return it;
 }
-
-
 
 inline int compute_granularity(int n, partition_hints hints) {
     int granularity = std::max(1, hints.granularity_);

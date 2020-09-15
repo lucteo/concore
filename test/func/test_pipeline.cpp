@@ -301,12 +301,8 @@ TEST_CASE("pipeline uses the given executor", "[pipeline]") {
     // Construct the pipeline
     using concore::stage_ordering;
     concore::pipeline_builder<int> builder(num_items, my_executor);
-    builder.add_stage(stage_ordering::concurrent, [&](int idx) {
-        cnt1++;
-    });
-    builder.add_stage(stage_ordering::concurrent, [&](int idx) {
-        cnt2++;
-    });
+    builder.add_stage(stage_ordering::concurrent, [&](int idx) { cnt1++; });
+    builder.add_stage(stage_ordering::concurrent, [&](int idx) { cnt2++; });
     auto my_pipeline = builder.build();
 
     // Push items through the pipeline
@@ -320,5 +316,5 @@ TEST_CASE("pipeline uses the given executor", "[pipeline]") {
     // Check that we used our executor for all items, and all stages
     REQUIRE(cnt1.load() == num_items);
     REQUIRE(cnt2.load() == num_items);
-    REQUIRE(num_executed.load() == 2*num_items);
+    REQUIRE(num_executed.load() == 2 * num_items);
 }

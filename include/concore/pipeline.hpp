@@ -307,7 +307,7 @@ public:
      * @param      <unnamed>  A tag value
      *
      * @return     The @ref pipeline object built by this @ref pipeline_builder object.
-     * 
+     *
      * This will actually finalize the building process and return the corresponding @ref pipeline
      * object. After this is called, any other operations on the builder are illegal.
      */

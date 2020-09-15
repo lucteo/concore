@@ -314,7 +314,8 @@ static void BM_fresnel_conc_for_upfront(benchmark::State& state) {
         concore::partition_hints hints;
         hints.method_ = concore::partition_method::upfront_partition;
         hints.tasks_per_worker_ = 10;
-        concore::conc_for(0, data_size,
+        concore::conc_for(
+                0, data_size,
                 [&](int idx) { out_vec[idx] = fresnel(incidence[idx], normals[idx], 1.0f); },
                 hints);
     }

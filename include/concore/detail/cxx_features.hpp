@@ -45,7 +45,6 @@
 #define CONCORE_CXX_HAS_PARTIAL_COROUTINES 0
 #endif
 
-
 #if defined(__cpp_modules)
 #define CONCORE_CXX_HAS_MODULES 1
 #else

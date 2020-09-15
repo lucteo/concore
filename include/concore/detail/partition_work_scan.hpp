@@ -105,10 +105,10 @@ inline void algo(RandomIt first, int n, WorkType& work, task_group grp, int gran
 
     // The lines of work; last line is not used
     std::vector<line<WorkType>> lines;
-    lines.resize(num_div-1, line<WorkType>{work, {}});
+    lines.resize(num_div - 1, line<WorkType>{work, {}});
 
     // Create the initial pass work tasks
-    for (int i = 0; i < num_div-1; i++) {
+    for (int i = 0; i < num_div - 1; i++) {
         auto start = first + (n * i / num_div);
         auto end = first + (n * (i + 1) / num_div);
         lines[i].work_.line_ = i;
@@ -118,7 +118,7 @@ inline void algo(RandomIt first, int n, WorkType& work, task_group grp, int gran
     // Create the first-pass join tasks
     for (int lvl = 0; lvl < num_levels; lvl++) {
         int stride = 1 << (lvl + 1);
-        for (int i = stride - 1; i < num_div-1; i += stride) {
+        for (int i = stride - 1; i < num_div - 1; i += stride) {
             create_join_task(lines[i - stride / 2], lines[i], grp);
             num_tasks++;
         }
@@ -144,7 +144,7 @@ inline void algo(RandomIt first, int n, WorkType& work, task_group grp, int gran
         num_tasks++;
     }
     // Start the first task in each line
-    for (int i = 0; i < num_div-1; i++) {
+    for (int i = 0; i < num_div - 1; i++) {
         if (lines[i].first_task_)
             global_executor(lines[i].first_task_);
     }

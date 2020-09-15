@@ -11,12 +11,11 @@
 int rand_small_int() { return rand() % (200) - 100; }
 
 char rand_char() {
-    static constexpr int num = 'z'-'a';
+    static constexpr int num = 'z' - 'a';
     return static_cast<char>('a' + rand() % num);
 }
 
-std::string rand_string()
-{
+std::string rand_string() {
     int size = rand() % 100;
     std::string res(size, 'a');
     std::generate(res.begin(), res.end(), &rand_char);
@@ -105,7 +104,6 @@ static void BM_tbb_parallel_sort(benchmark::State& state) {
 }
 #endif
 
-
 static void BM_string_std_sort(benchmark::State& state) {
     const int data_size = state.range(0);
     std::vector<std::string> test_data = generate_string_test_data(data_size);
@@ -177,8 +175,10 @@ static void BM_string_tbb_parallel_sort(benchmark::State& state) {
 static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
-#define BENCHMARK_CASE(fun) BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMillisecond)->Arg(10'000'000);
-#define BENCHMARK_CASE2(fun) BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMillisecond)->Arg(50'000);
+#define BENCHMARK_CASE(fun)                                                                        \
+    BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMillisecond)->Arg(10'000'000);
+#define BENCHMARK_CASE2(fun)                                                                       \
+    BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMillisecond)->Arg(50'000);
 
 BENCHMARK_CASE(BM_std_sort);
 BENCHMARK_CASE(BM_conc_sort);

@@ -149,7 +149,7 @@ public:
 
     /**
      * @brief      Clear all the dependencies that go from this task
-     * 
+     *
      * This is useful for constructing and destroying task graphs manually.
      */
     void clear_next() {

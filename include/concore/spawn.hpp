@@ -92,7 +92,6 @@ inline void spawn(F&& ftor, task_group grp, bool wake_workers = true) {
     detail::get_task_system().spawn(task(std::forward<F>(ftor), std::move(grp)), wake_workers);
 }
 
-
 /**
  * @brief      Spawn multiple tasks, given the functors to be executed.
  *
@@ -137,7 +136,8 @@ inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_worker
  *
  * @ref spawn(task&&, bool), spawn_and_wait()
  */
-inline void spawn(std::initializer_list<task_function>&& ftors, task_group grp, bool wake_workers = true) {
+inline void spawn(
+        std::initializer_list<task_function>&& ftors, task_group grp, bool wake_workers = true) {
     int count = static_cast<int>(ftors.size());
     for (auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true

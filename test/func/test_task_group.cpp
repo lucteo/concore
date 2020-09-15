@@ -275,15 +275,15 @@ TEST_CASE("higher level except handler is called, if the child doesn't have one"
     grpChild1.set_exception_handler([&](std::exception_ptr) { cnt_ex_child1++; });
 
     // Run a task in each group
-    concore::spawn(concore::task([]{throw 1;}, grpTop));
+    concore::spawn(concore::task([] { throw 1; }, grpTop));
     concore::wait(grpTop);
     REQUIRE(cnt_ex_top == 1);
     REQUIRE(cnt_ex_child1 == 0);
-    concore::spawn(concore::task([]{throw 1;}, grpChild1));
+    concore::spawn(concore::task([] { throw 1; }, grpChild1));
     concore::wait(grpTop);
     REQUIRE(cnt_ex_top == 1);
     REQUIRE(cnt_ex_child1 == 1);
-    concore::spawn(concore::task([]{throw 1;}, grpChild2));
+    concore::spawn(concore::task([] { throw 1; }, grpChild2));
     concore::wait(grpTop);
     REQUIRE(cnt_ex_top == 2);
     REQUIRE(cnt_ex_child1 == 1);

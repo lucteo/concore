@@ -92,7 +92,8 @@ TEST_CASE("conc_for can work with plain forward iterators", "[conc_for]") {
         }
 
         // Do the iterations in parallel
-        concore::conc_for(elems.begin(), elems.end(), [&counts](int i) { counts[i]++; }, hints);
+        concore::conc_for(
+                elems.begin(), elems.end(), [&counts](int i) { counts[i]++; }, hints);
 
         // Incremented each count once
         for (int i = 0; i < num_iter; i++)

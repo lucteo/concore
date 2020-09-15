@@ -39,12 +39,8 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     }
 };
 
-void task_group_access::on_starting_task(const task_group& grp) {
-    g_current_task_group = grp;
-}
-void task_group_access::on_task_done(const task_group& grp) {
-    g_current_task_group = task_group{};
-}
+void task_group_access::on_starting_task(const task_group& grp) { g_current_task_group = grp; }
+void task_group_access::on_task_done(const task_group& grp) { g_current_task_group = task_group{}; }
 void task_group_access::on_task_exception(const task_group& grp, std::exception_ptr ex) {
     g_current_task_group = task_group{};
     // Recurse up to find a group that has a exception handler fun
