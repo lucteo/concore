@@ -155,6 +155,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     SECTION("n_serializer is copyable") {
         auto e1 = concore::n_serializer(4);
         auto e2 = concore::n_serializer(4, ge);
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
         auto e3 = concore::n_serializer(e1);
         e2 = e1;
     }
@@ -166,6 +167,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     SECTION("rw_serializer.reader is copyable") {
         auto e1 = concore::rw_serializer().reader();
         auto e2 = concore::rw_serializer().reader();
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
         concore::rw_serializer::reader_type e3(e1);
         e2 = e1;
     }
@@ -177,6 +179,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     SECTION("rw_serializer.writer is copyable") {
         auto e1 = concore::rw_serializer().writer();
         auto e2 = concore::rw_serializer().writer();
+        // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
         concore::rw_serializer::writer_type e3(e1);
         e2 = e1;
     }

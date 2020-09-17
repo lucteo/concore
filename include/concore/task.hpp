@@ -93,8 +93,8 @@ public:
      * the functor must be valid at that time.
      */
     template <typename T>
-    task(T&& ftor) // cppcheck-suppress noExplicitConstructor
-        : fun_(std::forward<T>(ftor)) {}
+    task(T ftor)
+        : fun_(std::move(ftor)) {}
 
     /**
      * @brief      Constructs a new task given a functor and a task group
@@ -119,8 +119,8 @@ public:
      * @see get_task_group()
      */
     template <typename T>
-    task(T&& ftor, task_group grp)
-        : fun_(std::forward<T>(ftor))
+    task(T ftor, task_group grp)
+        : fun_(std::move(ftor))
         , task_group_(grp) {
         detail::task_group_access::on_task_created(grp);
     }
@@ -136,8 +136,8 @@ public:
      * This can be used to change the task function inside the task.
      */
     template <typename T>
-    task& operator=(T&& ftor) {
-        fun_ = std::forward<T>(ftor);
+    task& operator=(T ftor) {
+        fun_ = std::move(ftor);
         return *this;
     }
 

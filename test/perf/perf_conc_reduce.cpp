@@ -255,9 +255,9 @@ static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
 #define BENCHMARK_CASE1(fun, m)                                                                    \
-    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({10'000'000, (int)m})
+    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({10'000'000, (int)(m)})
 #define BENCHMARK_CASE2(fun, m)                                                                    \
-    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({100'000, (int)m})
+    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({100'000, (int)(m)})
 
 BENCHMARK_CASE1(BM_std_accumulate, 0);
 BENCHMARK_CASE1(BM_conc_reduce, concore::partition_method::auto_partition);

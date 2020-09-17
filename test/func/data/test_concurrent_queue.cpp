@@ -185,10 +185,10 @@ void reset_counters() {
 struct my_obj {
     my_obj() { g_num_ctors_++; }
     my_obj(const my_obj&) { g_num_copy_ctors_++; }
-    my_obj(my_obj&&) { g_num_move_ctors_++; }
+    my_obj(my_obj&&) noexcept { g_num_move_ctors_++; }
     ~my_obj() { g_num_dtors_++; }
     void operator=(const my_obj&) { g_num_copy_oper_++; }
-    void operator=(my_obj&&) { g_num_move_oper_++; }
+    void operator=(my_obj&&) noexcept { g_num_move_oper_++; }
 };
 
 template <concore::queue_type conc_type>

@@ -64,7 +64,7 @@ struct pipeline_impl {
     //! The private data for the pipeline
     std::shared_ptr<pipeline_data> data_;
 
-    pipeline_impl(pipeline_impl&& other);
+    pipeline_impl(pipeline_impl&& other) noexcept;
     pipeline_impl(int max_concurrency);
     pipeline_impl(int max_concurrency, task_group grp);
     pipeline_impl(int max_concurrency, task_group grp, executor_t exe);

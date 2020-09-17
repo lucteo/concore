@@ -144,7 +144,7 @@ void pipeline_data::on_task_done(stage_data& stage, line_ptr&& line) {
     }
 }
 
-pipeline_impl::pipeline_impl(pipeline_impl&& other)
+pipeline_impl::pipeline_impl(pipeline_impl&& other) noexcept
     : data_(std::move(other.data_)) {}
 pipeline_impl::pipeline_impl(int max_concurrency)
     : data_(std::make_shared<pipeline_data>(max_concurrency, task_group{}, global_executor)) {}

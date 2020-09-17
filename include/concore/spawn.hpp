@@ -113,10 +113,10 @@ inline void spawn(F&& ftor, task_group grp, bool wake_workers = true) {
 inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_workers = true) {
     auto grp = task_group::current_task_group();
     int count = static_cast<int>(ftors.size());
-    for (auto& ftor : ftors) {
+    for (const auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
         bool cur_wake_workers = (count-- > 0 || wake_workers);
-        detail::get_task_system().spawn(task(std::move(ftor), grp), cur_wake_workers);
+        detail::get_task_system().spawn(task(ftor, grp), cur_wake_workers);
     }
 }
 
@@ -139,10 +139,10 @@ inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_worker
 inline void spawn(
         std::initializer_list<task_function>&& ftors, task_group grp, bool wake_workers = true) {
     int count = static_cast<int>(ftors.size());
-    for (auto& ftor : ftors) {
+    for (const auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
         bool cur_wake_workers = (count-- > 0 || wake_workers);
-        detail::get_task_system().spawn(task(std::move(ftor), grp), cur_wake_workers);
+        detail::get_task_system().spawn(task(ftor, grp), cur_wake_workers);
     }
 }
 
@@ -195,9 +195,9 @@ inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wa
 
     auto grp = task_group::create(task_group::current_task_group());
     int count = static_cast<int>(ftors.size());
-    for (auto& ftor : ftors) {
+    for (const auto& ftor : ftors) {
         bool cur_wake_workers = count-- > 0; // don't wake on the last task
-        tsys.spawn(task(std::move(ftor), grp), cur_wake_workers);
+        tsys.spawn(task(ftor, grp), cur_wake_workers);
     }
     tsys.busy_wait_on(grp);
 

@@ -7,13 +7,6 @@ clang-analyzer-*,\
 performance-*,\
 portability-*,\
 -readability-*,\
--bugprone-forwarding-reference-overload,\
--bugprone-macro-parentheses,\
--bugprone-narrowing-conversions,\
--performance-for-range-copy,\
--performance-move-const-arg,\
--performance-noexcept-move-constructor,\
--performance-unnecessary-copy-initialization,\
 -performance-unnecessary-value-param,\
 -clang-analyzer-security.insecureAPI.rand"
 WarningsAsErrors: '*'

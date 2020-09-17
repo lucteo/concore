@@ -52,7 +52,7 @@ static void BM_execute_lots_of_tasks_manual_threads(benchmark::State& state) {
     const int problem_size = state.range(1);
     task_countdown tc{num_tasks};
 
-    const int num_threads = std::thread::hardware_concurrency();
+    const int num_threads = static_cast<int>(std::thread::hardware_concurrency());
     std::vector<std::thread> threads{static_cast<size_t>(num_threads)};
     std::this_thread::sleep_for(200ms);
 
