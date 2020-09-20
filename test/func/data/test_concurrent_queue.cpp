@@ -26,13 +26,13 @@ void test_pushes_then_pops() {
 
     // Now, we can extract all these elements, in the right order
     for (int i = 0; i < num_elements; i++) {
-        int value;
+        int value{0};
         REQUIRE(queue.try_pop(value));
         REQUIRE(value == i);
     }
 
     // Another pop should not return false
-    int value;
+    int value{0};
     REQUIRE_FALSE(queue.try_pop(value));
 }
 TEST_CASE("concurrent_queue: pushing then popping yields the same elements", "[concurrent_queue]") {
@@ -75,7 +75,7 @@ void test_one_pusher_one_popper() {
         // Continuously extract elements; do a busy-loop
         int idx = 0;
         while (idx < num_elements) {
-            int value;
+            int value{0};
             if (queue.try_pop(value)) {
                 // Ensure that the value is as expected
                 REQUIRE(value == idx++);
@@ -134,7 +134,7 @@ void test_multi_threads() {
         barrier.wait_for_all();
 
         int i = 0;
-        int value;
+        int value{0};
         while (std::chrono::high_resolution_clock::now() < end) {
             if (pusher)
                 queue.push(i++);
@@ -187,8 +187,14 @@ struct my_obj {
     my_obj(const my_obj&) { g_num_copy_ctors_++; }
     my_obj(my_obj&&) noexcept { g_num_move_ctors_++; }
     ~my_obj() { g_num_dtors_++; }
-    void operator=(const my_obj&) { g_num_copy_oper_++; }
-    void operator=(my_obj&&) noexcept { g_num_move_oper_++; }
+    my_obj& operator=(const my_obj&) {
+        g_num_copy_oper_++;
+        return *this;
+    }
+    my_obj& operator=(my_obj&&) noexcept {
+        g_num_move_oper_++;
+        return *this;
+    }
 };
 
 template <concore::queue_type conc_type>

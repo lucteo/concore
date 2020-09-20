@@ -52,9 +52,6 @@ struct node : Base {
  */
 class node_free_list {
 public:
-    node_free_list() = default;
-    ~node_free_list() = default;
-
     //! Acquire a new node from the free list. This is typically very fast
     //! Returns null, if we don't have any nodes in our free list
     node_ptr acquire() {
@@ -110,6 +107,7 @@ private:
 
     //! Index in the array of nodes, given the stride
     static node_ptr array_at(node_ptr arr, int stride, int idx) {
+        // NOLINTNEXTLINE
         return reinterpret_cast<node_ptr>(reinterpret_cast<char*>(arr) + stride * idx);
     }
 };
@@ -145,11 +143,18 @@ public:
         node_ptr chunk = allocated_chunks_;
         while (chunk) {
             node_ptr next = chunk->next_;
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
             dealloc(static_cast<node_of_node*>(chunk)->value_, num_nodes_per_chunk_);
             dealloc(chunk, 1);
             chunk = next;
         }
     }
+
+    node_factory(const node_factory&) = delete;
+    node_factory& operator=(const node_factory&) = delete;
+
+    node_factory(node_factory&&) noexcept = default;
+    node_factory& operator=(node_factory&&) noexcept = default;
 
     //! Acquire a new node from the factory. This is typically very fast
     node_ptr acquire() {

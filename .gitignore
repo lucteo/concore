@@ -36,6 +36,9 @@
 *.sublime-project
 *.sublime-workspace
 
+# VSCode files
+.vscode
+
 # Project folders/files
 build
 include/concore/version.hpp

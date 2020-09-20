@@ -67,6 +67,7 @@ struct simple_work {
     void exec(int first, int last) {
         CONCORE_PROFILING_SCOPE_N("body work");
         for (; first != last; first++)
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             out_vec_[first] = simple_transform(data_[first]);
     }
 };

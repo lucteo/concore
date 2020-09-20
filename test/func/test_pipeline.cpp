@@ -8,12 +8,14 @@
 #include <thread>
 #include <atomic>
 #include <chrono>
+#include <array>
 
 using namespace std::chrono_literals;
 
 TEST_CASE("simple pipeline", "[pipeline]") {
     constexpr int num_items = 50;
-    int items[num_items] = {0};
+    std::array<int, num_items> items{};
+    items.fill(0);
 
     // Construct the pipeline
     // clang-format off
@@ -40,7 +42,8 @@ TEST_CASE("simple pipeline", "[pipeline]") {
 
 TEST_CASE("pipeline's max concurrency is enforced", "[pipeline]") {
     constexpr int num_items = 50;
-    int items[num_items] = {0};
+    std::array<int, num_items> items{};
+    items.fill(0);
 
     constexpr int max_concurrency = 2;
 
@@ -76,11 +79,12 @@ TEST_CASE("pipeline's max concurrency is enforced", "[pipeline]") {
 }
 
 TEST_CASE("pipeline can have out of order stages", "[pipeline]") {
-    PROPERTY([]() {
+    PROPERTY(([]() {
         constexpr int num_items = 50;
 
-        int dur1[num_items] = {0};
-        int dur2[num_items] = {0};
+        std::array<int, num_items> dur1{}, dur2{};
+        dur1.fill(0);
+        dur2.fill(0);
         for (int i = 0; i < num_items; i++) {
             dur1[i] = *rc::gen::inRange(0, 5);
             dur2[i] = *rc::gen::inRange(0, 5);
@@ -116,14 +120,15 @@ TEST_CASE("pipeline can have out of order stages", "[pipeline]") {
 
         // Check that we've executed the right number of items
         REQUIRE(cur_idx == num_items);
-    });
+    }));
 }
 
 TEST_CASE("pipeline can have ordered stages", "[pipeline]") {
-    PROPERTY([]() {
+    PROPERTY(([]() {
         constexpr int num_items = 50;
 
-        int dur[num_items] = {0};
+        std::array<int, num_items> dur{};
+        dur.fill(0);
         for (int i = 0; i < num_items; i++)
             dur[i] = *rc::gen::inRange(0, 5);
         std::atomic<int> cur_idx{0};
@@ -153,11 +158,11 @@ TEST_CASE("pipeline can have ordered stages", "[pipeline]") {
 
         // Check that we've executed the right number of items
         REQUIRE(cur_idx == num_items);
-    });
+    }));
 }
 
 TEST_CASE("pipeline with multiple stages of different ordering", "[pipeline]") {
-    PROPERTY([]() {
+    PROPERTY(([]() {
         constexpr int max_stages = 20;
         int num_items = *rc::gen::inRange(0, 50);
         int num_stages = *rc::gen::inRange(1, max_stages);
@@ -168,7 +173,7 @@ TEST_CASE("pipeline with multiple stages of different ordering", "[pipeline]") {
         for (int i = 0; i < num_tasks; i++)
             dur[i] = *rc::gen::inRange(0, 5);
 
-        std::atomic<int> cur_idx[max_stages] = {0};
+        std::array<std::atomic<int>, max_stages> cur_idx{};
         std::atomic<int> completed_tasks = {0};
 
         // Construct the pipeline
@@ -202,7 +207,7 @@ TEST_CASE("pipeline with multiple stages of different ordering", "[pipeline]") {
 
         // Ensure that we executed as much tasks as needed
         REQUIRE(completed_tasks.load() == num_tasks);
-    });
+    }));
 }
 
 TEST_CASE("pipeline can throw exceptions", "[pipeline]") {

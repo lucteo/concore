@@ -6,6 +6,7 @@
 #include "concore/detail/algo_utils.hpp"
 
 #include <vector>
+#include <array>
 
 namespace concore {
 namespace detail {
@@ -63,7 +64,8 @@ void work_interval<WorkType, needs_join>::run(int start_idx) {
     }
 
     static constexpr int max_num_splits = 32;
-    work_interval* right_intervals[max_num_splits] = {0};
+    std::array<work_interval*, max_num_splits> right_intervals{};
+    right_intervals.fill(nullptr);
 
     // Iterate down, at each step splitting the range into half; stop when we reached the desired
     // granularity

@@ -31,11 +31,15 @@ public:
      * Constructs a spin mutex that is not acquired by any thread.
      */
     spin_mutex() = default;
+    ~spin_mutex() = default;
 
     //! Copy constructor is DISABLED
     spin_mutex(const spin_mutex&) = delete;
     //! Copy assignment is DISABLED
     spin_mutex& operator=(const spin_mutex&) = delete;
+
+    spin_mutex(spin_mutex&&) noexcept = delete;
+    spin_mutex& operator=(spin_mutex&&) noexcept = delete;
 
     /**
      * @brief      Acquires ownership of the mutex

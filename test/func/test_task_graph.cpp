@@ -5,12 +5,14 @@
 #include "test_common/task_countdown.hpp"
 #include "test_common/task_utils.hpp"
 
+#include <array>
+
 TEST_CASE("one can define a simple linear chain of tasks", "[task_graph]") {
     CONCORE_PROFILING_FUNCTION();
 
     constexpr int num_tasks = 10;
     int counter{0};
-    int res[num_tasks];
+    std::array<int, num_tasks> res{};
 
     task_countdown tc{num_tasks};
 
@@ -87,7 +89,8 @@ TEST_CASE("circular dependencies lead to tasks not being executed", "[task_graph
     CONCORE_PROFILING_FUNCTION();
 
     task_countdown tc{4};
-    bool executed[4] = {false};
+    std::array<bool, 4> executed{};
+    executed.fill(false);
 
     auto e = concore::global_executor;
     concore::chained_task t1(
@@ -168,7 +171,8 @@ TEST_CASE("a lot of predecessors added to a chained_task", "[task_graph]") {
 
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
-    bool executed[num_tasks] = {false};
+    std::array<bool, num_tasks> executed{};
+    executed.fill(false);
 
     // Create the tasks
     auto e = concore::global_executor;
@@ -301,7 +305,8 @@ TEST_CASE("a chained_task can be reused after it was run", "[task_graph]") {
 
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
-    int cnt[num_tasks] = {0};
+    std::array<int, num_tasks> cnt{};
+    cnt.fill(0);
 
     // Create the tasks
     auto e = concore::global_executor;
@@ -450,7 +455,7 @@ TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_gr
     auto finish_task = concore::task([]() {}, grp_wait);
 
     // Crete the tasks
-    bool executed[5] = {false, false, false, false, false};
+    std::array<bool, 5> executed = {false, false, false, false, false};
     auto t1 = concore::chained_task([&]() { executed[0] = true; }, throwing_executor{});
     auto t2 = concore::chained_task([&]() { executed[1] = true; }, throwing_executor{});
     auto t3 = concore::chained_task([&]() { executed[2] = true; }, throwing_executor{});

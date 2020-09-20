@@ -5,6 +5,8 @@
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_countdown.hpp"
 
+#include <array>
+
 using namespace std::chrono_literals;
 
 TEST_CASE("global_executor is copyable") {
@@ -29,7 +31,7 @@ TEST_CASE("global_executor executes tasks according to their prio") {
     for (int k = 0; k < num_runs; k++) {
         // The executors for all the priorities that we have
         constexpr int num_prios = 5;
-        concore::executor_t executors[num_prios] = {
+        std::array<concore::executor_t, num_prios> executors = {
                 concore::global_executor_background_prio,
                 concore::global_executor_low_prio,
                 concore::global_executor_normal_prio,
@@ -43,7 +45,7 @@ TEST_CASE("global_executor executes tasks according to their prio") {
 
         // We store the priorities of each task; the order will be consistent with the task
         // execution order.
-        int task_prios[num_tasks];
+        std::array<int, num_tasks> task_prios{};
         std::atomic<int> end_idx{0};
 
         // Create the tasks; start with the low prio ones

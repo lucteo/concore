@@ -24,6 +24,7 @@ struct finish_event_impl {
         , ref_count_(cnt) {
         assert(cnt > 0);
     }
+    ~finish_event_impl() = default;
 
     finish_event_impl(finish_event_impl&&) = delete;
     finish_event_impl& operator=(finish_event_impl&&) = delete;

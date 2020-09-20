@@ -28,22 +28,29 @@ namespace detail {
  */
 class worker_tasks {
 public:
-    worker_tasks() {
+    worker_tasks()
+        : root_{} {
         root_.next_.store(&root_, std::memory_order_relaxed);
         root_.prev_.store(&root_, std::memory_order_relaxed);
     }
+    ~worker_tasks() = default;
     worker_tasks(const worker_tasks&) = delete;
     const worker_tasks& operator=(const worker_tasks&) = delete;
+
+    worker_tasks(worker_tasks&&) noexcept = delete;
+    worker_tasks& operator=(worker_tasks&&) noexcept = delete;
 
     //! Pushes a task on the top of the stack
     //! Cannot be called in parallel with try_pop(), but can be called in parallel with try_steal()
     void push(task&& t) {
         // Get a new node and construct the task in it
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
         auto node = static_cast<bidir_node_ptr>(factory_.acquire());
         construct_in_bidir_node(node, std::forward<task>(t));
 
         // Insert the task in the front of the list
         std::lock_guard<spin_mutex> lock{access_bottleneck_};
+        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
         auto cur_first = static_cast<bidir_node_ptr>(root_.next_.load(std::memory_order_relaxed));
         node->next_.store(cur_first, std::memory_order_relaxed);
         node->prev_.store(&root_, std::memory_order_relaxed);
@@ -54,13 +61,14 @@ public:
     //! Pops one tasks from the top of the stack
     //! Cannot be called in parallel with push(), but can be called in parallel with try_steal()
     bool try_pop(task& t) {
-        node_ptr first;
+        node_ptr first{nullptr};
         // Synchronized access: get the first element from the list
         {
             std::lock_guard<spin_mutex> lock{access_bottleneck_};
             first = root_.next_.load(std::memory_order_relaxed);
             if (first != &root_) {
                 auto second =
+                        // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
                         static_cast<bidir_node_ptr>(first->next_.load(std::memory_order_relaxed));
                 root_.next_.store(second, std::memory_order_relaxed);
                 second->prev_.store(&root_, std::memory_order_relaxed);
@@ -82,10 +90,11 @@ public:
     bool try_steal(task& t) {
         CONCORE_PROFILING_FUNCTION();
 
-        bidir_node_ptr last;
+        bidir_node_ptr last{nullptr};
         // Synchronized access: get the last element from the list
         {
             std::lock_guard<spin_mutex> lock{access_bottleneck_};
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
             last = static_cast<bidir_node_ptr>(root_.prev_.load(std::memory_order_relaxed));
             if (last != &root_) {
                 node_ptr prev_to_last = last->prev_.load(std::memory_order_relaxed);

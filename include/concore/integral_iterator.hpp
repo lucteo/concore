@@ -30,6 +30,8 @@ public:
     ~integral_iterator() = default;
     integral_iterator(const integral_iterator&) = default;
     integral_iterator& operator=(const integral_iterator&) = default;
+    integral_iterator(integral_iterator&&) noexcept = default;
+    integral_iterator& operator=(integral_iterator&&) noexcept = default;
 
     explicit integral_iterator(T val)
         : value_(val) {}

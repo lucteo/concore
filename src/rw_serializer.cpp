@@ -52,7 +52,7 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
         // Increase the number of READ tasks.
         // If we WRITE writes, count towards the queued READs, otherwise towards the active READs.
-        count_bits old, desired;
+        count_bits old{}, desired{};
         old.int_value = combined_count_.load();
         do {
             desired.int_value = old.int_value;
@@ -71,7 +71,7 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
         write_tasks_.push(std::forward<task>(t));
 
         // Increase the number of WRITE tasks
-        count_bits old, desired;
+        count_bits old{}, desired{};
         old.int_value = combined_count_.load();
         do {
             desired.int_value = old.int_value;
@@ -88,7 +88,7 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
         detail::pop_and_execute(read_tasks_);
 
         // Decrement num_active_reads
-        count_bits old, desired;
+        count_bits old{}, desired{};
         old.int_value = combined_count_.load();
         do {
             desired.int_value = old.int_value;
@@ -107,7 +107,7 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
         // Decrement num_writes
         // If num_writes == 0, transform pending READs into active READs
-        count_bits old, desired;
+        count_bits old{}, desired{};
         old.int_value = combined_count_.load();
         assert(old.fields.num_active_reads == 0);
         do {

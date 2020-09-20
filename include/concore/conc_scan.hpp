@@ -18,8 +18,11 @@ struct conc_scan_work {
     int line_{-1};
 
     conc_scan_work() = default;
+    ~conc_scan_work() = default;
     conc_scan_work(const conc_scan_work&) = default;
     conc_scan_work& operator=(const conc_scan_work&) = default;
+    conc_scan_work(conc_scan_work&&) noexcept = default;
+    conc_scan_work& operator=(conc_scan_work&&) noexcept = default;
 
     conc_scan_work(It first, It2 d_first, Value id, const BinaryOp& func)
         : first_(first)

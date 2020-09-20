@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <cstdlib>
 #include <ctime>
+#include <array>
 
 namespace {
 
@@ -78,7 +79,7 @@ void check_parallelism(concore::executor_t e, int max_par, int min_par = 1) {
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
 
-    int results[num_tasks];
+    std::array<int, num_tasks> results{};
     std::atomic<int> end_idx{0};
     std::atomic<int> cur_parallelism{0};
 
@@ -117,7 +118,7 @@ void check_in_order_execution(concore::executor_t e) {
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
 
-    int results[num_tasks];
+    std::array<int, num_tasks> results{};
     std::atomic<int> end_idx{0};
 
     // Create the tasks, and add them to the executor
@@ -335,7 +336,7 @@ TEST_CASE("rw_serializer will execute WRITEs as soon as possible", "[ser]") {
     std::srand(std::time(0));
     int write_pos = std::rand() % num_tasks;
 
-    int results[num_tasks];
+    std::array<int, num_tasks> results{};
     std::atomic<int> end_idx{0};
 
     // Create the tasks, and add them to the right executor

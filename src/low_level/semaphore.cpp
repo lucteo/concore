@@ -114,44 +114,52 @@ inline namespace v1 {
 
 semaphore::semaphore(int start_count) {
     CONCORE_PROFILING_FUNCTION();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_SEMAPHORE_IMPL_CTOR(start_count);
 }
 
 semaphore::~semaphore() {
     CONCORE_PROFILING_FUNCTION();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_SEMAPHORE_IMPL_DTOR();
 }
 
 void semaphore::wait() {
     CONCORE_PROFILING_SCOPE_C(CONCORE_PROFILING_COLOR_SILVER);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_SEMAPHORE_IMPL_WAIT();
     CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 void semaphore::signal() {
     CONCORE_PROFILING_FUNCTION();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_SEMAPHORE_IMPL_SIGNAL();
     CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 binary_semaphore::binary_semaphore() {
     CONCORE_PROFILING_FUNCTION();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_BINARY_SEMAPHORE_IMPL_CTOR();
 }
 
 binary_semaphore::~binary_semaphore() {
     CONCORE_PROFILING_FUNCTION();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_BINARY_SEMAPHORE_IMPL_DTOR();
 }
 
 void binary_semaphore::wait() {
     CONCORE_PROFILING_SCOPE_C(CONCORE_PROFILING_COLOR_SILVER);
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_BINARY_SEMAPHORE_IMPL_WAIT();
     CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }
 
 void binary_semaphore::signal() {
     CONCORE_PROFILING_FUNCTION();
+    // NOLINTNEXTLINE(cppcoreguidelines-pro-type-reinterpret-cast)
     CONCORE_BINARY_SEMAPHORE_IMPL_SIGNAL();
     CONCORE_PROFILING_SET_TEXT_FMT(64, "this=%p", this);
 }

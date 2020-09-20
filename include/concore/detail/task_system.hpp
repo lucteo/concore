@@ -61,6 +61,12 @@ public:
     explicit task_system(const init_data& config);
     ~task_system();
 
+    task_system(const task_system&) = delete;
+    task_system& operator=(const task_system&) = delete;
+
+    task_system(task_system&&) noexcept = delete;
+    task_system& operator=(task_system&&) noexcept = delete;
+
     template <int P, typename T>
     void enqueue(T&& t) {
         CONCORE_PROFILING_FUNCTION();
