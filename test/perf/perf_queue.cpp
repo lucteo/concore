@@ -18,8 +18,10 @@ struct test_elem {
 
     test_elem(const test_elem& other) = default;
     test_elem& operator=(const test_elem& other) = default;
-    test_elem(test_elem&&) noexcept = default;
-    test_elem& operator=(test_elem&&) noexcept = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    test_elem(test_elem&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    test_elem& operator=(test_elem&&) = default;
 
     int idx_{0};
     std::function<void()> t1_;

@@ -48,8 +48,10 @@ public:
     //! Copy assignment is DISABLED
     const concurrent_queue& operator=(const concurrent_queue&) = delete;
 
-    concurrent_queue(concurrent_queue&&) noexcept = default;
-    concurrent_queue& operator=(concurrent_queue&&) noexcept = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    concurrent_queue(concurrent_queue&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    concurrent_queue& operator=(concurrent_queue&&) = default;
 
     /**
      * @brief      Pushes one element in the back of the queue.

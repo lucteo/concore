@@ -153,8 +153,10 @@ public:
     node_factory(const node_factory&) = delete;
     node_factory& operator=(const node_factory&) = delete;
 
-    node_factory(node_factory&&) noexcept = default;
-    node_factory& operator=(node_factory&&) noexcept = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    node_factory(node_factory&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    node_factory& operator=(node_factory&&) = default;
 
     //! Acquire a new node from the factory. This is typically very fast
     node_ptr acquire() {

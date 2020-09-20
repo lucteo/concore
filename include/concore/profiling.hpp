@@ -171,8 +171,10 @@ public:
     //! Disabled assignment operator
     profiling_lockable_wrapper& operator=(const profiling_lockable_wrapper&) = delete;
 
-    profiling_lockable_wrapper(profiling_lockable_wrapper&&) noexcept = default;
-    profiling_lockable_wrapper& operator=(profiling_lockable_wrapper&&) noexcept = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    profiling_lockable_wrapper(profiling_lockable_wrapper&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    profiling_lockable_wrapper& operator=(profiling_lockable_wrapper&&) = default;
 
     //! Getter for the base lockable object
     T& base() { return base_; }

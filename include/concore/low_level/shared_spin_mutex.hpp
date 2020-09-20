@@ -49,8 +49,8 @@ public:
     shared_spin_mutex(const shared_spin_mutex&) = delete;
     //! Copy assignment is DISABLED
     shared_spin_mutex& operator=(const shared_spin_mutex&) = delete;
-    shared_spin_mutex(shared_spin_mutex&&) noexcept = delete;
-    shared_spin_mutex& operator=(shared_spin_mutex&&) noexcept = delete;
+    shared_spin_mutex(shared_spin_mutex&&) = delete;
+    shared_spin_mutex& operator=(shared_spin_mutex&&) = delete;
 
     /**
      * @brief      Acquires exclusive ownership of the mutex

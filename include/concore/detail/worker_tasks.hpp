@@ -37,8 +37,8 @@ public:
     worker_tasks(const worker_tasks&) = delete;
     const worker_tasks& operator=(const worker_tasks&) = delete;
 
-    worker_tasks(worker_tasks&&) noexcept = delete;
-    worker_tasks& operator=(worker_tasks&&) noexcept = delete;
+    worker_tasks(worker_tasks&&) = delete;
+    worker_tasks& operator=(worker_tasks&&) = delete;
 
     //! Pushes a task on the top of the stack
     //! Cannot be called in parallel with try_pop(), but can be called in parallel with try_steal()

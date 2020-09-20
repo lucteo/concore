@@ -38,8 +38,8 @@ public:
     //! Copy assignment is DISABLED
     spin_mutex& operator=(const spin_mutex&) = delete;
 
-    spin_mutex(spin_mutex&&) noexcept = delete;
-    spin_mutex& operator=(spin_mutex&&) noexcept = delete;
+    spin_mutex(spin_mutex&&) = delete;
+    spin_mutex& operator=(spin_mutex&&) = delete;
 
     /**
      * @brief      Acquires ownership of the mutex
