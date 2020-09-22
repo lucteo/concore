@@ -30,8 +30,8 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     std::function<void(std::exception_ptr)> except_fun_;
 
     task_group_impl() = default;
-    task_group_impl(const std::shared_ptr<task_group_impl>& parent)
-        : parent_(parent) {}
+    task_group_impl(std::shared_ptr<task_group_impl> parent)
+        : parent_(std::move(parent)) {}
 
     bool is_cancelled() const {
         return is_cancelled_.load(std::memory_order_acquire) ||
@@ -76,9 +76,8 @@ void task_group_access::on_task_destroyed(task_group& grp) {
 
 inline namespace v1 {
 
-task_group::task_group()
-    : impl_() {}
-task_group::~task_group() {}
+task_group::task_group() = default;
+task_group::~task_group() = default;
 
 task_group task_group::create(const task_group& parent) {
     task_group res;

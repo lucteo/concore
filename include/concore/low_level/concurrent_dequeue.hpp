@@ -54,7 +54,7 @@ struct bounded_dequeue {
     //! Reserve one slot at the back of the fast queue. Yields the position of the reserved item.
     //! Returns false if we don't have enough room to add new elements.
     bool reserve_back(uint16_t& pos) {
-        const uint16_t max_dist = uint16_t(size_ - 3);
+        const auto max_dist = static_cast<uint16_t>(size_ - 3);
         fast_range old{}, desired{};
         old.int_value = fast_range_.load();
         while (true) {
@@ -71,7 +71,7 @@ struct bounded_dequeue {
     //! Reserve one slot at the front of the fast queue. Yields the position of the reserved item.
     //! Returns false if we don't have enough room to add new elements.
     bool reserve_front(uint16_t& pos) {
-        const uint16_t max_dist = uint16_t(size_ - 3);
+        const auto max_dist = static_cast<uint16_t>(size_ - 3);
         fast_range old{}, desired{};
         old.int_value = fast_range_.load();
         while (true) {

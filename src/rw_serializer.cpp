@@ -141,12 +141,12 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 };
 
 rw_serializer::reader_type::reader_type(std::shared_ptr<impl> impl)
-    : impl_(impl) {}
+    : impl_(std::move(impl)) {}
 
 void rw_serializer::reader_type::operator()(task t) { impl_->enqueue_read(std::move(t)); }
 
 rw_serializer::writer_type::writer_type(std::shared_ptr<impl> impl)
-    : impl_(impl) {}
+    : impl_(std::move(impl)) {}
 
 void rw_serializer::writer_type::operator()(task t) { impl_->enqueue_write(std::move(t)); }
 

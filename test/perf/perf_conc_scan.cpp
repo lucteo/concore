@@ -45,7 +45,7 @@ static void BM_std_partial_sum(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        std::partial_sum(data.begin(), data.end(), out.begin(), std::plus<int64_t>());
+        std::partial_sum(data.begin(), data.end(), out.begin(), std::plus<>());
     }
 }
 
@@ -58,7 +58,7 @@ static void BM_conc_scan(benchmark::State& state) {
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         auto res = concore::conc_scan(
-                data.begin(), data.end(), out.begin(), int64_t(0), std::plus<int64_t>());
+                data.begin(), data.end(), out.begin(), int64_t(0), std::plus<>());
         benchmark::DoNotOptimize(res);
     }
 }
@@ -110,7 +110,7 @@ static void BM_string_std_partial_sum(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        std::partial_sum(data.begin(), data.end(), out.begin(), std::plus<std::string>());
+        std::partial_sum(data.begin(), data.end(), out.begin(), std::plus<>());
     }
 }
 
@@ -123,7 +123,7 @@ static void BM_string_conc_scan(benchmark::State& state) {
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
         auto res = concore::conc_scan(
-                data.begin(), data.end(), out.begin(), std::string{}, std::plus<std::string>());
+                data.begin(), data.end(), out.begin(), std::string{}, std::plus<>());
         benchmark::DoNotOptimize(res);
     }
 }

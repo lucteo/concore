@@ -199,7 +199,7 @@ private:
         free_list_.use_nodes(nodes_array, sizeof(node_type), num_nodes_per_chunk_);
 
         // Add this to our list of allocated chunks (with another allocation)
-        node_of_node* chunk = alloc<node_of_node>(1);
+        auto* chunk = alloc<node_of_node>(1);
         chunk->value_ = nodes_array;
 
         // Atomically add the new chunk to the top of the list

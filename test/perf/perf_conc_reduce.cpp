@@ -94,8 +94,8 @@ static void BM_conc_reduce_it(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        auto res = concore::conc_reduce(data.begin(), data.end(), int64_t(0), std::plus<int64_t>(),
-                std::plus<int64_t>(), hints);
+        auto res = concore::conc_reduce(
+                data.begin(), data.end(), int64_t(0), std::plus<>(), std::plus<>(), hints);
         benchmark::DoNotOptimize(res);
     }
 }
@@ -199,8 +199,8 @@ static void BM_string_conc_reduce_it(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        auto res = concore::conc_reduce(data.begin(), data.end(), std::string{},
-                std::plus<std::string>(), std::plus<std::string>(), hints);
+        auto res = concore::conc_reduce(
+                data.begin(), data.end(), std::string{}, std::plus<>(), std::plus<>(), hints);
         benchmark::DoNotOptimize(res);
     }
 }

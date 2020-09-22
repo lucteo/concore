@@ -30,6 +30,7 @@ jobs:
         with:
           cc: gcc-9
           checks: clang-tidy
+          clangtidyflags: '-quiet'
   clang-format:
     runs-on: ubuntu-latest
     steps:

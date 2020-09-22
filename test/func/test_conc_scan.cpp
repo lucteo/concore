@@ -76,9 +76,9 @@ TEST_CASE("conc_scan on non-commutative operations (static)", "[conc_scan]") {
     std::vector<std::string> v;
     v.reserve(sz);
     for (char c = 'A'; c <= 'Z'; c++)
-        v.push_back(std::string(1, c));
+        v.emplace_back(1, c);
     for (char c = 'a'; c <= 'z'; c++)
-        v.push_back(std::string(1, c));
+        v.emplace_back(1, c);
     std::vector<std::string> res1(sz, std::string{});
     std::vector<std::string> res2(sz, std::string{});
 

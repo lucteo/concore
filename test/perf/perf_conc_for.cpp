@@ -16,7 +16,7 @@
 
 #include <benchmark/benchmark.h>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 
 using concore::integral_iterator;
 
@@ -35,8 +35,10 @@ void generate_simple_test_data(int size, std::vector<float>& data) {
 }
 
 float simple_transform(float in) {
-    return sqrt(sin(in)) * sqrt(cos(in)) + sqrt(sin(2 * in)) * sqrt(cos(2 * in)) +
-           sqrt(sin(3 * in)) * sqrt(cos(3 * in)) + sqrt(sin(4 * in)) * sqrt(cos(4 * in));
+    return std::sqrt(std::sin(in)) * std::sqrt(std::cos(in)) +
+           std::sqrt(std::sin(2 * in)) * std::sqrt(std::cos(2 * in)) +
+           std::sqrt(std::sin(3 * in)) * std::sqrt(std::cos(3 * in)) +
+           std::sqrt(std::sin(4 * in)) * std::sqrt(std::cos(4 * in));
 }
 
 static void BM_simple_std_for_each(benchmark::State& state) {

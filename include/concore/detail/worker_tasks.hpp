@@ -115,7 +115,7 @@ public:
 private:
     //! The root node representing the double-linked list of nodes
     //! First elem == top of the stack, last elem == bottom of the stack
-    detail::bidir_node_base root_;
+    detail::bidir_node_base root_{};
 
     //! Bottleneck for synchronizing the access to the double-linked list
     spin_mutex access_bottleneck_;

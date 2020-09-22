@@ -333,7 +333,7 @@ TEST_CASE("rw_serializer will execute WRITEs as soon as possible", "[ser]") {
     constexpr int num_tasks = 10;
     task_countdown tc{num_tasks};
 
-    std::srand(std::time(0));
+    std::srand(std::time(nullptr));
     int write_pos = std::rand() % num_tasks;
 
     std::array<int, num_tasks> results{};

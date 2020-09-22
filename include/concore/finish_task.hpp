@@ -6,7 +6,7 @@
 #include "concore/immediate_executor.hpp"
 
 #include <memory>
-#include <assert.h>
+#include <cassert>
 
 namespace concore {
 

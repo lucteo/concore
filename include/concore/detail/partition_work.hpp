@@ -292,7 +292,7 @@ struct iterative_spawner {
     iterative_spawner(It first, It last, task_group grp)
         : first_(first)
         , last_(last)
-        , grp_(grp) {}
+        , grp_(std::move(grp)) {}
 
     void spawn_task_1(WorkType& work, bool cont = false) {
         // Atomically take the first element from our range

@@ -9,12 +9,15 @@ cppcoreguidelines-*,\
 -cppcoreguidelines-pro-bounds-constant-array-index,\
 -cppcoreguidelines-pro-type-union-access,\
 -cppcoreguidelines-pro-type-vararg,\
-clang-analyzer-*,\
--modernize-*,\
+modernize-*,\
+-modernize-concat-nested-namespaces,\
+-modernize-use-nodiscard,\
+-modernize-use-trailing-return-type,\
 performance-*,\
 -performance-unnecessary-value-param,\
 portability-*,\
 -readability-*,\
+clang-analyzer-*,\
 -clang-analyzer-security.insecureAPI.rand"
 WarningsAsErrors: '*'
 HeaderFilterRegex: 'include/concore/.*\.hpp$'
