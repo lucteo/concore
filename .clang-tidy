@@ -16,7 +16,6 @@ modernize-*,\
 performance-*,\
 -performance-unnecessary-value-param,\
 portability-*,\
--readability-*,\
 clang-analyzer-*,\
 -clang-analyzer-security.insecureAPI.rand"
 WarningsAsErrors: '*'
