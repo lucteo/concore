@@ -7,6 +7,8 @@
 TEST_CASE("immediate_executor is copyable") {
     auto e1 = concore::immediate_executor;
     auto e2 = concore::immediate_executor;
+    // cppcheck-suppress redundantInitialization
+    // cppcheck-suppress unreadVariable
     e2 = e1;
 }
 

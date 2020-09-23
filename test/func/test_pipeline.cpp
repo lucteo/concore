@@ -162,6 +162,7 @@ TEST_CASE("pipeline can have ordered stages", "[pipeline]") {
 }
 
 TEST_CASE("pipeline with multiple stages of different ordering", "[pipeline]") {
+    // cppcheck-suppress multiCondition
     PROPERTY(([]() {
         constexpr int max_stages = 20;
         int num_items = *rc::gen::inRange(0, 50);

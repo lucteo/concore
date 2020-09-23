@@ -128,7 +128,7 @@ private:
 struct finish_task {
     finish_task(task&& t, executor_t e, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(std::move(t), std::move(e), count)) {}
-    finish_task(task&& t, int count = 1)
+    explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
                   std::move(t), spawn_continuation_executor, count)) {}
 

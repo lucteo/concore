@@ -39,7 +39,7 @@ std::vector<std::string> generate_string_test_data(int size) {
 static void BM_std_sort(benchmark::State& state) {
     const int data_size = state.range(0);
     std::vector<int> test_data = generate_test_data(data_size);
-    std::vector<int> data(data_size, 0);
+    std::vector<int> data;
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
@@ -61,7 +61,7 @@ static void BM_std_sort(benchmark::State& state) {
 static void BM_conc_sort(benchmark::State& state) {
     const int data_size = state.range(0);
     std::vector<int> test_data = generate_test_data(data_size);
-    std::vector<int> data(data_size, 0);
+    std::vector<int> data;
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
@@ -107,7 +107,7 @@ static void BM_tbb_parallel_sort(benchmark::State& state) {
 static void BM_string_std_sort(benchmark::State& state) {
     const int data_size = state.range(0);
     std::vector<std::string> test_data = generate_string_test_data(data_size);
-    std::vector<std::string> data(data_size, std::string{});
+    std::vector<std::string> data;
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
@@ -129,7 +129,7 @@ static void BM_string_std_sort(benchmark::State& state) {
 static void BM_string_conc_sort(benchmark::State& state) {
     const int data_size = state.range(0);
     std::vector<std::string> test_data = generate_string_test_data(data_size);
-    std::vector<std::string> data(data_size, std::string{});
+    std::vector<std::string> data;
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {

@@ -97,7 +97,7 @@ public:
      *
      * @see add_dependency(), add_dependencies(), task
      */
-    chained_task(task t, executor_t executor = {})
+    explicit chained_task(task t, executor_t executor = {})
         : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
 
     /**

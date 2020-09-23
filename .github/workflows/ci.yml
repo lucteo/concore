@@ -29,8 +29,9 @@ jobs:
       - uses: lucteo/action-cxx-toolkit@master
         with:
           cc: gcc-9
-          checks: clang-tidy
+          checks: cppcheck clang-tidy
           clangtidyflags: '-quiet'
+          cppcheckflags: '--enable=warning,style,performance,portability --inline-suppr'
   clang-format:
     runs-on: ubuntu-latest
     steps:

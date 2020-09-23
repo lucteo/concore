@@ -12,6 +12,8 @@ using namespace std::chrono_literals;
 TEST_CASE("global_executor is copyable") {
     auto e1 = concore::global_executor;
     auto e2 = concore::global_executor;
+    // cppcheck-suppress redundantInitialization
+    // cppcheck-suppress unreadVariable
     e2 = e1;
 }
 

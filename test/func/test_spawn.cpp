@@ -13,6 +13,8 @@ using namespace std::chrono_literals;
 TEST_CASE("spawn_executor is copyable") {
     auto e1 = concore::spawn_executor;
     auto e2 = concore::spawn_executor;
+    // cppcheck-suppress redundantInitialization
+    // cppcheck-suppress unreadVariable
     e2 = e1;
 }
 

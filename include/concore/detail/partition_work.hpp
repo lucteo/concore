@@ -182,6 +182,7 @@ void work_interval<WorkType, needs_join>::release() {
                 parent_->work_.join(work_);
 
             // Release the parent and the next interval that needs to be joined in the parent
+            // cppcheck-suppress duplicateCondition
             if (parent_)
                 parent_->release();
             if (next_)

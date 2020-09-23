@@ -54,7 +54,7 @@ public:
 
     public:
         //! Constructor. Should only be called by @ref rw_serializer
-        reader_type(std::shared_ptr<impl> impl);
+        explicit reader_type(std::shared_ptr<impl> impl);
         /**
          * @brief      Function call operator.
          *
@@ -78,7 +78,7 @@ public:
 
     public:
         //! Constructor. Should only be called by @ref rw_serializer
-        writer_type(std::shared_ptr<impl> impl);
+        explicit writer_type(std::shared_ptr<impl> impl);
         /**
          * @brief      Function call operator.
          *

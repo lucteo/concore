@@ -93,6 +93,7 @@ public:
      * the functor must be valid at that time.
      */
     template <typename T>
+    // cppcheck-suppress noExplicitConstructor
     task(T ftor)
         : fun_(std::move(ftor)) {}
 

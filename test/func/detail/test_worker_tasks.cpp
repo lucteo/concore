@@ -14,6 +14,7 @@ TEST_CASE("worker_tasks: pushing then popping behave like a stack", "[worker_tas
     constexpr int num_tasks = 100;
 
     // All the tasks would write some value here
+    // cppcheck-suppress unreadVariable
     int out_location = -1;
 
     concore::detail::worker_tasks tasks;
@@ -42,6 +43,7 @@ TEST_CASE("worker_tasks: stealing gets far away tasks", "[worker_tasks]") {
     constexpr int num_tasks = 100;
 
     // All the tasks would write some value here
+    // cppcheck-suppress unreadVariable
     int out_location = -1;
 
     concore::detail::worker_tasks tasks;

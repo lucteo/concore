@@ -83,7 +83,9 @@ TEST_CASE("conc_scan on non-commutative operations (static)", "[conc_scan]") {
     std::vector<std::string> res2(sz, std::string{});
 
     // Run conc_scan
-    auto op = [](std::string lhs, std::string rhs) -> std::string { return lhs + rhs; };
+    auto op = [](const std::string& lhs, const std::string& rhs) -> std::string {
+        return lhs + rhs;
+    };
     concore::conc_scan(v.begin(), v.end(), res1.begin(), std::string{}, op);
 
     // Run std::partial_sum
@@ -99,7 +101,9 @@ TEST_CASE("conc_scan on non-commutative operations", "[conc_scan]") {
         std::vector<std::string> res2(v.size(), std::string{});
 
         // Run conc_scan
-        auto op = [](std::string lhs, std::string rhs) -> std::string { return lhs + rhs; };
+        auto op = [](const std::string& lhs, const std::string& rhs) -> std::string {
+            return lhs + rhs;
+        };
         concore::conc_scan(v.begin(), v.end(), res1.begin(), std::string{}, op);
 
         // Run std::partial_sum

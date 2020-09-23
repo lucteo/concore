@@ -24,10 +24,10 @@ struct task_group_access {
     static void on_task_exception(const task_group& grp, std::exception_ptr ex);
 
     //! Called when a task was created in a group; the task starts to be "active"
-    static void on_task_created(task_group& grp);
+    static void on_task_created(const task_group& grp);
     //! Called when a task from the group is destroyed; the task is executed, and it's not "active"
     //! anymore.
-    static void on_task_destroyed(task_group& grp);
+    static void on_task_destroyed(const task_group& grp);
 };
 
 } // namespace detail

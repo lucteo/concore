@@ -70,10 +70,11 @@ static void BM_conc_reduce(benchmark::State& state) {
             int64_t value{0};
             void exec(iterator first, iterator last) {
                 int64_t temp = value;
-                for (; first != last; first++)
+                for (; first != last; ++first)
                     temp += *first;
                 value = temp;
             }
+            // cppcheck-suppress constParameter
             void join(sum_work& rhs) { value += rhs.value; }
         };
         sum_work work;
@@ -175,10 +176,11 @@ static void BM_string_conc_reduce(benchmark::State& state) {
             std::string value{};
             void exec(iterator first, iterator last) {
                 std::string temp = value;
-                for (; first != last; first++)
+                for (; first != last; ++first)
                     temp += *first;
                 value = std::move(temp);
             }
+            // cppcheck-suppress constParameter
             void join(sum_work& rhs) { value += rhs.value; }
         };
         sum_work work;
