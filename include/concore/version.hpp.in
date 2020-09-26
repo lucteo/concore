@@ -9,7 +9,7 @@
 //! The date in which the library was built/packaged
 #define CONCORE_VERSION_DATE "${concore_BUILD_DATE}"
 //! The year in which the library was built/packaged
-#define CONCORE_BUILD_YEAR   ${concore_BUILD_YEAR}
+#define CONCORE_BUILD_YEAR ${concore_BUILD_YEAR}
 
 //! The library version, as a number, including the major and the minor version
-#define CONCORE_VERSION_NUM ((CONCORE_VERSION_MAJOR) * 1000 + (CONCORE_VERSION_MINOR))
+#define CONCORE_VERSION_NUM ((CONCORE_VERSION_MAJOR)*1000 + (CONCORE_VERSION_MINOR))

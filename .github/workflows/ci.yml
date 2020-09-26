@@ -40,10 +40,10 @@ jobs:
         with:
           checks: clang-format
           clangformatdirs: src include test
-  # sanitizer:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@master
-  #     - uses: lucteo/action-cxx-toolkit@master
-  #       with:
-  #         checks: sanitize=address sanitize=undefined
+  sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: lucteo/action-cxx-toolkit@master
+        with:
+          checks: sanitize=address sanitize=undefined

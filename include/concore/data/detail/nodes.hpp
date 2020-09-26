@@ -140,11 +140,11 @@ public:
 
     ~node_factory() {
         // Free the allocated chunks
-        node_ptr chunk = allocated_chunks_;
+        node_of_node* chunk = allocated_chunks_.load();
         while (chunk) {
-            node_ptr next = chunk->next_;
             // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
-            dealloc(static_cast<node_of_node*>(chunk)->value_, num_nodes_per_chunk_);
+            auto* next = static_cast<node_of_node*>(chunk->next_.load());
+            dealloc(chunk->value_, num_nodes_per_chunk_);
             dealloc(chunk, 1);
             chunk = next;
         }
@@ -180,10 +180,10 @@ private:
     //! The allocator used to allocate memory
     allocator_type allocator_;
 
-    using node_of_node = node<node_ptr>;
+    using node_of_node = node<node_type*>;
 
     //! List (single-linked) of chunks we've allocated so far.
-    std::atomic<node_ptr> allocated_chunks_{nullptr};
+    std::atomic<node_of_node*> allocated_chunks_{nullptr};
 
     //! The list with free nodes, ready to be used
     node_free_list free_list_;
@@ -193,7 +193,7 @@ private:
     //! we would still use all the nodes allocated.
     void allocate_nodes() {
         // Allocate memory for the new chunk
-        node_ptr nodes_array = alloc<node_type>(num_nodes_per_chunk_);
+        auto* nodes_array = alloc<node_type>(num_nodes_per_chunk_);
 
         // Pass it to base to populate the free list
         free_list_.use_nodes(nodes_array, sizeof(node_type), num_nodes_per_chunk_);
