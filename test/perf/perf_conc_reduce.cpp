@@ -70,10 +70,11 @@ static void BM_conc_reduce(benchmark::State& state) {
             int64_t value{0};
             void exec(iterator first, iterator last) {
                 int64_t temp = value;
-                for (; first != last; first++)
+                for (; first != last; ++first)
                     temp += *first;
                 value = temp;
             }
+            // cppcheck-suppress constParameter
             void join(sum_work& rhs) { value += rhs.value; }
         };
         sum_work work;
@@ -94,8 +95,8 @@ static void BM_conc_reduce_it(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        auto res = concore::conc_reduce(data.begin(), data.end(), int64_t(0), std::plus<int64_t>(),
-                std::plus<int64_t>(), hints);
+        auto res = concore::conc_reduce(
+                data.begin(), data.end(), int64_t(0), std::plus<>(), std::plus<>(), hints);
         benchmark::DoNotOptimize(res);
     }
 }
@@ -175,10 +176,11 @@ static void BM_string_conc_reduce(benchmark::State& state) {
             std::string value{};
             void exec(iterator first, iterator last) {
                 std::string temp = value;
-                for (; first != last; first++)
+                for (; first != last; ++first)
                     temp += *first;
                 value = std::move(temp);
             }
+            // cppcheck-suppress constParameter
             void join(sum_work& rhs) { value += rhs.value; }
         };
         sum_work work;
@@ -199,8 +201,8 @@ static void BM_string_conc_reduce_it(benchmark::State& state) {
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
     for (auto _ : state) {
         CONCORE_PROFILING_SCOPE_N("test iter");
-        auto res = concore::conc_reduce(data.begin(), data.end(), std::string{},
-                std::plus<std::string>(), std::plus<std::string>(), hints);
+        auto res = concore::conc_reduce(
+                data.begin(), data.end(), std::string{}, std::plus<>(), std::plus<>(), hints);
         benchmark::DoNotOptimize(res);
     }
 }
@@ -255,9 +257,9 @@ static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
 #define BENCHMARK_CASE1(fun, m)                                                                    \
-    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({10'000'000, (int)m})
+    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({10'000'000, (int)(m)})
 #define BENCHMARK_CASE2(fun, m)                                                                    \
-    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({100'000, (int)m})
+    BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({100'000, (int)(m)})
 
 BENCHMARK_CASE1(BM_std_accumulate, 0);
 BENCHMARK_CASE1(BM_conc_reduce, concore::partition_method::auto_partition);

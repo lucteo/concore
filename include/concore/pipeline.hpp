@@ -64,11 +64,17 @@ struct pipeline_impl {
     //! The private data for the pipeline
     std::shared_ptr<pipeline_data> data_;
 
-    pipeline_impl(pipeline_impl&& other);
-    pipeline_impl(int max_concurrency);
+    explicit pipeline_impl(int max_concurrency);
     pipeline_impl(int max_concurrency, task_group grp);
     pipeline_impl(int max_concurrency, task_group grp, executor_t exe);
     pipeline_impl(int max_concurrency, executor_t exe);
+    ~pipeline_impl();
+
+    pipeline_impl(pipeline_impl&&) noexcept;
+    pipeline_impl& operator=(pipeline_impl&&) noexcept;
+
+    pipeline_impl(const pipeline_impl&);
+    pipeline_impl& operator=(const pipeline_impl&);
 
     //! Called to add a stage into the pipeline.
     void do_add_stage(stage_ordering ord, stage_fun&& f);
@@ -307,7 +313,7 @@ public:
      * @param      <unnamed>  A tag value
      *
      * @return     The @ref pipeline object built by this @ref pipeline_builder object.
-     * 
+     *
      * This will actually finalize the building process and return the corresponding @ref pipeline
      * object. After this is called, any other operations on the builder are illegal.
      */

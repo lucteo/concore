@@ -2,7 +2,9 @@
 
 namespace concore {
 
-inline namespace v1 { struct init_data; }
+inline namespace v1 {
+struct init_data;
+}
 
 namespace detail {
 

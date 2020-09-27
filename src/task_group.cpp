@@ -30,8 +30,8 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     std::function<void(std::exception_ptr)> except_fun_;
 
     task_group_impl() = default;
-    task_group_impl(const std::shared_ptr<task_group_impl>& parent)
-        : parent_(parent) {}
+    explicit task_group_impl(std::shared_ptr<task_group_impl> parent)
+        : parent_(std::move(parent)) {}
 
     bool is_cancelled() const {
         return is_cancelled_.load(std::memory_order_acquire) ||
@@ -39,19 +39,15 @@ struct task_group_impl : std::enable_shared_from_this<task_group_impl> {
     }
 };
 
-void task_group_access::on_starting_task(const task_group& grp) {
-    g_current_task_group = grp;
-}
-void task_group_access::on_task_done(const task_group& grp) {
-    g_current_task_group = task_group{};
-}
+void task_group_access::on_starting_task(const task_group& grp) { g_current_task_group = grp; }
+void task_group_access::on_task_done(const task_group& grp) { g_current_task_group = task_group{}; }
 void task_group_access::on_task_exception(const task_group& grp, std::exception_ptr ex) {
     g_current_task_group = task_group{};
     // Recurse up to find a group that has a exception handler fun
     // Stop when we find the first one
     auto pimpl = grp.impl_;
     while (pimpl) {
-        if (pimpl && pimpl->except_fun_) {
+        if (pimpl->except_fun_) {
             pimpl->except_fun_(ex);
             return;
         }
@@ -59,7 +55,8 @@ void task_group_access::on_task_exception(const task_group& grp, std::exception_
     }
 }
 
-void task_group_access::on_task_created(task_group& grp) {
+// cppcheck-suppress constParameter
+void task_group_access::on_task_created(const task_group& grp) {
     // Increase the number of active tasks; recurse up
     auto pimpl = grp.impl_;
     while (pimpl) {
@@ -67,7 +64,7 @@ void task_group_access::on_task_created(task_group& grp) {
         pimpl = pimpl->parent_;
     }
 }
-void task_group_access::on_task_destroyed(task_group& grp) {
+void task_group_access::on_task_destroyed(const task_group& grp) {
     // Decrease the number of tasks; recurse up
     auto pimpl = grp.impl_;
     while (pimpl) {
@@ -80,9 +77,8 @@ void task_group_access::on_task_destroyed(task_group& grp) {
 
 inline namespace v1 {
 
-task_group::task_group()
-    : impl_() {}
-task_group::~task_group() {}
+task_group::task_group() = default;
+task_group::~task_group() = default;
 
 task_group task_group::create(const task_group& parent) {
     task_group res;

@@ -18,13 +18,18 @@ struct conc_scan_work {
     int line_{-1};
 
     conc_scan_work() = default;
+    ~conc_scan_work() = default;
     conc_scan_work(const conc_scan_work&) = default;
     conc_scan_work& operator=(const conc_scan_work&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    conc_scan_work(conc_scan_work&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    conc_scan_work& operator=(conc_scan_work&&) = default;
 
     conc_scan_work(It first, It2 d_first, Value id, const BinaryOp& func)
-        : first_(first)
-        , d_first_(d_first)
-        , sum_(id)
+        : first_(std::move(first))
+        , d_first_(std::move(d_first))
+        , sum_(std::move(id))
         , func_(&func) {}
 
     void exec(It first, It last, work_stage stage) {

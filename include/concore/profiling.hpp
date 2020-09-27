@@ -164,11 +164,17 @@ public:
     //! This should always be constructed with a location
     profiling_lockable_wrapper(CONCORE_PROFILING_LOCATION_TYPE loc)
             CONCORE_PROFILING_MUTEX_INIT_CONTEXT(ctx_, loc) {}
+    ~profiling_lockable_wrapper() = default;
 
     //! Disabled copy constructor
     profiling_lockable_wrapper(const profiling_lockable_wrapper&) = delete;
     //! Disabled assignment operator
     profiling_lockable_wrapper& operator=(const profiling_lockable_wrapper&) = delete;
+
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    profiling_lockable_wrapper(profiling_lockable_wrapper&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    profiling_lockable_wrapper& operator=(profiling_lockable_wrapper&&) = default;
 
     //! Getter for the base lockable object
     T& base() { return base_; }

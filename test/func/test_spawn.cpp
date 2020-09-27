@@ -6,11 +6,15 @@
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_countdown.hpp"
 
+#include <array>
+
 using namespace std::chrono_literals;
 
 TEST_CASE("spawn_executor is copyable") {
     auto e1 = concore::spawn_executor;
     auto e2 = concore::spawn_executor;
+    // cppcheck-suppress redundantInitialization
+    // cppcheck-suppress unreadVariable
     e2 = e1;
 }
 
@@ -51,8 +55,8 @@ TEST_CASE("spawned tasks can be executed by multiple workers", "[spawn]") {
     for (int k = 0; k < max_runs; k++) {
         constexpr int num_tasks = 20;
 
-        int starts[num_tasks];
-        int ends[num_tasks];
+        std::array<int, num_tasks> starts{};
+        std::array<int, num_tasks> ends{};
         std::atomic<int> counter{0};
 
         task_countdown tc{num_tasks};

@@ -6,7 +6,7 @@
 #include "concore/immediate_executor.hpp"
 
 #include <memory>
-#include <assert.h>
+#include <cassert>
 
 namespace concore {
 
@@ -24,6 +24,7 @@ struct finish_event_impl {
         , ref_count_(cnt) {
         assert(cnt > 0);
     }
+    ~finish_event_impl() = default;
 
     finish_event_impl(finish_event_impl&&) = delete;
     finish_event_impl& operator=(finish_event_impl&&) = delete;
@@ -127,7 +128,7 @@ private:
 struct finish_task {
     finish_task(task&& t, executor_t e, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(std::move(t), std::move(e), count)) {}
-    finish_task(task&& t, int count = 1)
+    explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
                   std::move(t), spawn_continuation_executor, count)) {}
 

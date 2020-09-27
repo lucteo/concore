@@ -2,60 +2,62 @@
 name: CI
 on: push
 jobs:
-  build:
-    strategy:
-        matrix:
-          cc: [ gcc, clang ]
+  build-gcc:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
+      - uses: docker://lucteo/action-cxx-toolkit:latest
+        with:
+          cc: gcc
+          checks: build test install warnings
+  build-clang:
+    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+          cc: [ clang-7, clang-10 ]
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lucteo/action-cxx-toolkit:latest
         with:
           cc: ${{ matrix.cc }}
+          conanflags: -s compiler.libcxx=libstdc++11
+          checks: build test
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lucteo/action-cxx-toolkit:latest
+        with:
+          cc: gcc-9
+          checks: cppcheck clang-tidy
+          clangtidyflags: '-quiet'
+          cppcheckflags: '--enable=warning,style,performance,portability --inline-suppr'
+  clang-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lucteo/action-cxx-toolkit:latest
+        with:
+          checks: clang-format
+          clangformatdirs: src include test
+  sanitizer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lucteo/action-cxx-toolkit:latest
+        with:
+          checks: sanitize=address sanitize=undefined
   coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
+      - uses: docker://lucteo/action-cxx-toolkit:latest
         with:
-          coverage: codecov
-          cmakeflags: -DCODE_COVERAGE=ON
-  valgrind:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          ctestflags: '-D ExperimentalMemCheck'
-  clang-sanitizers:
-    name: build with clang -fsanitize
-    strategy:
-        matrix:
-          cflags:
-            - -fsanitize=address
-            - -fsanitize=memory
-            - -fsanitize=undefined
-            - -fsanitize=dataflow
-            - -fsanitize=safe-stack
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          cc: clang
-          cflags: ${{ matrix.cflags }}
-  # Disable clang-format: there are formatting differences between different versions of clang-format
-  # clang-format:
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: actions/checkout@master
-  #     - uses: docker://lucteo/ghaction-conan-cmake:latest
-  #       with:
-  #         analyzer: clang-format
-  clang-analyzers:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/ghaction-conan-cmake:latest
-        with:
-          analyzer: clang-tidy
+          checks: coverage=codecov
+        env:
+          GITHUB_ACTION: ${GITHUB_ACTION}
+          GITHUB_REF: ${GITHUB_REF}
+          GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}
+          GITHUB_HEAD_REF: ${GITHUB_HEAD_REF}
+          GITHUB_SHA: ${GITHUB_SHA}
+          GITHUB_RUN_ID: ${GITHUB_RUN_ID}

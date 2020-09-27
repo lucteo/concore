@@ -43,7 +43,7 @@ void test_pushes_then_pops(int fast_size, int num_elements, bool push_front, boo
     }
 
     // Trying to pop from either side now, should return false
-    int value;
+    int value{0};
     REQUIRE_FALSE(queue.try_pop_front(value));
     REQUIRE_FALSE(queue.try_pop_back(value));
 }
@@ -98,7 +98,7 @@ void test_one_pusher_one_popper(int fast_size, int num_elements, bool push_front
         // Continuously extract elements; do a busy-loop
         int pops_remaining = num_elements;
         while (pops_remaining > 0) {
-            int value;
+            int value{0};
             bool popped = pop_front ? queue.try_pop_front(value) : queue.try_pop_back(value);
 
             if (popped) {
@@ -147,7 +147,7 @@ TEST_CASE("concurrent_dequeue: multiple threads pushing and popping continuously
         barrier.wait_for_all();
 
         int i = 0;
-        int value;
+        int value{0};
         while (std::chrono::high_resolution_clock::now() < end) {
             if (pusher && front)
                 queue.push_front(i++);

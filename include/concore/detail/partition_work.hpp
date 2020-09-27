@@ -6,6 +6,8 @@
 #include "concore/detail/algo_utils.hpp"
 
 #include <vector>
+#include <array>
+#include <memory>
 
 namespace concore {
 namespace detail {
@@ -24,20 +26,22 @@ namespace detail {
 namespace auto_part {
 
 template <typename WorkType, bool needs_join>
-struct work_interval {
+struct work_interval : std::enable_shared_from_this<work_interval<WorkType, needs_join>> {
     using iterator = typename WorkType::iterator;
 
-    std::atomic<int> ref_count_;
+    using ptr_type = std::shared_ptr<work_interval>;
+
+    std::atomic<int> join_predecessors_;
     const iterator first_;
     const int count_;
     std::atomic<int> start_idx_;
     WorkType work_;
     const int granularity_;
-    work_interval* parent_;
-    work_interval* next_;
+    ptr_type parent_;
+    ptr_type next_;
 
     work_interval(iterator first, int start_idx, int cnt, WorkType work, int granularity)
-        : ref_count_(1)
+        : join_predecessors_(1)
         , first_(first)
         , count_(cnt)
         , start_idx_(start_idx)
@@ -63,7 +67,8 @@ void work_interval<WorkType, needs_join>::run(int start_idx) {
     }
 
     static constexpr int max_num_splits = 32;
-    work_interval* right_intervals[max_num_splits] = {0};
+    std::array<ptr_type, max_num_splits> right_intervals{};
+    right_intervals.fill(nullptr);
 
     // Iterate down, at each step splitting the range into half; stop when we reached the desired
     // granularity
@@ -72,12 +77,14 @@ void work_interval<WorkType, needs_join>::run(int start_idx) {
     while (end > granularity_) {
         // Current interval: [first, first+end)
 
-        // Spawn a task to handle the right side
+        // Create a task to handle the right side
         int start_right = (end + 1) / 2;
-        auto right = new work_interval(
+        auto right = std::make_shared<work_interval>(
                 first_, start_idx + start_right, start_idx + end, work_, granularity_);
-        right->ref_count_++;
+        right->join_predecessors_++;
         right_intervals[level] = right;
+
+        // If we don't need join, spawn the task immediatelly
         if constexpr (!needs_join)
             spawn([right]() { right->run_as_right(); });
 
@@ -92,68 +99,80 @@ void work_interval<WorkType, needs_join>::run(int start_idx) {
         // Set the connections between intervals, so that we join in the proper order
         // Larger intervals (levels closer to zero) will wait for smaller intervals to complete
         // As the connections are made, also start the tasks
-        ref_count_ += max_level + 1;
+        join_predecessors_ += max_level + 1;
         for (int l = 0; l < max_level; l++) {
             right_intervals[l + 1]->next_ = right_intervals[l];
-            right_intervals[l]->ref_count_++;
+            // pred = 3 means: its own work, parent, and next smaller interval
+            right_intervals[l]->join_predecessors_.store(3, std::memory_order_relaxed);
         }
         for (int l = 0; l <= max_level; l++) {
-            auto cur = right_intervals[l];
-            cur->parent_ = this;
+            auto& cur = right_intervals[l];
+            cur->parent_ = this->shared_from_this();
             spawn([cur]() { cur->run_as_right(); });
         }
     }
 
     std::exception_ptr thrown_exception;
 
-    // Now, left-to-right start executing the work
-    // At each step, update the corresponding atomic to make sure other tasks are not executing the
-    // same tasks. If right-hand tasks did not start, steal iterations from them
-    int our_max = end;
-    int i = 0;
-    while (i < n) {
-        // Run as many iterations as we can
-        work_.exec(first + i, first + our_max);
-        i = our_max;
-        if (our_max == n)
-            break;
-        // If we can, try to steal some more from the right-hand task
-        work_interval& right = *right_intervals[level];
-        int lvl_end = right.count_;
-        int steal_end = std::min(our_max + granularity_, lvl_end);
-        int old_val = our_max;
-        if (!right.start_idx_.compare_exchange_strong(
-                    old_val, steal_end, std::memory_order_acq_rel))
-            break;
-        our_max = steal_end;
-        assert(our_max <= lvl_end);
-        assert(our_max <= n);
-        // If we consumed everything from the right-side, move one level up
-        if (our_max == lvl_end)
-            level--;
+    try {
+        // Now, left-to-right start executing the work
+        // At each step, update the corresponding atomic to make sure other tasks are not executing
+        // the same tasks. If right-hand tasks did not start, steal iterations from them
+        int our_max = end;
+        int i = 0;
+        while (i < n) {
+            // Run as many iterations as we can
+            work_.exec(first + i, first + our_max);
+            i = our_max;
+            if (our_max == n)
+                break;
+            // If we can, try to steal some more from the right-hand task
+            work_interval& right = *right_intervals[level];
+            int lvl_end = right.count_;
+            int steal_end = std::min(our_max + granularity_, lvl_end);
+            int old_val = our_max;
+            if (!right.start_idx_.compare_exchange_strong(
+                        old_val, steal_end, std::memory_order_acq_rel))
+                break;
+            our_max = steal_end;
+            assert(our_max <= lvl_end);
+            assert(our_max <= n);
+            // If we consumed everything from the right-side, move one level up
+            if (our_max == lvl_end)
+                level--;
+        }
+    } catch (...) {
+        thrown_exception = std::current_exception();
     }
 
     // Ensure that we release all the non-null levels
     // To prevent race conditions, this needs to be done after we've done touching 'work_'
-    for (int lvl = max_level; lvl >= 0; lvl--)
+    for (int lvl = max_level; lvl >= 0; lvl--) {
         right_intervals[lvl]->release();
+        right_intervals[lvl].reset();
+    }
 
-    // The logic of joining and, deleting intervals:
-    // - general considerations:
-    //      - we use manually-counted shared pointers (ref_count_)
-    //      - whenever the counter decrements to zero, we delete the interval
-    //      - if we need to join, we do the join before deleting the interval
-    // - when we don't need a join:
-    //      - in general we have a ref_count_ of 2:
-    //          - one in the parent, and one in the task that is running the interval
-    // - when we need a join:
-    //      - we have rec_count_ of 3, plus the number of sub-intervals
-    //          - 1 in the parent
-    //          - one the task that is running
-    //          - one the task that need to join before the current one (smaller right interval)
-    //          - and also, each children keeps a reference to the parent
-    //      - the joins are executed in the order of deleting the intervals, so we control it
-    //      - we want that smaller intervals are joining before larger ones
+    // If we have an exception, re-throw it
+    if (thrown_exception)
+        std::rethrow_exception(thrown_exception);
+
+    // For deletion, we use shared_pointers to properly delete our work intervals whenever needed;
+    // please note that we may have more interval objects than actually tasks. On exceptions, some
+    // of the tasks will not run, but the objects still need to be cleaned up.
+
+    // The logic for joins:
+    //  - general considerations
+    //      - typically it follows the reference counts of the shared_ptrs (if we don't have
+    //      exceptions)
+    //      - we use a join_predecessors_ counter to determine the number of predecessors
+    //      - the join operation is typcailly the last operation that is done on an interval
+    //  - we have join_predecessors_ of 3, plus the number of sub-intervals
+    //      - 1 in the parent
+    //      - one the task that is running
+    //      - one the task that need to join before the current one (smaller right interval)
+    //      - and also, each children keeps a reference to the parent
+    //  - the joins are executed in the order of deleting the intervals, so we control it
+    //  - we want that smaller intervals are joining before larger ones
 }
 
 template <typename WorkType, bool needs_join>
@@ -173,22 +192,31 @@ void work_interval<WorkType, needs_join>::run_as_right() {
 
 template <typename WorkType, bool needs_join>
 void work_interval<WorkType, needs_join>::release() {
-    if (ref_count_-- == 1) {
-        // We are done with this interval; now it's the time to join the result in the parent work
-        if constexpr (needs_join) {
-            if (parent_)
-                parent_->work_.join(work_);
+    if constexpr (needs_join) {
+        if (join_predecessors_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+            // We are done with this interval; now it's the time to join the result in the parent
+            // work
+            std::exception_ptr thrown_exception;
+            try {
+                if (parent_)
+                    parent_->work_.join(work_);
+            } catch (...) {
+                thrown_exception = std::current_exception();
+            }
 
             // Release the parent and the next interval that needs to be joined in the parent
+            // cppcheck-suppress duplicateCondition
             if (parent_)
                 parent_->release();
             if (next_)
                 next_->release();
-        }
 
-        // Completely done; delete the interval
-        // Similar to shared_ptr destructor
-        delete this;
+            // If we have an exception, re-throw it
+            if (thrown_exception)
+                std::rethrow_exception(thrown_exception);
+
+            // soon after this, the shared_ptr destructor will delete our object
+        }
     }
 }
 } // namespace auto_part
@@ -221,10 +249,12 @@ void work_interval<WorkType, needs_join>::release() {
 template <bool needs_join, typename WorkType>
 inline void auto_partition_work(typename WorkType::iterator first, int n, WorkType& work,
         task_group& grp, int granularity) {
-    auto_part::work_interval<WorkType, needs_join> all(first, 0, n, std::move(work), granularity);
-    all.run();
+    assert(task_group::current_task_group());
+    auto all = std::make_shared<auto_part::work_interval<WorkType, needs_join>>(
+            first, 0, n, std::move(work), granularity);
+    all->run();
     wait(grp);
-    work = std::move(all.work_);
+    work = std::move(all->work_);
 }
 
 /**
@@ -290,7 +320,7 @@ struct iterative_spawner {
     iterative_spawner(It first, It last, task_group grp)
         : first_(first)
         , last_(last)
-        , grp_(grp) {}
+        , grp_(std::move(grp)) {}
 
     void spawn_task_1(WorkType& work, bool cont = false) {
         // Atomically take the first element from our range

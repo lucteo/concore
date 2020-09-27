@@ -42,10 +42,16 @@ public:
 
     //! Default constructor. Creates a valid empty queue.
     concurrent_queue() = default;
+    ~concurrent_queue() = default;
     //! Copy constructor is DISABLED
     concurrent_queue(const concurrent_queue&) = delete;
     //! Copy assignment is DISABLED
     const concurrent_queue& operator=(const concurrent_queue&) = delete;
+
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    concurrent_queue(concurrent_queue&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    concurrent_queue& operator=(concurrent_queue&&) = default;
 
     /**
      * @brief      Pushes one element in the back of the queue.
@@ -84,7 +90,7 @@ public:
      * @see push()
      */
     bool try_pop(T& elem) {
-        node_ptr node;
+        node_ptr node{nullptr};
         if constexpr (detail::is_single_consumer(conc_type))
             node = detail::try_pop_front_single(queue_);
         else {

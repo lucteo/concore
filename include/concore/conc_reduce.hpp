@@ -16,11 +16,16 @@ struct conc_reduce_work {
     const ReductionOp* reduction_{nullptr};
 
     conc_reduce_work() = default;
+    ~conc_reduce_work() = default;
     conc_reduce_work(const conc_reduce_work&) = default;
     conc_reduce_work& operator=(const conc_reduce_work&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    conc_reduce_work(conc_reduce_work&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    conc_reduce_work& operator=(conc_reduce_work&&) = default;
 
     conc_reduce_work(Value id, const BinaryOp& func, const ReductionOp& reduction)
-        : value_(id)
+        : value_(std::move(id))
         , func_(&func)
         , reduction_(&reduction) {}
 

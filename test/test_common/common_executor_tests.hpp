@@ -6,6 +6,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
+#include <atomic>
 
 using namespace std::chrono_literals;
 

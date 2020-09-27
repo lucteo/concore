@@ -18,7 +18,7 @@ using namespace std::chrono_literals;
 //! The `wait_for_all` method provides a timeout, to ensure that it doesn't block forever in the
 //! case of bugs.
 struct task_countdown {
-    task_countdown(int num_tasks)
+    explicit task_countdown(int num_tasks)
         : tasks_remaining_(num_tasks) {}
 
     //! Called by every task to announce that the task is completed

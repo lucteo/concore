@@ -1,6 +1,7 @@
 #pragma once
 
 #include <functional>
+#include <stdexcept>
 
 namespace concore {
 
@@ -8,12 +9,11 @@ inline namespace v1 {
 
 /**
  * @brief      Configuration data for the concore library
- * 
+ *
  * Store here all the parameters needed to be passed to concore when initializing. Any parameters
  * that are left unfilled will have reasonable defaults in concore.
  */
-struct init_data
-{
+struct init_data {
     //! The number of workers we need to create in the task system; 0 = num core available
     int num_workers_{0};
     //! The number of extra slots we reserve for other threads to temporary join the tasks system
@@ -27,13 +27,13 @@ struct init_data
  * @brief      Initializes the concore library.
  *
  * @param      config  The configuration to be passed to the library; optional.
- * 
+ *
  * This will initialize the library, with the given parameters. If the library is already
  * initialized this will throw an @ref already_initialized exception.
- * 
+ *
  * If this is not explicitly called the library will be initialized with default settings the first
  * time that a global task needs to be executed.
- * 
+ *
  * @see        shutdown(), is_initialized(), already_initialized
  */
 void init(const init_data& config = {});

@@ -1,11 +1,22 @@
 ---
-Checks: "bugprone-,\
-cppcoreguidelines-,\
-clang-analyzer-,\
-modernize-,\
-performance-,\
-portability-,\
-readability-,\
+Checks: "\
+bugprone-*,\
+cppcoreguidelines-*,\
+-cppcoreguidelines-avoid-magic-numbers,\
+-cppcoreguidelines-macro-usage,\
+-cppcoreguidelines-owning-memory,\
+-cppcoreguidelines-pro-bounds-array-to-pointer-decay,\
+-cppcoreguidelines-pro-bounds-constant-array-index,\
+-cppcoreguidelines-pro-type-union-access,\
+-cppcoreguidelines-pro-type-vararg,\
+modernize-*,\
+-modernize-concat-nested-namespaces,\
+-modernize-use-nodiscard,\
+-modernize-use-trailing-return-type,\
+performance-*,\
+-performance-unnecessary-value-param,\
+portability-*,\
+clang-analyzer-*,\
 -clang-analyzer-security.insecureAPI.rand"
-WarningsAsErrors: True
+WarningsAsErrors: '*'
 HeaderFilterRegex: 'include/concore/.*\.hpp$'

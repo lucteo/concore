@@ -12,11 +12,16 @@
 //! Structure that is large enough for our purposes, when testing the speed
 struct test_elem {
     test_elem() = default;
+    ~test_elem() = default;
     explicit test_elem(int idx)
         : idx_(idx) {}
 
     test_elem(const test_elem& other) = default;
     test_elem& operator=(const test_elem& other) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    test_elem(test_elem&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    test_elem& operator=(test_elem&&) = default;
 
     int idx_{0};
     std::function<void()> t1_;

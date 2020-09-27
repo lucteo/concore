@@ -97,7 +97,7 @@ public:
      *
      * @see add_dependency(), add_dependencies(), task
      */
-    chained_task(task t, executor_t executor = {})
+    explicit chained_task(task t, executor_t executor = {})
         : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
 
     /**
@@ -149,7 +149,7 @@ public:
 
     /**
      * @brief      Clear all the dependencies that go from this task
-     * 
+     *
      * This is useful for constructing and destroying task graphs manually.
      */
     void clear_next() {
@@ -196,7 +196,7 @@ inline void add_dependency(chained_task prev, chained_task next) {
  * @see chained_task, add_dependency()
  */
 inline void add_dependencies(chained_task prev, std::initializer_list<chained_task> nexts) {
-    for (auto n : nexts)
+    for (const auto& n : nexts)
         n.impl_->pred_count_++;
     prev.impl_->next_tasks_.insert(prev.impl_->next_tasks_.end(), nexts.begin(), nexts.end());
 }
@@ -215,7 +215,7 @@ inline void add_dependencies(chained_task prev, std::initializer_list<chained_ta
  */
 inline void add_dependencies(std::initializer_list<chained_task> prevs, chained_task next) {
     next.impl_->pred_count_ += static_cast<int32_t>(prevs.size());
-    for (auto p : prevs)
+    for (const auto& p : prevs)
         p.impl_->next_tasks_.push_back(next);
 }
 

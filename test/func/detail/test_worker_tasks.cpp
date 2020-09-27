@@ -6,6 +6,7 @@
 
 #include <thread>
 #include <chrono>
+#include <array>
 
 using namespace std::chrono_literals;
 
@@ -13,6 +14,7 @@ TEST_CASE("worker_tasks: pushing then popping behave like a stack", "[worker_tas
     constexpr int num_tasks = 100;
 
     // All the tasks would write some value here
+    // cppcheck-suppress unreadVariable
     int out_location = -1;
 
     concore::detail::worker_tasks tasks;
@@ -41,6 +43,7 @@ TEST_CASE("worker_tasks: stealing gets far away tasks", "[worker_tasks]") {
     constexpr int num_tasks = 100;
 
     // All the tasks would write some value here
+    // cppcheck-suppress unreadVariable
     int out_location = -1;
 
     concore::detail::worker_tasks tasks;
@@ -110,7 +113,8 @@ TEST_CASE("worker_tasks: push,push,pop,steal cycles leave the stack empty", "[wo
 TEST_CASE("worker_tasks: can steal in parallel with push", "[worker_tasks]") {
     constexpr int num_tasks = 1'000;
 
-    bool res[num_tasks] = {false};
+    std::array<bool, num_tasks> res{};
+    res.fill(false);
 
     task_countdown barrier{2};
 
@@ -163,7 +167,8 @@ TEST_CASE("worker_tasks: can steal in parallel with push", "[worker_tasks]") {
 TEST_CASE("worker_tasks: can steal in parallel with push/pop", "[worker_tasks]") {
     constexpr int num_tasks = 2'000;
 
-    bool res[num_tasks] = {false};
+    std::array<bool, num_tasks> res{};
+    res.fill(false);
 
     task_countdown barrier{2};
 

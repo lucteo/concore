@@ -2,7 +2,7 @@
 
 #include "concore/detail/platform.hpp"
 
-#if CONCORE_CPP_VERSION >= 20
+#if CONCORE_CPP_VERSION >= 20 && __has_cpp_attribute(likely) && __has_cpp_attribute(unlikely)
 
 // clang-format off
 #define CONCORE_IF_LIKELY(cond) if (cond) [[likely]]

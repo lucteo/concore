@@ -1,6 +1,7 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 namespace concore {
 namespace detail {
@@ -51,9 +52,6 @@ struct node : Base {
  */
 class node_free_list {
 public:
-    node_free_list() = default;
-    ~node_free_list() = default;
-
     //! Acquire a new node from the free list. This is typically very fast
     //! Returns null, if we don't have any nodes in our free list
     node_ptr acquire() {
@@ -109,6 +107,7 @@ private:
 
     //! Index in the array of nodes, given the stride
     static node_ptr array_at(node_ptr arr, int stride, int idx) {
+        // NOLINTNEXTLINE
         return reinterpret_cast<node_ptr>(reinterpret_cast<char*>(arr) + stride * idx);
     }
 };
@@ -141,14 +140,23 @@ public:
 
     ~node_factory() {
         // Free the allocated chunks
-        node_ptr chunk = allocated_chunks_;
+        node_of_node* chunk = allocated_chunks_.load();
         while (chunk) {
-            node_ptr next = chunk->next_;
-            dealloc(static_cast<node_of_node*>(chunk)->value_, num_nodes_per_chunk_);
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-type-static-cast-downcast)
+            auto* next = static_cast<node_of_node*>(chunk->next_.load());
+            dealloc(chunk->value_, num_nodes_per_chunk_);
             dealloc(chunk, 1);
             chunk = next;
         }
     }
+
+    node_factory(const node_factory&) = delete;
+    node_factory& operator=(const node_factory&) = delete;
+
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    node_factory(node_factory&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    node_factory& operator=(node_factory&&) = default;
 
     //! Acquire a new node from the factory. This is typically very fast
     node_ptr acquire() {
@@ -172,10 +180,10 @@ private:
     //! The allocator used to allocate memory
     allocator_type allocator_;
 
-    using node_of_node = node<node_ptr>;
+    using node_of_node = node<node_type*>;
 
     //! List (single-linked) of chunks we've allocated so far.
-    std::atomic<node_ptr> allocated_chunks_{nullptr};
+    std::atomic<node_of_node*> allocated_chunks_{nullptr};
 
     //! The list with free nodes, ready to be used
     node_free_list free_list_;
@@ -185,13 +193,13 @@ private:
     //! we would still use all the nodes allocated.
     void allocate_nodes() {
         // Allocate memory for the new chunk
-        node_ptr nodes_array = alloc<node_type>(num_nodes_per_chunk_);
+        auto* nodes_array = alloc<node_type>(num_nodes_per_chunk_);
 
         // Pass it to base to populate the free list
         free_list_.use_nodes(nodes_array, sizeof(node_type), num_nodes_per_chunk_);
 
         // Add this to our list of allocated chunks (with another allocation)
-        node_of_node* chunk = alloc<node_of_node>(1);
+        auto* chunk = alloc<node_of_node>(1);
         chunk->value_ = nodes_array;
 
         // Atomically add the new chunk to the top of the list
@@ -205,13 +213,13 @@ private:
 
     template <typename TT>
     TT* alloc(size_t n) {
-        typename decltype(allocator_)::template rebind<TT>::other a;
+        typename std::allocator_traits<decltype(allocator_)>::template rebind_alloc<TT> a;
         return a.allocate(n);
     }
 
     template <typename TT>
     void dealloc(TT* p, size_t n) {
-        typename decltype(allocator_)::template rebind<TT>::other a;
+        typename std::allocator_traits<decltype(allocator_)>::template rebind_alloc<TT> a;
         a.deallocate(p, n);
     }
 };

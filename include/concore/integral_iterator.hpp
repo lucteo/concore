@@ -24,12 +24,16 @@ class integral_iterator : public std::iterator<std::random_access_iterator_tag, 
 
 public:
     using difference_type = T;
-    using reference = T;    // non-standard behavior to allow integrals to behave like iterators
+    using reference = T; // non-standard behavior to allow integrals to behave like iterators
 
     integral_iterator() = default;
     ~integral_iterator() = default;
     integral_iterator(const integral_iterator&) = default;
     integral_iterator& operator=(const integral_iterator&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    integral_iterator(integral_iterator&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    integral_iterator& operator=(integral_iterator&&) = default;
 
     explicit integral_iterator(T val)
         : value_(val) {}

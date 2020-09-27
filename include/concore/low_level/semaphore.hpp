@@ -27,19 +27,19 @@ inline namespace v1 {
 #elif defined(CONCORE_PLATFORM_LINUX)
 
 // Synonym for sem_t
-#define CONCORE_SEMAPHORE_IMPL_MEMBERS std::aligned_storage<32>::type sem_;
+#define CONCORE_SEMAPHORE_IMPL_MEMBERS std::aligned_storage<32>::type sem_{};
 #define CONCORE_BINARY_SEMAPHORE_IMPL_MEMBERS CONCORE_SEMAPHORE_IMPL_MEMBERS
 
 #elif defined(CONCORE_PLATFORM_APPLE)
 
 // Synonym for semaphore_t
-#define CONCORE_SEMAPHORE_IMPL_MEMBERS int sem_;
+#define CONCORE_SEMAPHORE_IMPL_MEMBERS int sem_{0};
 #define CONCORE_BINARY_SEMAPHORE_IMPL_MEMBERS CONCORE_SEMAPHORE_IMPL_MEMBERS
 
 #elif defined(CONCORE_PLATFORM_WINDOWS)
 
 // Synonym for HANDLE
-#define CONCORE_SEMAPHORE_IMPL_MEMBERS void* sem_handle_;
+#define CONCORE_SEMAPHORE_IMPL_MEMBERS void* sem_handle_{nullptr};
 #define CONCORE_BINARY_SEMAPHORE_IMPL_MEMBERS CONCORE_SEMAPHORE_IMPL_MEMBERS
 
 #else
@@ -48,7 +48,7 @@ inline namespace v1 {
 #define CONCORE_SEMAPHORE_IMPL_MEMBERS                                                             \
     std::condition_variable cond_var_;                                                             \
     std::mutex mutex_;                                                                             \
-    int count_;
+    int count_{0};
 #define CONCORE_BINARY_SEMAPHORE_IMPL_MEMBERS CONCORE_SEMAPHORE_IMPL_MEMBERS
 
 #endif
@@ -80,6 +80,10 @@ public:
     semaphore(const semaphore&) = delete;
     //! Copy assignment is DISABLED
     void operator=(const semaphore&) = delete;
+
+    // For the moment, we disable move
+    semaphore(semaphore&&) = delete;
+    void operator=(semaphore&&) = delete;
 
     /**
      * @brief      Decrement the internal count and wait on the count to be positive
@@ -126,6 +130,10 @@ public:
     binary_semaphore(const binary_semaphore&) = delete;
     //! Copy assignment is DISABLED
     void operator=(const binary_semaphore&) = delete;
+
+    // For the moment, we disable move
+    binary_semaphore(binary_semaphore&&) = delete;
+    void operator=(binary_semaphore&&) = delete;
 
     /**
      * @brief      Wait for the semaphore to be signaled.

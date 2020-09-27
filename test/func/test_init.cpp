@@ -101,4 +101,3 @@ TEST_CASE("init twice (first time automatic) throws", "[init]") {
 
     REQUIRE_THROWS_AS(concore::init(), concore::already_initialized);
 }
-

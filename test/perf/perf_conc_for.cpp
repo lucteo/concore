@@ -16,7 +16,7 @@
 
 #include <benchmark/benchmark.h>
 #include <algorithm>
-#include <math.h>
+#include <cmath>
 
 using concore::integral_iterator;
 
@@ -35,8 +35,10 @@ void generate_simple_test_data(int size, std::vector<float>& data) {
 }
 
 float simple_transform(float in) {
-    return sqrt(sin(in)) * sqrt(cos(in)) + sqrt(sin(2 * in)) * sqrt(cos(2 * in)) +
-           sqrt(sin(3 * in)) * sqrt(cos(3 * in)) + sqrt(sin(4 * in)) * sqrt(cos(4 * in));
+    return std::sqrt(std::sin(in)) * std::sqrt(std::cos(in)) +
+           std::sqrt(std::sin(2 * in)) * std::sqrt(std::cos(2 * in)) +
+           std::sqrt(std::sin(3 * in)) * std::sqrt(std::cos(3 * in)) +
+           std::sqrt(std::sin(4 * in)) * std::sqrt(std::cos(4 * in));
 }
 
 static void BM_simple_std_for_each(benchmark::State& state) {
@@ -67,6 +69,7 @@ struct simple_work {
     void exec(int first, int last) {
         CONCORE_PROFILING_SCOPE_N("body work");
         for (; first != last; first++)
+            // NOLINTNEXTLINE(cppcoreguidelines-pro-bounds-pointer-arithmetic)
             out_vec_[first] = simple_transform(data_[first]);
     }
 };
@@ -314,7 +317,8 @@ static void BM_fresnel_conc_for_upfront(benchmark::State& state) {
         concore::partition_hints hints;
         hints.method_ = concore::partition_method::upfront_partition;
         hints.tasks_per_worker_ = 10;
-        concore::conc_for(0, data_size,
+        concore::conc_for(
+                0, data_size,
                 [&](int idx) { out_vec[idx] = fresnel(incidence[idx], normals[idx], 1.0f); },
                 hints);
     }
@@ -357,8 +361,10 @@ static void BM_fresnel_omp_for(benchmark::State& state) {
 #endif
 #endif // CONCORE_USE_GLM
 
+#if CONCORE_USE_GLM
 static void BM_____(benchmark::State& /*state*/) {}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
+#endif
 
 #define BENCHMARK_CASE(fun) BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Arg(1'000'000);
 

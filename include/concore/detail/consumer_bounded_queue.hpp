@@ -58,7 +58,7 @@ struct consumer_bounded_queue {
 
         // Increase the number of items we keep track of
         // Check if we can increase the "active" items; if so, acquire an item
-        count_bits old, desired;
+        count_bits old{}, desired{};
         old.int_value = combined_count_.load();
         do {
             desired.int_value = old.int_value;
@@ -102,7 +102,7 @@ struct consumer_bounded_queue {
     bool release_and_acquire() {
         // Decrement the number of elements
         // Check if we need to acquire a new element
-        count_bits old, desired;
+        count_bits old{}, desired{};
         old.int_value = combined_count_.load();
         do {
             desired.int_value = old.int_value;
@@ -116,7 +116,7 @@ struct consumer_bounded_queue {
 
 private:
     //! The maximum number of active items
-    int max_active_;
+    uint32_t max_active_;
     //! Queue of items that are waiting (or not yet extracted)
     concurrent_queue<T, queue_type::multi_prod_multi_cons> waiting_;
     //! The count of items in our queue (active & total)

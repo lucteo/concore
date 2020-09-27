@@ -238,7 +238,9 @@ TEST_CASE("task_group::is_active doesn't count the sub-groups", "[task_group]") 
 TEST_CASE("task_group::is_active doesn't return true for multiple copies of the group",
         "[task_group]") {
     auto grp = concore::task_group::create();
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     auto grp1 = grp;
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     auto grp2 = grp;
     REQUIRE_FALSE(grp.is_active());
     REQUIRE_FALSE(grp1.is_active());
@@ -258,7 +260,9 @@ TEST_CASE("task_group::is_active also counts the tasks from sub-groups", "[task_
 
 TEST_CASE("an empty group cannot be active", "[task_group]") {
     concore::task_group grp;
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     concore::task_group grp1 = grp;
+    // NOLINTNEXTLINE(performance-unnecessary-copy-initialization)
     concore::task_group grp2 = grp;
     REQUIRE_FALSE(grp.is_active());
     REQUIRE_FALSE(grp1.is_active());
@@ -275,15 +279,15 @@ TEST_CASE("higher level except handler is called, if the child doesn't have one"
     grpChild1.set_exception_handler([&](std::exception_ptr) { cnt_ex_child1++; });
 
     // Run a task in each group
-    concore::spawn(concore::task([]{throw 1;}, grpTop));
+    concore::spawn(concore::task([] { throw 1; }, grpTop));
     concore::wait(grpTop);
     REQUIRE(cnt_ex_top == 1);
     REQUIRE(cnt_ex_child1 == 0);
-    concore::spawn(concore::task([]{throw 1;}, grpChild1));
+    concore::spawn(concore::task([] { throw 1; }, grpChild1));
     concore::wait(grpTop);
     REQUIRE(cnt_ex_top == 1);
     REQUIRE(cnt_ex_child1 == 1);
-    concore::spawn(concore::task([]{throw 1;}, grpChild2));
+    concore::spawn(concore::task([] { throw 1; }, grpChild2));
     concore::wait(grpTop);
     REQUIRE(cnt_ex_top == 2);
     REQUIRE(cnt_ex_child1 == 1);

@@ -144,8 +144,14 @@ void pipeline_data::on_task_done(stage_data& stage, line_ptr&& line) {
     }
 }
 
-pipeline_impl::pipeline_impl(pipeline_impl&& other)
-    : data_(std::move(other.data_)) {}
+pipeline_impl::~pipeline_impl() = default;
+
+pipeline_impl::pipeline_impl(pipeline_impl&&) noexcept = default;
+pipeline_impl& pipeline_impl::operator=(pipeline_impl&&) noexcept = default;
+
+pipeline_impl::pipeline_impl(const pipeline_impl&) = default;
+pipeline_impl& pipeline_impl::operator=(const pipeline_impl&) = default;
+
 pipeline_impl::pipeline_impl(int max_concurrency)
     : data_(std::make_shared<pipeline_data>(max_concurrency, task_group{}, global_executor)) {}
 pipeline_impl::pipeline_impl(int max_concurrency, task_group grp)

@@ -15,8 +15,13 @@ struct conc_for_work {
     using iterator = It;
 
     conc_for_work() = default;
+    ~conc_for_work() = default;
     conc_for_work(const conc_for_work&) = default;
     conc_for_work& operator=(const conc_for_work&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    conc_for_work(conc_for_work&&) = default;
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    conc_for_work& operator=(conc_for_work&&) = default;
 
     explicit conc_for_work(const UnaryFunction& f)
         : ftor_(&f) {}

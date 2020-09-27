@@ -24,10 +24,10 @@ struct task_group_access {
     static void on_task_exception(const task_group& grp, std::exception_ptr ex);
 
     //! Called when a task was created in a group; the task starts to be "active"
-    static void on_task_created(task_group& grp);
+    static void on_task_created(const task_group& grp);
     //! Called when a task from the group is destroyed; the task is executed, and it's not "active"
     //! anymore.
-    static void on_task_destroyed(task_group& grp);
+    static void on_task_destroyed(const task_group& grp);
 };
 
 } // namespace detail
@@ -255,12 +255,12 @@ public:
      * @brief      Sets the task group for the current worker.
      *
      * @param      grp   The new group to be set for the current worker.
-     * 
+     *
      * @return     The previous set task group (if any).
-     * 
+     *
      * This is used by implementation of certain algorithms to speed up the use of task groups. Not
      * intended to be heavily used. To be used with care.
-     * 
+     *
      * In general, after setting a task group, one may want to restore the old task group. This is
      * why the function returns the previous task_group object.
      */

@@ -23,7 +23,7 @@ struct bounded_dequeue {
         destructing,
     };
     //! We need to add an atomic to the element, to know the state of each element.
-    struct wrapped_elem {
+    struct wrapped_elem { // NOLINT(cppcoreguidelines-pro-type-member-init)
         //! Indicates that the 'elem_' is considered part of the queue, and can be popped.
         //! This may be true while trying to move away data from it.
         //! While constructing the element this is false.
@@ -54,8 +54,8 @@ struct bounded_dequeue {
     //! Reserve one slot at the back of the fast queue. Yields the position of the reserved item.
     //! Returns false if we don't have enough room to add new elements.
     bool reserve_back(uint16_t& pos) {
-        const uint16_t max_dist = uint16_t(size_ - 3);
-        fast_range old, desired;
+        const auto max_dist = static_cast<uint16_t>(size_ - 3);
+        fast_range old{}, desired{};
         old.int_value = fast_range_.load();
         while (true) {
             if (uint16_t(old.end - old.start) > max_dist)
@@ -71,8 +71,8 @@ struct bounded_dequeue {
     //! Reserve one slot at the front of the fast queue. Yields the position of the reserved item.
     //! Returns false if we don't have enough room to add new elements.
     bool reserve_front(uint16_t& pos) {
-        const uint16_t max_dist = uint16_t(size_ - 3);
-        fast_range old, desired;
+        const auto max_dist = static_cast<uint16_t>(size_ - 3);
+        fast_range old{}, desired{};
         old.int_value = fast_range_.load();
         while (true) {
             if (uint16_t(old.end - old.start) > max_dist)
@@ -87,7 +87,7 @@ struct bounded_dequeue {
     }
     //! Consumes one slot at the front of the fast queue. Yields the position of the consumed item.
     bool consume_front(uint16_t& pos) {
-        fast_range old, desired;
+        fast_range old{}, desired{};
         old.int_value = fast_range_.load();
         while (true) {
             if (old.start == old.end)
@@ -102,7 +102,7 @@ struct bounded_dequeue {
     }
     //! Consumes one slot at the front of the fast queue. Yields the position of the reserved item.
     bool consume_back(uint16_t& pos) {
-        fast_range old, desired;
+        fast_range old{}, desired{};
         old.int_value = fast_range_.load();
         while (true) {
             if (old.start == old.end)
@@ -248,7 +248,7 @@ inline concurrent_dequeue<T>::concurrent_dequeue(size_t expected_size)
 template <typename T>
 inline void concurrent_dequeue<T>::push_back(T&& elem) {
     // If we have enough space in the 'fast' queue, construct the element there
-    uint16_t pos;
+    uint16_t pos{0};
     if (fast_deque_.reserve_back(pos)) {
         fast_deque_.construct_in_fast(pos, std::forward<T>(elem));
     } else {
@@ -262,7 +262,7 @@ inline void concurrent_dequeue<T>::push_back(T&& elem) {
 template <typename T>
 inline void concurrent_dequeue<T>::push_front(T&& elem) {
     // If we have enough space in the 'fast' queue, construct the element there
-    uint16_t pos;
+    uint16_t pos{0};
     if (fast_deque_.reserve_front(pos)) {
         fast_deque_.construct_in_fast(pos, std::forward<T>(elem));
     } else {
@@ -276,7 +276,7 @@ inline void concurrent_dequeue<T>::push_front(T&& elem) {
 template <typename T>
 inline bool concurrent_dequeue<T>::try_pop_front(T& elem) {
     // If we can extract one element from the fast queue, move an element from there
-    uint16_t pos;
+    uint16_t pos{0};
     if (fast_deque_.consume_front(pos)) {
         fast_deque_.extract_from_fast(pos, elem);
         return true;
@@ -296,7 +296,7 @@ inline bool concurrent_dequeue<T>::try_pop_front(T& elem) {
 template <typename T>
 inline bool concurrent_dequeue<T>::try_pop_back(T& elem) {
     // If we can extract one element from the fast queue, move an element from there
-    uint16_t pos;
+    uint16_t pos{0};
     if (fast_deque_.consume_back(pos)) {
         fast_deque_.extract_from_fast(pos, elem);
         return true;

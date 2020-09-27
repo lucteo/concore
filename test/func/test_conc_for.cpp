@@ -10,15 +10,16 @@
 #include <atomic>
 #include <chrono>
 #include <forward_list>
+#include <array>
 
 using namespace std::chrono_literals;
 
 using concore::integral_iterator;
 
 TEST_CASE("conc_for executes all its iterations exactly once", "[conc_for]") {
-    PROPERTY([](concore::partition_hints hints) {
+    PROPERTY(([](concore::partition_hints hints) {
         constexpr int num_iter = 100;
-        std::atomic<int> counts[num_iter] = {};
+        std::array<std::atomic<int>, num_iter> counts{};
         for (int i = 0; i < num_iter; i++)
             counts[i] = 0;
 
@@ -35,7 +36,7 @@ TEST_CASE("conc_for executes all its iterations exactly once", "[conc_for]") {
         // Check that each iteration was executed only once
         for (int i = 0; i < num_iter; i++)
             RC_ASSERT(counts[i].load() == 1);
-    });
+    }));
 }
 
 TEST_CASE("conc_for can be canceled", "[conc_for]") {
@@ -80,9 +81,9 @@ TEST_CASE("conc_for is a blocking call", "[conc_for]") {
 }
 
 TEST_CASE("conc_for can work with plain forward iterators", "[conc_for]") {
-    PROPERTY([](concore::partition_hints hints) {
+    PROPERTY(([](concore::partition_hints hints) {
         constexpr int num_iter = 100;
-        std::atomic<int> counts[num_iter];
+        std::array<std::atomic<int>, num_iter> counts{};
 
         // Prepare the input data
         std::forward_list<int> elems;
@@ -92,12 +93,13 @@ TEST_CASE("conc_for can work with plain forward iterators", "[conc_for]") {
         }
 
         // Do the iterations in parallel
-        concore::conc_for(elems.begin(), elems.end(), [&counts](int i) { counts[i]++; }, hints);
+        concore::conc_for(
+                elems.begin(), elems.end(), [&counts](int i) { counts[i]++; }, hints);
 
         // Incremented each count once
         for (int i = 0; i < num_iter; i++)
             RC_ASSERT(counts[i].load() == 1);
-    });
+    }));
 }
 
 TEST_CASE("conc_for forwards the exceptions", "[conc_for]") {
