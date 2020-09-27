@@ -47,3 +47,17 @@ jobs:
       - uses: lucteo/action-cxx-toolkit@master
         with:
           checks: sanitize=address sanitize=undefined
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: lucteo/action-cxx-toolkit@master
+        with:
+          GITHUB_ACTION: ${GITHUB_ACTION}
+          GITHUB_REF: ${GITHUB_REF}
+          GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}
+          GITHUB_HEAD_REF: ${GITHUB_HEAD_REF}
+          GITHUB_SHA: ${GITHUB_SHA}
+          GITHUB_RUN_ID: ${GITHUB_RUN_ID}
+          VCS_COMMIT_ID: ${GITHUB_SHA}
+          checks: coverage=codecov
