@@ -26,6 +26,9 @@ set(func_sourceFiles
     "func/test_pipeline.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
+
+    "func/std/test_execution.cpp"
+
     "func/profiling_helper_test.cpp" # Must be last
 )
 
