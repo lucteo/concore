@@ -53,6 +53,8 @@ jobs:
       - uses: actions/checkout@master
       - uses: lucteo/action-cxx-toolkit@master
         with:
+          checks: coverage=codecov
+        env:
           GITHUB_ACTION: ${GITHUB_ACTION}
           GITHUB_REF: ${GITHUB_REF}
           GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}
@@ -60,4 +62,3 @@ jobs:
           GITHUB_SHA: ${GITHUB_SHA}
           GITHUB_RUN_ID: ${GITHUB_RUN_ID}
           VCS_COMMIT_ID: ${GITHUB_SHA}
-          checks: coverage=codecov
