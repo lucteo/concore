@@ -91,6 +91,7 @@ set(concore_sourceFiles
     "src/rw_serializer.cpp"
     "src/serializer.cpp"
     "src/task_group.cpp"
+    "src/std/thread_pool.cpp"
 )
 
 # Configure profiling
@@ -114,6 +115,7 @@ add_library(concore STATIC ${concore_sourceFiles})
 
 # Set the right C++ standard
 if (concore.use2020)
+    add_definitions(-DUSE_CXX2020=1)
     target_compile_features(concore PUBLIC cxx_std_20)
 
     # Additional flags to turn on experimental features

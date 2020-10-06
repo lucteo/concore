@@ -8,10 +8,12 @@ source ${CURDIR}/_test_common.sh
 
 startTest "Static checks test"
 
+SRCFILES=""
+
 # Run docker with action-cxx-toolkit to check our code
 docker run ${DOCKER_RUN_PARAMS} -e INPUT_CC='gcc-9' -e INPUT_CHECKS='cppcheck clang-tidy' \
     -e INPUT_CPPCHECKFLAGS='--enable=warning,style,performance,portability --inline-suppr' \
-    -e INPUT_CLANGTIDYFLAGS='-quiet' \
+    -e INPUT_CLANGTIDYFLAGS="-quiet ${SRCFILES}" \
     action-cxx-toolkit
 status=$?
 printStatus $status
