@@ -4,6 +4,8 @@
 #include "concore/serializer.hpp"
 #include "concore/detail/consumer_bounded_queue.hpp"
 
+#include <vector>
+
 namespace concore {
 
 namespace detail {

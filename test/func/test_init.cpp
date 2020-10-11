@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/init.hpp>
 #include <concore/global_executor.hpp>
+#include <concore/profiling.hpp>
 
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_utils.hpp"

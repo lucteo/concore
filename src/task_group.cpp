@@ -1,5 +1,4 @@
 #include "concore/task_group.hpp"
-#include "concore/detail/exec_context.hpp"
 
 #include <atomic>
 #include <cassert>

@@ -5,6 +5,7 @@
 #include "concore/spawn.hpp"
 #include "concore/immediate_executor.hpp"
 
+#include <atomic>
 #include <memory>
 #include <cassert>
 

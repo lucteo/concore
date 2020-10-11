@@ -3,8 +3,9 @@
 #include <concore/task_group.hpp>
 #include <concore/executor_type.hpp>
 #include <concore/detail/library_data.hpp>
-#include <concore/detail/exec_context.hpp>
+#include <concore/detail/exec_context_if.hpp>
 
+#include <thread>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -31,7 +32,7 @@ inline bool bounded_wait(std::chrono::milliseconds timeout = 1000ms) {
     auto end = start + timeout;
     auto sleep_dur = timeout / 1000;
     while (std::chrono::high_resolution_clock::now() < end) {
-        if (!concore::detail::get_exec_context().is_active())
+        if (!concore::detail::is_active(concore::detail::get_exec_context()))
             return true;
         std::this_thread::sleep_for(sleep_dur);
         sleep_dur = sleep_dur * 16 / 10;

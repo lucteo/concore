@@ -7,6 +7,7 @@
 #include <tbb/task_scheduler_init.h>
 #endif
 #include <concore/immediate_executor.hpp>
+#include <concore/profiling.hpp>
 
 #include "test_common/task_countdown.hpp"
 

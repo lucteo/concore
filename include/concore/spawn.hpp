@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "detail/exec_context.hpp"
+#include "detail/exec_context_if.hpp"
 #include "detail/library_data.hpp"
 
 #include <initializer_list>
@@ -12,12 +12,12 @@ namespace detail {
 
 //! Defines an executor that can spawn tasks in the current worker queue.
 struct spawn_executor {
-    void operator()(task t) const { detail::get_exec_context().spawn(std::move(t)); }
+    void operator()(task t) const { do_spawn(detail::get_exec_context(), std::move(t)); }
 };
 
 //! Similar to a spawn_executor, but doesn't wake other workers
 struct spawn_continuation_executor {
-    void operator()(task t) const { detail::get_exec_context().spawn(std::move(t), false); }
+    void operator()(task t) const { do_spawn(detail::get_exec_context(), std::move(t), false); }
 };
 
 } // namespace detail
@@ -47,7 +47,7 @@ inline namespace v1 {
  * the groups of the spawned tasks.
  */
 inline void spawn(task&& t, bool wake_workers = true) {
-    detail::get_exec_context().spawn(std::move(t), wake_workers);
+    detail::do_spawn(detail::get_exec_context(), std::move(t), wake_workers);
 }
 
 /**
@@ -68,7 +68,7 @@ inline void spawn(task&& t, bool wake_workers = true) {
 template <typename F>
 inline void spawn(F&& ftor, bool wake_workers = true) {
     auto grp = task_group::current_task_group();
-    detail::get_exec_context().spawn(task(std::forward<F>(ftor), grp), wake_workers);
+    detail::do_spawn(detail::get_exec_context(), task(std::forward<F>(ftor), grp), wake_workers);
 }
 
 /**
@@ -89,7 +89,8 @@ inline void spawn(F&& ftor, bool wake_workers = true) {
  */
 template <typename F>
 inline void spawn(F&& ftor, task_group grp, bool wake_workers = true) {
-    detail::get_exec_context().spawn(task(std::forward<F>(ftor), std::move(grp)), wake_workers);
+    detail::do_spawn(
+            detail::get_exec_context(), task(std::forward<F>(ftor), std::move(grp)), wake_workers);
 }
 
 /**
@@ -116,7 +117,7 @@ inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_worker
     for (const auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
         bool cur_wake_workers = (count-- > 0 || wake_workers);
-        detail::get_exec_context().spawn(task(ftor, grp), cur_wake_workers);
+        detail::do_spawn(detail::get_exec_context(), task(ftor, grp), cur_wake_workers);
     }
 }
 
@@ -142,7 +143,7 @@ inline void spawn(
     for (const auto& ftor : ftors) {
         // wake_workers applies only to the last element; otherwise pass true
         bool cur_wake_workers = (count-- > 0 || wake_workers);
-        detail::get_exec_context().spawn(task(ftor, grp), cur_wake_workers);
+        detail::do_spawn(detail::get_exec_context(), task(ftor, grp), cur_wake_workers);
     }
 }
 
@@ -165,13 +166,13 @@ inline void spawn(
 template <typename F>
 inline void spawn_and_wait(F&& ftor) {
     auto& ctx = detail::get_exec_context();
-    auto worker_data = ctx.enter_worker();
+    auto worker_data = detail::enter_worker(ctx);
 
     auto grp = task_group::create(task_group::current_task_group());
-    ctx.spawn(task(std::forward<F>(ftor), grp), false);
-    ctx.busy_wait_on(grp);
+    detail::do_spawn(ctx, task(std::forward<F>(ftor), grp), false);
+    detail::busy_wait_on(ctx, grp);
 
-    ctx.exit_worker(worker_data);
+    detail::exit_worker(ctx, worker_data);
 }
 
 /**
@@ -191,17 +192,17 @@ inline void spawn_and_wait(F&& ftor) {
  */
 inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wake_workers = true) {
     auto& ctx = detail::get_exec_context();
-    auto worker_data = ctx.enter_worker();
+    auto worker_data = detail::enter_worker(ctx);
 
     auto grp = task_group::create(task_group::current_task_group());
     int count = static_cast<int>(ftors.size());
     for (const auto& ftor : ftors) {
         bool cur_wake_workers = count-- > 0; // don't wake on the last task
-        ctx.spawn(task(ftor, grp), cur_wake_workers);
+        detail::do_spawn(ctx, task(ftor, grp), cur_wake_workers);
     }
-    ctx.busy_wait_on(grp);
+    detail::busy_wait_on(ctx, grp);
 
-    ctx.exit_worker(worker_data);
+    detail::exit_worker(ctx, worker_data);
 }
 
 /**
@@ -222,9 +223,9 @@ inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wa
  */
 inline void wait(task_group& grp) {
     auto& ctx = detail::get_exec_context();
-    auto worker_data = ctx.enter_worker();
-    detail::get_exec_context().busy_wait_on(grp);
-    ctx.exit_worker(worker_data);
+    auto worker_data = detail::enter_worker(ctx);
+    detail::busy_wait_on(ctx, grp);
+    detail::exit_worker(ctx, worker_data);
 }
 
 /**

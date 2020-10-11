@@ -4,7 +4,8 @@
 #include "concore/profiling.hpp"
 #include "concore/low_level/semaphore.hpp"
 #include "concore/data/concurrent_queue.hpp"
-#include "worker_tasks.hpp"
+#include "concore/detail/worker_tasks.hpp"
+#include "concore/detail/task_priority.hpp"
 
 #include <array>
 #include <vector>
@@ -42,17 +43,6 @@ struct worker_thread_data {
     worker_tasks local_tasks_;
 };
 
-//! The possible priorities of tasks, as handled by the global executor
-enum class task_priority {
-    critical,   //! Critical priority; we better execute this tasks asap
-    high,       //! High-priority tasks
-    normal,     //! Tasks with normal priority
-    low,        //! Tasks with low priority
-    background, //! Background tasks; execute then when not doing something else
-};
-
-constexpr int num_priorities = 5;
-
 //! The task system, corresponding to a global executor.
 //! This will create a set of worker threads corresponding to the number of cores we have on the
 //! system, and each worker is capable of executing tasks.
@@ -66,6 +56,8 @@ public:
 
     exec_context(exec_context&&) = delete;
     exec_context& operator=(exec_context&&) = delete;
+
+    void enqueue(task&& t, task_priority prio);
 
     template <int P, typename T>
     void enqueue(T&& t) {

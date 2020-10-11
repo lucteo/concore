@@ -1,5 +1,6 @@
 
 #include <concore/conc_reduce.hpp>
+#include <concore/profiling.hpp>
 #if CONCORE_USE_TBB
 #include <tbb/parallel_reduce.h>
 #include <tbb/blocked_range.h>

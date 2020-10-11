@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <array>
+#include <atomic>
 
 namespace {
 

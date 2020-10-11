@@ -1,6 +1,7 @@
 #pragma once
 
 #include "task_countdown.hpp"
+#include <concore/profiling.hpp>
 
 #include <thread>
 #include <chrono>

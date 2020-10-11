@@ -2,6 +2,9 @@
 #include <concore/finish_task.hpp>
 #include "rapidcheck_utils.hpp"
 
+#include <thread>
+#include <chrono>
+
 using namespace std::chrono_literals;
 
 using concore::task;

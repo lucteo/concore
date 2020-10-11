@@ -73,10 +73,10 @@ inline Value conc_scan_it(It first, It last, It2 d_first, Value identity, const 
     // enough elements to sum
     int granularity = std::max(1, hints.granularity_);
     int n = static_cast<int>(last - first);
-    if (n / granularity <= ctx.num_worker_threads() * 2)
+    if (n / granularity <= detail::num_worker_threads(ctx) * 2)
         return linear_scan(first, last, d_first, identity, op);
 
-    auto worker_data = ctx.enter_worker();
+    auto worker_data = detail::enter_worker(ctx);
 
     if (!grp)
         grp = task_group::current_task_group();
@@ -90,7 +90,7 @@ inline Value conc_scan_it(It first, It last, It2 d_first, Value identity, const 
     detail::auto_partition_work_scan(first, n, work, ex_grp, granularity);
     res = std::move(work.sum_);
 
-    ctx.exit_worker(worker_data);
+    detail::exit_worker(ctx, worker_data);
 
     // If we have an exception, re-throw it
     if (thrown_exception)

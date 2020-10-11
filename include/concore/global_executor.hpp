@@ -1,16 +1,22 @@
 #pragma once
 
-#include "detail/exec_context.hpp"
+#include "detail/exec_context_if.hpp"
 #include "detail/library_data.hpp"
 
+#include <utility>
+
 namespace concore {
+
+inline namespace v1 {
+class task;
+}
 
 namespace detail {
 
 //! Structure that defines an executor for a given priority
 template <task_priority P = task_priority::normal>
 struct executor_with_prio {
-    void operator()(task t) const { get_exec_context().enqueue<int(P)>(std::move(t)); }
+    void operator()(task&& t) const { do_enqueue(get_exec_context(), std::move(t), P); }
 };
 
 } // namespace detail

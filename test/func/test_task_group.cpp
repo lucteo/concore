@@ -5,6 +5,7 @@
 #include <concore/serializer.hpp>
 #include <concore/n_serializer.hpp>
 #include <concore/rw_serializer.hpp>
+#include <concore/profiling.hpp>
 
 #include <thread>
 #include <atomic>

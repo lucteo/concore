@@ -2,8 +2,7 @@
 #include <concore/std/thread_pool.hpp>
 #include "test_common/task_utils.hpp"
 
-#include <thread>
-#include <chrono>
+#include <array>
 
 using namespace concore::std_execution;
 using namespace std::chrono_literals;

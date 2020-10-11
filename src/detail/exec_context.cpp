@@ -1,4 +1,5 @@
 #include "concore/detail/exec_context.hpp"
+#include "concore/detail/exec_context_if.hpp"
 #include "concore/detail/utils.hpp"
 #include "concore/init.hpp"
 #include "concore/task_group.hpp"
@@ -48,6 +49,18 @@ exec_context::~exec_context() {
     // Wait for all the threads to finish
     for (auto& worker_data : workers_data_)
         worker_data.thread_.join();
+}
+
+void exec_context::enqueue(task&& t, task_priority prio) {
+    CONCORE_PROFILING_FUNCTION();
+    auto p = static_cast<int>(prio);
+    assert(p < num_priorities);
+
+    // Push the task in the global queue, corresponding to the given prio
+    on_task_added();
+    enqueued_tasks_[p].push(std::move(t));
+    num_global_tasks_++;
+    wakeup_workers();
 }
 
 void exec_context::spawn(task&& t, bool wake_workers) {
@@ -305,6 +318,23 @@ void exec_context::on_task_removed() const {
     num_tasks_--;
 #endif
 }
+
+void do_enqueue(exec_context& ctx, task&& t, task_priority prio) {
+    ctx.enqueue(std::move(t), prio);
+}
+void do_spawn(exec_context& ctx, task&& t, bool wake_workers) {
+    ctx.spawn(std::move(t), wake_workers);
+}
+
+void busy_wait_on(exec_context& ctx, task_group& grp) { ctx.busy_wait_on(grp); }
+worker_thread_data* enter_worker(exec_context& ctx) { return ctx.enter_worker(); }
+void exit_worker(exec_context& ctx, worker_thread_data* worker_data) {
+    ctx.exit_worker(worker_data);
+}
+
+int num_worker_threads(const exec_context& ctx) { return ctx.num_worker_threads(); }
+bool is_active(const exec_context& ctx) { return ctx.is_active(); }
+int num_active_tasks(const exec_context& ctx) { return ctx.num_active_tasks(); }
 
 } // namespace detail
 } // namespace concore
