@@ -3,7 +3,7 @@
 #include "concore/detail/platform.hpp"
 #include "concore/detail/likely.hpp"
 #include "concore/detail/library_data.hpp"
-#include "concore/detail/task_system.hpp"
+#include "concore/detail/exec_context.hpp"
 
 #include <mutex>
 
@@ -20,7 +20,7 @@ using cxa_guard_type = uint64_t;
 #endif
 
 static cxa_guard_type g_initialized_guard{0};
-static task_system* g_task_system{nullptr};
+static exec_context* g_exec_context{nullptr};
 
 // Take the advantage of ABI compatibility
 extern "C" int __cxa_guard_acquire(cxa_guard_type*);
@@ -29,7 +29,7 @@ extern "C" void __cxa_guard_abort(cxa_guard_type*);
 
 #else
 
-static std::atomic<task_system*> g_task_system{nullptr};
+static std::atomic<exec_context*> g_exec_context{nullptr};
 
 #endif
 
@@ -43,32 +43,32 @@ void do_shutdown() {
     if (!is_initialized())
         return;
 #if __IMPL__CONCORE_USE_CXX_ABI
-    delete detail::g_task_system;
-    detail::g_task_system = nullptr;
+    delete detail::g_exec_context;
+    detail::g_exec_context = nullptr;
     g_initialized_guard = 0;
 #else
-    delete detail::g_task_system.load();
-    detail::g_task_system.store(nullptr, std::memory_order_release);
+    delete detail::g_exec_context.load();
+    detail::g_exec_context.store(nullptr, std::memory_order_release);
 #endif
     detail::g_config_used.store(nullptr, std::memory_order_release);
 }
 
-//! Actually initialized the library; this is guarded by get_task_system()
+//! Actually initialized the library; this is guarded by get_exec_context()
 void do_init(const init_data* config) {
     static init_data default_config;
     if (!config)
         config = &default_config;
-    auto ts = new task_system(*config);
+    auto global_ctx = new exec_context(*config);
 #if __IMPL__CONCORE_USE_CXX_ABI
-    detail::g_task_system = ts;
+    detail::g_exec_context = global_ctx;
 #else
-    detail::g_task_system.store(ts, std::memory_order_release);
+    detail::g_exec_context.store(global_ctx, std::memory_order_release);
 #endif
     g_config_used.store(config, std::memory_order_release);
     atexit(&do_shutdown);
 }
 
-task_system& get_task_system(const init_data* config) {
+exec_context& get_exec_context(const init_data* config) {
 #if __IMPL__CONCORE_USE_CXX_ABI
     CONCORE_IF_UNLIKELY(__cxa_guard_acquire(&g_initialized_guard)) {
         try {
@@ -80,16 +80,16 @@ task_system& get_task_system(const init_data* config) {
         }
         __cxa_guard_release(&g_initialized_guard);
     }
-    return *g_task_system;
+    return *g_exec_context;
 #else
-    auto p = detail::g_task_system.load(std::memory_order_acquire);
+    auto p = detail::g_exec_context.load(std::memory_order_acquire);
     CONCORE_IF_UNLIKELY(!p) {
         static spin_mutex init_bottleneck;
         try {
             init_bottleneck.lock();
             do_init(config);
             init_bottleneck.unlock();
-            p = g_task_system.load(std::memory_order_acquire);
+            p = g_exec_context.load(std::memory_order_acquire);
         } catch (...) {
             init_bottleneck.unlock();
             throw;
@@ -106,10 +106,10 @@ inline namespace v1 {
 void init(const init_data& config) {
     if (is_initialized())
         throw already_initialized();
-    detail::get_task_system(&config);
+    detail::get_exec_context(&config);
 }
 
-bool is_initialized() { return detail::g_task_system != nullptr; }
+bool is_initialized() { return detail::g_exec_context != nullptr; }
 
 void shutdown() { detail::do_shutdown(); }
 

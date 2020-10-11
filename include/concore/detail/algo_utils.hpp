@@ -1,7 +1,7 @@
 #pragma once
 
 #include "concore/partition_hints.hpp"
-#include "concore/detail/task_system.hpp"
+#include "concore/detail/exec_context.hpp"
 
 #include <iterator>
 
@@ -51,7 +51,7 @@ inline int compute_granularity(int n, partition_hints hints) {
     int granularity = std::max(1, hints.granularity_);
     int max_tasks_per_worker = hints.tasks_per_worker_ > 0 ? hints.tasks_per_worker_ : 20;
     int min_granularity =
-            n / (detail::get_task_system().num_worker_threads() * max_tasks_per_worker);
+            n / (detail::get_exec_context().num_worker_threads() * max_tasks_per_worker);
     return std::max(granularity, min_granularity);
 }
 

@@ -8,10 +8,10 @@ struct init_data;
 
 namespace detail {
 
-class task_system;
+class exec_context;
 
 /**
- * @brief      Getter for the task_system object that also ensures that the library is initialized.
+ * @brief      Getter for the exec_context object that also ensures that the library is initialized.
  *
  * @param      config  The configuration to be used for the library; can be null.
  *
@@ -19,7 +19,7 @@ class task_system;
  *
  * This is used so that we can automatically initialize the library before its first use.
  */
-task_system& get_task_system(const init_data* config = nullptr);
+exec_context& get_exec_context(const init_data* config = nullptr);
 
 } // namespace detail
 } // namespace concore

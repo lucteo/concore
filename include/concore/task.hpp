@@ -7,7 +7,7 @@
 namespace concore {
 
 namespace detail {
-class task_system;
+class exec_context;
 }
 
 inline namespace v1 {

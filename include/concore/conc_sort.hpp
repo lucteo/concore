@@ -94,10 +94,10 @@ inline void conc_sort(It begin, It end, const Comp& comp, task_group grp) {
     // Run the quicksort algorithm
     conc_quicksort(begin, n, comp, wait_grp);
 
-    auto& tsys = detail::get_task_system();
-    auto worker_data = tsys.enter_worker();
-    tsys.busy_wait_on(wait_grp);
-    tsys.exit_worker(worker_data);
+    auto& ctx = detail::get_exec_context();
+    auto worker_data = ctx.enter_worker();
+    ctx.busy_wait_on(wait_grp);
+    ctx.exit_worker(worker_data);
 
     // If we have an exception, re-throw it
     if (thrown_exception)

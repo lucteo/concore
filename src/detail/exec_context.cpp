@@ -1,4 +1,4 @@
-#include "concore/detail/task_system.hpp"
+#include "concore/detail/exec_context.hpp"
 #include "concore/detail/utils.hpp"
 #include "concore/init.hpp"
 #include "concore/task_group.hpp"
@@ -17,7 +17,7 @@ int get_num_threads(int config_num_threads) {
     return res > 0 ? res : 4;
 }
 
-task_system::task_system(const init_data& config)
+exec_context::exec_context(const init_data& config)
     : count_(get_num_threads(config.num_workers_))
     , reserved_slots_(config.reserved_slots_)
     , workers_data_(static_cast<size_t>(count_))
@@ -39,7 +39,7 @@ task_system::task_system(const init_data& config)
         });
     }
 }
-task_system::~task_system() {
+exec_context::~exec_context() {
     CONCORE_PROFILING_FUNCTION();
     // Set the flag to mark shut down, and wake all the threads
     done_ = true;
@@ -50,7 +50,7 @@ task_system::~task_system() {
         worker_data.thread_.join();
 }
 
-void task_system::spawn(task&& t, bool wake_workers) {
+void exec_context::spawn(task&& t, bool wake_workers) {
     CONCORE_PROFILING_FUNCTION();
     worker_thread_data* data = g_worker_data;
 
@@ -70,7 +70,7 @@ void task_system::spawn(task&& t, bool wake_workers) {
         wakeup_workers();
 }
 
-void task_system::busy_wait_on(task_group& grp) {
+void exec_context::busy_wait_on(task_group& grp) {
     worker_thread_data* data = g_worker_data;
 
     on_worker_active();
@@ -99,7 +99,7 @@ void task_system::busy_wait_on(task_group& grp) {
     on_worker_inactive();
 }
 
-worker_thread_data* task_system::enter_worker() {
+worker_thread_data* exec_context::enter_worker() {
     // Check if we already have an attached worker; if yes, no need for a new one
     if (g_worker_data)
         return nullptr;
@@ -124,7 +124,7 @@ worker_thread_data* task_system::enter_worker() {
     return nullptr;
 }
 
-void task_system::exit_worker(worker_thread_data* worker_data) {
+void exec_context::exit_worker(worker_thread_data* worker_data) {
     if (worker_data) {
         assert(worker_data->state_.load() == worker_thread_data::running);
         worker_data->state_.store(worker_thread_data::idle, std::memory_order_release);
@@ -134,7 +134,7 @@ void task_system::exit_worker(worker_thread_data* worker_data) {
     }
 }
 
-void task_system::worker_run(int worker_idx) {
+void exec_context::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
     g_worker_data = &workers_data_[worker_idx];
     on_worker_active();
@@ -149,7 +149,7 @@ void task_system::worker_run(int worker_idx) {
     on_worker_inactive();
 }
 
-bool task_system::try_extract_execute_task(worker_thread_data& worker_data) {
+bool exec_context::try_extract_execute_task(worker_thread_data& worker_data) {
     CONCORE_PROFILING_FUNCTION();
     task t;
 
@@ -191,7 +191,7 @@ bool task_system::try_extract_execute_task(worker_thread_data& worker_data) {
     return false;
 }
 
-void task_system::try_sleep(int worker_idx) {
+void exec_context::try_sleep(int worker_idx) {
     on_worker_inactive();
     auto& data = workers_data_[worker_idx];
     data.state_.store(worker_thread_data::waiting);
@@ -202,7 +202,7 @@ void task_system::try_sleep(int worker_idx) {
     data.state_.store(worker_thread_data::running);
 }
 
-bool task_system::before_sleep(int worker_idx) {
+bool exec_context::before_sleep(int worker_idx) {
     CONCORE_PROFILING_FUNCTION();
     CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", worker_idx);
     auto& data = workers_data_[worker_idx];
@@ -227,7 +227,7 @@ bool task_system::before_sleep(int worker_idx) {
     return true;
 }
 
-void task_system::wakeup_workers() {
+void exec_context::wakeup_workers() {
     CONCORE_PROFILING_FUNCTION();
 
     // First try to wake up any worker that is in waiting state
@@ -259,14 +259,14 @@ void task_system::wakeup_workers() {
     // If we are here, it means that all workers are woken up.
 }
 
-void task_system::execute_task(task& t) const {
+void exec_context::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
 
     detail::execute_task(t);
     on_task_removed();
 }
 
-void task_system::on_worker_active() const {
+void exec_context::on_worker_active() const {
 #if CONCORE_ENABLE_PROFILING
     int val = num_active_workers_++;
     CONCORE_PROFILING_PLOT("# concore active workers", int64_t(val));
@@ -276,7 +276,7 @@ void task_system::on_worker_active() const {
 #endif
 }
 
-void task_system::on_worker_inactive() const {
+void exec_context::on_worker_inactive() const {
 #if CONCORE_ENABLE_PROFILING
     int val = num_active_workers_--;
     CONCORE_PROFILING_PLOT("# concore active workers", int64_t(val));
@@ -286,7 +286,7 @@ void task_system::on_worker_inactive() const {
 #endif
 }
 
-void task_system::on_task_added() const {
+void exec_context::on_task_added() const {
 #if CONCORE_ENABLE_PROFILING
     int val = num_tasks_++;
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));
@@ -296,7 +296,7 @@ void task_system::on_task_added() const {
 #endif
 }
 
-void task_system::on_task_removed() const {
+void exec_context::on_task_removed() const {
 #if CONCORE_ENABLE_PROFILING
     int val = num_tasks_--;
     CONCORE_PROFILING_PLOT("# concore sys tasks", int64_t(val));

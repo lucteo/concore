@@ -66,17 +66,17 @@ inline Value linear_scan(It first, It last, It2 d_first, Value init, BinaryOp op
 template <typename It, typename It2, typename Value, typename BinaryOp>
 inline Value conc_scan_it(It first, It last, It2 d_first, Value identity, const BinaryOp& op,
         task_group grp, partition_hints hints, std::random_access_iterator_tag) {
-    auto& tsys = detail::get_task_system();
+    auto& ctx = detail::get_exec_context();
 
     // Check if it's worth doing it in parallel
     // As the parallel algorithm creates twice as much total work, we need to ensure that we have
     // enough elements to sum
     int granularity = std::max(1, hints.granularity_);
     int n = static_cast<int>(last - first);
-    if (n / granularity <= tsys.num_worker_threads() * 2)
+    if (n / granularity <= ctx.num_worker_threads() * 2)
         return linear_scan(first, last, d_first, identity, op);
 
-    auto worker_data = tsys.enter_worker();
+    auto worker_data = ctx.enter_worker();
 
     if (!grp)
         grp = task_group::current_task_group();
@@ -90,7 +90,7 @@ inline Value conc_scan_it(It first, It last, It2 d_first, Value identity, const 
     detail::auto_partition_work_scan(first, n, work, ex_grp, granularity);
     res = std::move(work.sum_);
 
-    tsys.exit_worker(worker_data);
+    ctx.exit_worker(worker_data);
 
     // If we have an exception, re-throw it
     if (thrown_exception)

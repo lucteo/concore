@@ -56,16 +56,16 @@ constexpr int num_priorities = 5;
 //! The task system, corresponding to a global executor.
 //! This will create a set of worker threads corresponding to the number of cores we have on the
 //! system, and each worker is capable of executing tasks.
-class task_system {
+class exec_context {
 public:
-    explicit task_system(const init_data& config);
-    ~task_system();
+    explicit exec_context(const init_data& config);
+    ~exec_context();
 
-    task_system(const task_system&) = delete;
-    task_system& operator=(const task_system&) = delete;
+    exec_context(const exec_context&) = delete;
+    exec_context& operator=(const exec_context&) = delete;
 
-    task_system(task_system&&) = delete;
-    task_system& operator=(task_system&&) = delete;
+    exec_context(exec_context&&) = delete;
+    exec_context& operator=(exec_context&&) = delete;
 
     template <int P, typename T>
     void enqueue(T&& t) {
