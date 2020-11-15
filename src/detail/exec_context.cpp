@@ -1,6 +1,7 @@
 #include "concore/detail/exec_context.hpp"
 #include "concore/detail/exec_context_if.hpp"
 #include "concore/detail/utils.hpp"
+#include "concore/detail/library_data.hpp"
 #include "concore/init.hpp"
 #include "concore/task_group.hpp"
 
@@ -126,6 +127,7 @@ worker_thread_data* exec_context::enter_worker() {
                 data.state_.store(worker_thread_data::running, std::memory_order_relaxed);
                 // It's important for us to store this in TLS
                 g_worker_data = &data;
+                set_context_in_current_thread(this);
                 return &data;
             }
         }
@@ -144,12 +146,14 @@ void exec_context::exit_worker(worker_thread_data* worker_data) {
         num_active_extra_slots_--;
         // Make sure to clear the TLS storage
         g_worker_data = nullptr;
+        set_context_in_current_thread(nullptr);
     }
 }
 
 void exec_context::worker_run(int worker_idx) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
     g_worker_data = &workers_data_[worker_idx];
+    set_context_in_current_thread(this);
     on_worker_active();
     while (true) {
         if (done_)

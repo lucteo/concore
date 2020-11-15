@@ -300,8 +300,8 @@ public:
     /**
      * \brief   Signal all work to complete
      *
-     * This will signal the therad pool to stop working as soon as possible. This will return
-     * immediatelly without waiting on the worker threads to complete.
+     * This will signal the thread pool to stop working as soon as possible. This will return
+     * immediately without waiting on the worker threads to complete.
      *
      * After calling this, no new work will be taken by the thread pool.
      *

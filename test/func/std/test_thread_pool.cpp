@@ -45,10 +45,20 @@ TEST_CASE("A static_thread_pool can bulk_execute work", "[execution]") {
 
 TEST_CASE("static_thread_pool executor's running_in_this_thread returns false if called from a "
           "different thread",
-        "[execution]") {}
+        "[execution]") {
+    static_thread_pool my_pool{4};
+    REQUIRE_FALSE(my_pool.executor().running_in_this_thread());
+}
 TEST_CASE("static_thread_pool executor's running_in_this_thread returns true if called from inside "
           "a running task",
-        "[execution]") {}
+        "[execution]") {
+    static_thread_pool my_pool{4};
+    auto ex = my_pool.executor();
+    ex.execute([&] { REQUIRE(ex.running_in_this_thread()); });
+    // wait for the task to be executed
+    auto grp = detail::get_associated_group(my_pool);
+    REQUIRE(bounded_wait(grp));
+}
 TEST_CASE("static_thread_pool cannot execute more than maximum concurrency tasks in parallel",
         "[execution]") {}
 TEST_CASE("static_thread_pool::attach will make the calling thread join the pool", "[execution]") {}

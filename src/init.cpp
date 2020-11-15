@@ -33,10 +33,12 @@ static std::atomic<exec_context*> g_exec_context{nullptr};
 
 #endif
 
-//! Identifier used to determine if the library was already initialized at the oint in which @ref
-//! init() is called.
-//! One should never dereference this pointer, as it might be invalid.
-static std::atomic<const init_data*> g_config_used = nullptr;
+//! Copy of the init_data used to create the global exec_context
+init_data g_init_data_used;
+
+//! The per-thread execution context; can be null if the thread doesn't belong to any execution
+//! context.
+thread_local exec_context* g_tlsCtx{nullptr};
 
 //! Called to shutdown the library
 void do_shutdown() {
@@ -50,7 +52,6 @@ void do_shutdown() {
     delete detail::g_exec_context.load();
     detail::g_exec_context.store(nullptr, std::memory_order_release);
 #endif
-    detail::g_config_used.store(nullptr, std::memory_order_release);
 }
 
 //! Actually initialized the library; this is guarded by get_exec_context()
@@ -59,16 +60,20 @@ void do_init(const init_data* config) {
     if (!config)
         config = &default_config;
     auto global_ctx = new exec_context(*config);
+    g_init_data_used = *config;
 #if __IMPL__CONCORE_USE_CXX_ABI
     detail::g_exec_context = global_ctx;
 #else
     detail::g_exec_context.store(global_ctx, std::memory_order_release);
 #endif
-    g_config_used.store(config, std::memory_order_release);
     atexit(&do_shutdown);
 }
 
 exec_context& get_exec_context(const init_data* config) {
+    // If we have an execution context in the current thread, return it
+    if (g_tlsCtx)
+        return *g_tlsCtx;
+
 #if __IMPL__CONCORE_USE_CXX_ABI
     CONCORE_IF_UNLIKELY(__cxa_guard_acquire(&g_initialized_guard)) {
         try {
@@ -98,6 +103,10 @@ exec_context& get_exec_context(const init_data* config) {
     return *p;
 #endif
 }
+
+void set_context_in_current_thread(exec_context* ctx) { g_tlsCtx = ctx; }
+
+init_data get_current_init_data() { return g_init_data_used; }
 
 } // namespace detail
 

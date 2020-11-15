@@ -57,7 +57,7 @@ public:
     exec_context(exec_context&&) = delete;
     exec_context& operator=(exec_context&&) = delete;
 
-    void enqueue(task&& t, task_priority prio);
+    void enqueue(task&& t, task_priority prio = task_priority::normal);
 
     template <int P, typename T>
     void enqueue(T&& t) {
