@@ -71,6 +71,7 @@ TEST_CASE("static_thread_pool cannot execute more than maximum concurrency tasks
 
     std::atomic<int> num_parallel{0};
     std::array<int, num_tasks> results;
+    results.fill(0);
 
     std::atomic<bool> can_continue{false};
 
