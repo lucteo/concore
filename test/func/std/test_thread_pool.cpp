@@ -3,6 +3,9 @@
 #include "test_common/task_utils.hpp"
 
 #include <array>
+#include <atomic>
+#include <thread>
+#include <chrono>
 
 using namespace concore::std_execution;
 using namespace std::chrono_literals;
