@@ -30,14 +30,7 @@ struct pool_data {
     explicit pool_data(size_t num_threads)
         : ctx_(new concore::detail::exec_context(get_init_data_for_pool(num_threads)))
         , grp_(task_group::create()) {}
-    ~pool_data() {
-        if (ctx_) {
-            // Wait for all the tasks to complete
-            grp_.cancel();
-            wait(grp_);
-            delete ctx_;
-        }
-    }
+    ~pool_data() { destroy(); }
 
     // Copy is disabled
     pool_data(const pool_data&) = delete;
@@ -118,10 +111,10 @@ static_thread_pool::static_thread_pool(std::size_t num_threads)
 static_thread_pool::~static_thread_pool() = default;
 
 void static_thread_pool::attach() {
-    // TODO
+    impl_->ctx_->attach_worker();
 }
 void static_thread_pool::join() {
-    // TODO
+    attach();
 }
 void static_thread_pool::stop() {
     // TODO

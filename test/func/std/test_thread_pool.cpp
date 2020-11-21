@@ -70,7 +70,7 @@ TEST_CASE("static_thread_pool cannot execute more than maximum concurrency tasks
     auto ex = my_pool.executor();
 
     std::atomic<int> num_parallel{0};
-    std::array<int, num_tasks> results;
+    std::array<int, num_tasks> results{};
     results.fill(0);
 
     std::atomic<bool> can_continue{false};
@@ -92,7 +92,7 @@ TEST_CASE("static_thread_pool cannot execute more than maximum concurrency tasks
     // Unblock all the tasks
     can_continue = true;
 
-    // wait for the task to be executed
+    // wait for the tasks to be executed
     auto grp = detail::get_associated_group(my_pool);
     REQUIRE(bounded_wait(grp));
 
@@ -101,8 +101,40 @@ TEST_CASE("static_thread_pool cannot execute more than maximum concurrency tasks
         REQUIRE(results[i] <= num_threads);
 }
 
-TEST_CASE("static_thread_pool::attach will make the calling thread join the pool", "[execution]") {}
+TEST_CASE("static_thread_pool::attach will make the calling thread join the pool", "[execution]") {
+    std::thread* new_thread{nullptr};
+    {
+        static_thread_pool my_pool{1};
+        auto ex = my_pool.executor();
+
+        // Create a new thread that joins the pool
+        new_thread = new std::thread([&] { my_pool.attach(); });
+        std::this_thread::sleep_for(1ms);
+        auto tid = new_thread->get_id();
+
+        // Add a lot of tasks to the pool, until we have one executed by our thread
+        std::atomic<bool> found{false};
+        for (int i = 0; i < 100; i++) {
+            ex.execute([&] {
+                if (std::this_thread::get_id() == tid) {
+                    found = true;
+                    REQUIRE(ex.running_in_this_thread());
+                }
+            });
+        }
+        // wait for the tasks to be executed
+        auto grp = detail::get_associated_group(my_pool);
+        REQUIRE(bounded_wait(grp));
+        // We should have at least one task running in our new thread
+        REQUIRE(found.load() == true);
+    }
+    // After the thread is released from the pool, join and delete the object
+    new_thread->join();
+    delete new_thread;
+}
 TEST_CASE("static_thread_pool::attach will increase the number of threads in the pool",
+        "[execution]") {}
+TEST_CASE("static_thread_pool attached thread will continue after the thread pool is stopped",
         "[execution]") {}
 TEST_CASE("static_thread_pool does not take new tasks after stop()", "[execution]") {}
 TEST_CASE("static_thread_pool does not take new tasks after wait()", "[execution]") {}

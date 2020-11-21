@@ -37,7 +37,7 @@ exec_context::exec_context(const init_data& config)
             if (worker_start_fun)
                 worker_start_fun();
             // now actually run the logic for the worker thread
-            worker_run(i);
+            worker_run(workers_data_[i]);
         });
     }
 }
@@ -47,9 +47,15 @@ exec_context::~exec_context() {
     done_ = true;
     for (auto& worker_data : workers_data_)
         worker_data.has_data_.signal();
+    for (auto& worker_data : reserved_worker_slots_)
+        worker_data.has_data_.signal();
     // Wait for all the threads to finish
     for (auto& worker_data : workers_data_)
         worker_data.thread_.join();
+    // Wait for all the extra threads to exit this exec_context
+    spin_backoff spinner;
+    while (num_active_extra_slots_.load() > 0)
+        spinner.pause();
 }
 
 void exec_context::enqueue(task&& t, task_priority prio) {
@@ -131,10 +137,9 @@ worker_thread_data* exec_context::enter_worker() {
                 return &data;
             }
         }
-    } else {
-        // Couldn't find any empty slot; decrement the counter back and return
-        num_active_extra_slots_--;
     }
+    // Couldn't find any empty slot; decrement the counter back and return
+    num_active_extra_slots_--;
 
     return nullptr;
 }
@@ -150,17 +155,29 @@ void exec_context::exit_worker(worker_thread_data* worker_data) {
     }
 }
 
-void exec_context::worker_run(int worker_idx) {
+void exec_context::attach_worker() {
+    CONCORE_PROFILING_FUNCTION();
+    auto* wd = enter_worker();
+    if (!wd)
+        throw std::runtime_error("cannot attach; thread already a worker thread");
+
+    // Run until we are done
+    worker_run(*wd);
+    exit_worker(wd);
+}
+
+
+void exec_context::worker_run(worker_thread_data& worker_data) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
-    g_worker_data = &workers_data_[worker_idx];
+    g_worker_data = &worker_data;
     set_context_in_current_thread(this);
     on_worker_active();
     while (true) {
         if (done_)
             return;
 
-        if (!try_extract_execute_task(workers_data_[worker_idx])) {
-            try_sleep(worker_idx);
+        if (!try_extract_execute_task(worker_data)) {
+            try_sleep(worker_data);
         }
     }
     on_worker_inactive();
@@ -208,23 +225,20 @@ bool exec_context::try_extract_execute_task(worker_thread_data& worker_data) {
     return false;
 }
 
-void exec_context::try_sleep(int worker_idx) {
+void exec_context::try_sleep(worker_thread_data& worker_data) {
     on_worker_inactive();
-    auto& data = workers_data_[worker_idx];
-    data.state_.store(worker_thread_data::waiting);
-    if (before_sleep(worker_idx)) {
-        data.has_data_.wait();
+    worker_data.state_.store(worker_thread_data::waiting);
+    if (before_sleep(worker_data)) {
+        worker_data.has_data_.wait();
     }
     on_worker_active();
-    data.state_.store(worker_thread_data::running);
+    worker_data.state_.store(worker_thread_data::running);
 }
 
-bool exec_context::before_sleep(int worker_idx) {
+bool exec_context::before_sleep(worker_thread_data& worker_data) {
     CONCORE_PROFILING_FUNCTION();
-    CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", worker_idx);
-    auto& data = workers_data_[worker_idx];
 
-    data.state_.store(worker_thread_data::waiting);
+    worker_data.state_.store(worker_thread_data::waiting);
 
     // Spin for a bit, in the hope that new tasks are added to the system
     // We hope that we avoid going to sleep just to be woken up immediately
@@ -238,7 +252,7 @@ bool exec_context::before_sleep(int worker_idx) {
 
     // Ok, so now we have to go to sleep
     int old = worker_thread_data::waiting;
-    if (!data.state_.compare_exchange_strong(old, worker_thread_data::idle))
+    if (!worker_data.state_.compare_exchange_strong(old, worker_thread_data::idle))
         return false; // somebody prevented us to go to sleep
 
     return true;
@@ -259,6 +273,20 @@ void exec_context::wakeup_workers() {
         if (old == worker_thread_data::idle)
             num_idle++;
     }
+
+    // Also try to wake up additional threads in in waiting state
+    int num_other_idle = 0;
+    for (int i = 0; i < reserved_slots_; i++) {
+        int old = worker_thread_data::waiting;
+        if (reserved_worker_slots_[i].state_.compare_exchange_strong(old, worker_thread_data::running)) {
+            // Put a worker from waiting to running. That should be enough
+            return;
+        }
+
+        if (old == worker_thread_data::idle)
+            num_other_idle++;
+    }
+
     // If we are here, it means that all our workers are either running or idle.
     // If a worker just switched from running to waiting, it should should be picking up the new
     // task. But we should still wake up one idle thread.
@@ -273,6 +301,20 @@ void exec_context::wakeup_workers() {
             }
         }
     }
+
+    // Also try to wake up additional workers that are idle
+    if (num_other_idle > 0) {
+        for (int i = 0; i < reserved_slots_; i++) {
+            int old = worker_thread_data::idle;
+            if (reserved_worker_slots_[i].state_.compare_exchange_strong(old, worker_thread_data::running)) {
+                // CONCORE_PROFILING_SCOPE_N("waking")
+                // CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", i);
+                reserved_worker_slots_[i].has_data_.signal();
+                return;
+            }
+        }
+    }
+
     // If we are here, it means that all workers are woken up.
 }
 

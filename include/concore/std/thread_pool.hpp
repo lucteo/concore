@@ -250,13 +250,13 @@ public:
     using executor_type = detail::thread_pool_executor;
 
     /**
-     * \biref   Constructs a thread pool.
+     * \brief   Constructs a thread pool.
      *
      * \param   num_threads     The number of threads to statically create in the thread pool
      *
      * This thread pool will create the given number of "internal" threads. This number of threads
      * cannot be changed later on. In addition to these threads, the user might manually add other
-     * threads in the pool by caling the \ref attach() method.
+     * threads in the pool by calling the \ref attach() method.
      *
      * \see     attach()
      */
@@ -282,12 +282,12 @@ public:
     /**
      * \brief   Attach the current thread to the thread pool.
      *
-     * The thread that is calling this will temporary join this thread pool. The thread will behav
+     * The thread that is calling this will temporary join this thread pool. The thread will behave
      * as if it was created during the constructor of this class. The thread will be released from
      * the pool (and return to the caller) whenever the \ref stop() and \ref wait() are releasing
-     * the theads from this pool.
+     * the threads from this pool.
      *
-     * If the thread pool is stopped, this will exit immediatelly without attaching the current
+     * If the thread pool is stopped, this will exit immediately without attaching the current
      * thread to the thread pool.
      *
      * \see     stop(), wait()
@@ -306,6 +306,8 @@ public:
      * After calling this, no new work will be taken by the thread pool.
      *
      * This will cause the threads attached to this pool to detach (after completing ongoing work).
+     * 
+     * This is not thread-safe. Ensure that this is called from a single thread.
      */
     void stop();
 

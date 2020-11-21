@@ -96,7 +96,11 @@ public:
     //! Should be paired 1:1 with enter_worker();
     void exit_worker(worker_thread_data* worker_data);
 
-    //! Returns the number of worker threads we created
+    //! Called to attach the current thread as a worker to the execution context.
+    //! The current function will not terminate until the execution context is destroyed.
+    void attach_worker();
+
+    //! Returns the number of worker threads we initially created
     int num_worker_threads() const { return count_; }
 
     //! Tests if there are tasks currently executing in our task system. This also counts any
@@ -143,17 +147,17 @@ private:
     mutable std::atomic<int> num_active_workers_{0};
 
     //! The run procedure for a worker thread
-    void worker_run(int worker_idx);
+    void worker_run(worker_thread_data& worker_data);
 
     //! Tries to extract a task and execute it. Returns false if couldn't extract a task
     bool try_extract_execute_task(worker_thread_data& worker_data);
 
     //! Puts the worker to sleep if the `done_` flag is not set
-    void try_sleep(int worker_idx);
+    void try_sleep(worker_thread_data& worker_data);
 
     //! Called before going to sleep to wait a bit and check for any incoming tasks.
     //! Returns true if we can safely go to sleep.
-    bool before_sleep(int worker_idx);
+    bool before_sleep(worker_thread_data& worker_data);
 
     //! Called when adding a new task to wakeup the workers
     void wakeup_workers();
