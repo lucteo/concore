@@ -63,50 +63,46 @@ TEST_CASE("static_thread_pool executor's running_in_this_thread returns true if 
     REQUIRE(bounded_wait(grp));
 }
 
-int get_max_concurrency(static_thread_pool& pool, int num_tasks) {
+int get_max_concurrency(static_thread_pool& pool) {
     std::atomic<int> num_parallel{0};
-    std::vector<int> results;
-    results.resize(num_tasks, 0);
+    std::atomic<bool> done{false};
 
-    std::atomic<bool> can_continue{false};
-
-    // Start all the tasks in parallel; but keep them blocked
-    auto ex = pool.executor();
-    for (int i = 0; i < num_tasks; i++) {
-        ex.execute([i, &results, &can_continue, &num_parallel] {
-            // Increase the parallelism and note the current parallelism level
-            results[i] = ++num_parallel;
-            // Wait until all the tasks are started
-            while (!can_continue.load())
+    auto taskFun = [&](int) {
+        if (!done) {
+            // Increase the parallel count, and wait for us to be unblocked
+            num_parallel++;
+            while (!done)
                 std::this_thread::sleep_for(100us);
-            // Decrease parallelism and exit
-            num_parallel--;
-        });
+        }
+    };
+
+    // Add tasks to the pool, until the parallelism level doesn't increase anymore
+    int prev_par = -1;
+    while (true) {
+        int cur_par = num_parallel.load();
+        if (cur_par == prev_par)
+            break;
+        prev_par = cur_par;
+        // Start a new set of tasks
+        pool.executor().bulk_execute(taskFun, 10);
+        // Wait for the tasks to start
+        std::this_thread::sleep_for(10ms);
     }
-    std::this_thread::sleep_for(1ms);
 
-    // Unblock all the tasks
-    can_continue = true;
-
-    // wait for the tasks to be executed
+    // Wait for all the tasks to complete
+    done = true;
     auto grp = detail::get_associated_group(pool);
     REQUIRE(bounded_wait(grp));
 
-    // Check that the maximum parallelism is the one we specified
-    int max_concurrency = 0;
-    for (auto res : results) {
-        if (max_concurrency < res)
-            max_concurrency = res;
-    }
-    return max_concurrency;
+    return num_parallel.load();
 }
 
 TEST_CASE("static_thread_pool cannot execute more than maximum concurrency tasks in parallel",
         "[execution]") {
     constexpr int num_threads = 10;
     static_thread_pool my_pool{num_threads};
-    int conc = get_max_concurrency(my_pool, 2 * num_threads);
-    REQUIRE(conc <= num_threads);
+    int conc = get_max_concurrency(my_pool);
+    REQUIRE(conc == num_threads);
 }
 
 TEST_CASE("static_thread_pool::attach will make the calling thread join the pool", "[execution]") {
@@ -160,9 +156,8 @@ TEST_CASE("static_thread_pool::attach will increase the number of threads in the
             extra_threads.emplace_back(std::thread([&] { my_pool.attach(); }));
 
         // Check the max concurrency of the pool
-        int conc = get_max_concurrency(my_pool, 100);
-        REQUIRE(conc <= num_pool_threads + num_extra_threads);
-        REQUIRE(conc > num_pool_threads);
+        int conc = get_max_concurrency(my_pool);
+        REQUIRE(conc == num_pool_threads + num_extra_threads);
     }
     // Join the threads
     for (auto& t : extra_threads)
