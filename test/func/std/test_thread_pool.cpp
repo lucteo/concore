@@ -147,7 +147,6 @@ TEST_CASE("static_thread_pool::attach will make the calling thread join the pool
 }
 TEST_CASE("static_thread_pool::attach will increase the number of threads in the pool",
         "[execution]") {
-    std::this_thread::sleep_for(200ms);
     constexpr int num_pool_threads = 2;
     constexpr int num_extra_threads = 4;
     std::vector<std::thread> extra_threads{};
@@ -168,10 +167,45 @@ TEST_CASE("static_thread_pool::attach will increase the number of threads in the
     // Join the threads
     for (auto& t : extra_threads)
         t.join();
-    std::this_thread::sleep_for(200ms);
 }
 TEST_CASE("static_thread_pool attached thread will continue after the thread pool is stopped",
-        "[execution]") {}
+        "[execution]") {
+    std::thread extra_thread{};
+    std::atomic<bool> after_attach{false};
+    {
+        static_thread_pool my_pool{1};
+
+        // Add thread too the pool
+        extra_thread = std::thread([&] {
+            my_pool.attach();
+            after_attach = true;
+        });
+
+        // Add a bunch of tasks to the pool
+        constexpr int num_tasks = 100;
+        std::atomic<int> num_executed{0};
+        auto ex = my_pool.executor();
+        ex.bulk_execute([&](int) { num_executed++; }, num_tasks);
+
+        // Wait for all the tasks to be executed
+        auto grp = detail::get_associated_group(my_pool);
+        REQUIRE(bounded_wait(grp));
+        REQUIRE(num_executed.load() == num_tasks);
+
+        // At this point, the extra thread is still inside the call to 'attach()'
+        REQUIRE_FALSE(after_attach.load());
+    }
+
+    // Wait until we exit the attach() function and we set the atomic
+    for (int i = 0; i < 100; i++) {
+        if (!after_attach.load())
+            std::this_thread::sleep_for(1ms);
+    }
+    REQUIRE(after_attach.load());
+
+    // Join thee thread
+    extra_thread.join();
+}
 TEST_CASE("static_thread_pool does not take new tasks after stop()", "[execution]") {}
 TEST_CASE("static_thread_pool does not take new tasks after wait()", "[execution]") {}
 TEST_CASE("static_thread_pool waits for all the tasks to be done when calling wait()",
