@@ -112,11 +112,14 @@ static_thread_pool::~static_thread_pool() = default;
 
 void static_thread_pool::attach() { impl_->ctx_->attach_worker(); }
 void static_thread_pool::join() { attach(); }
-void static_thread_pool::stop() {
-    // TODO
-}
+void static_thread_pool::stop() { impl_->grp_.cancel(); }
 void static_thread_pool::wait() {
-    // TODO
+    // Wait for all the existing tasks to complete
+    concore::wait(impl_->grp_);
+    // Ensure that no more tasks are added to the pool
+    impl_->grp_.cancel();
+    // Wait for any tasks that were added in the meantime
+    concore::wait(impl_->grp_);
 }
 static_thread_pool::scheduler_type static_thread_pool::scheduler() noexcept {
     return detail::thread_pool_scheduler{impl_.get()};

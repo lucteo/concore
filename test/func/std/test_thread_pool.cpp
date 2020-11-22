@@ -206,7 +206,92 @@ TEST_CASE("static_thread_pool attached thread will continue after the thread poo
     // Join thee thread
     extra_thread.join();
 }
-TEST_CASE("static_thread_pool does not take new tasks after stop()", "[execution]") {}
-TEST_CASE("static_thread_pool does not take new tasks after wait()", "[execution]") {}
-TEST_CASE("static_thread_pool waits for all the tasks to be done when calling wait()",
-        "[execution]") {}
+TEST_CASE("static_thread_pool does not take new tasks after stop()", "[execution]") {
+    static_thread_pool my_pool{1};
+    auto ex = my_pool.executor();
+    auto grp = detail::get_associated_group(my_pool);
+
+    std::atomic<int> num_executed{0};
+
+    // Add a bunch of tasks to the pool, and wait for them to execute
+    constexpr int num_tasks = 100;
+    ex.bulk_execute([&](int) { num_executed++; }, num_tasks);
+    REQUIRE(bounded_wait(grp));
+
+    // Stop the thread pool
+    my_pool.stop();
+
+    // Add some more tasks to the pool, and wait until everything is executed
+    ex.bulk_execute([&](int) { num_executed++; }, num_tasks);
+    REQUIRE(bounded_wait(grp));
+
+    // Check that we haven't executed anything in the second phase
+    REQUIRE(num_executed.load() == num_tasks);
+}
+TEST_CASE("static_thread_pool does not take new tasks after wait()", "[execution]") {
+    static_thread_pool my_pool{1};
+    auto ex = my_pool.executor();
+    auto grp = detail::get_associated_group(my_pool);
+
+    std::atomic<int> num_executed{0};
+
+    // Add a bunch of tasks to the pool, and wait for them to execute
+    constexpr int num_tasks = 100;
+    ex.bulk_execute([&](int) { num_executed++; }, num_tasks);
+    REQUIRE(bounded_wait(grp));
+
+    // Stop the thread pool by calling 'wait()'
+    my_pool.wait();
+
+    // Add some more tasks to the pool, and wait until everything is executed
+    ex.bulk_execute([&](int) { num_executed++; }, num_tasks);
+    REQUIRE(bounded_wait(grp));
+
+    // Check that we haven't executed anything in the second phase
+    REQUIRE(num_executed.load() == num_tasks);
+}
+TEST_CASE("static_thread_pool will not execute all pending tasks when stop() is called",
+        "[execution]") {
+    static_thread_pool my_pool{1};
+    auto ex = my_pool.executor();
+    auto grp = detail::get_associated_group(my_pool);
+
+    std::atomic<int> num_executed{0};
+
+    // Add a bunch of tasks to the pool, that can take a bit of time
+    auto waitTask = [&](int) {
+        std::this_thread::sleep_for(1ms);
+        num_executed++;
+    };
+    constexpr int num_tasks = 20;
+    ex.bulk_execute(waitTask, num_tasks);
+
+    // Stop the thread pool
+    my_pool.stop();
+
+    // Ensure that we haven't executed all the tasks
+    REQUIRE(bounded_wait(grp));
+    REQUIRE(num_executed.load() < num_tasks);
+}
+TEST_CASE(
+        "static_thread_pool will execute all pending tasks when wait() is called", "[execution]") {
+    static_thread_pool my_pool{1};
+    auto ex = my_pool.executor();
+    auto grp = detail::get_associated_group(my_pool);
+
+    std::atomic<int> num_executed{0};
+
+    // Add a bunch of tasks to the pool, that can take a bit of time
+    auto waitTask = [&](int) {
+        std::this_thread::sleep_for(1ms);
+        num_executed++;
+    };
+    constexpr int num_tasks = 20;
+    ex.bulk_execute(waitTask, num_tasks);
+
+    // Wait on the the thread pool
+    my_pool.wait();
+
+    // Ensure that we have executed all the tasks
+    REQUIRE(num_executed.load() == num_tasks);
+}
