@@ -306,7 +306,7 @@ public:
      * After calling this, no new work will be taken by the thread pool.
      *
      * This will cause the threads attached to this pool to detach (after completing ongoing work).
-     * 
+     *
      * This is not thread-safe. Ensure that this is called from a single thread.
      */
     void stop();

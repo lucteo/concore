@@ -110,12 +110,8 @@ static_thread_pool::static_thread_pool(std::size_t num_threads)
 
 static_thread_pool::~static_thread_pool() = default;
 
-void static_thread_pool::attach() {
-    impl_->ctx_->attach_worker();
-}
-void static_thread_pool::join() {
-    attach();
-}
+void static_thread_pool::attach() { impl_->ctx_->attach_worker(); }
+void static_thread_pool::join() { attach(); }
 void static_thread_pool::stop() {
     // TODO
 }

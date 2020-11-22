@@ -26,9 +26,9 @@ exec_context::exec_context(const init_data& config)
     , reserved_worker_slots_(static_cast<size_t>(reserved_slots_)) {
     CONCORE_PROFILING_INIT();
     CONCORE_PROFILING_FUNCTION();
-    // Mark all the extra slots as being idle
+    // Mark all the extra slots as being invalid
     for (auto& w : reserved_worker_slots_)
-        w.state_.store(worker_thread_data::idle);
+        w.state_.store(worker_thread_data::invalid);
     // Start the worker threads
     std::function<void()> worker_start_fun = config.worker_start_fun_;
     for (int i = 0; i < count_; i++) {
@@ -127,7 +127,7 @@ worker_thread_data* exec_context::enter_worker() {
     // Ok, so this is called from an external thread. Try to occupy a free slot
     if (++num_active_extra_slots_ <= reserved_slots_) {
         for (auto& data : reserved_worker_slots_) {
-            int old = worker_thread_data::idle;
+            int old = worker_thread_data::invalid;
             if (data.state_.compare_exchange_strong(old, worker_thread_data::running)) {
                 // Found an empty slot; use it
                 data.state_.store(worker_thread_data::running, std::memory_order_relaxed);
@@ -166,16 +166,12 @@ void exec_context::attach_worker() {
     exit_worker(wd);
 }
 
-
 void exec_context::worker_run(worker_thread_data& worker_data) {
     CONCORE_PROFILING_SETTHREADNAME("concore_worker");
     g_worker_data = &worker_data;
     set_context_in_current_thread(this);
     on_worker_active();
-    while (true) {
-        if (done_)
-            return;
-
+    while (!done_.load()) {
         if (!try_extract_execute_task(worker_data)) {
             try_sleep(worker_data);
         }
@@ -278,7 +274,8 @@ void exec_context::wakeup_workers() {
     int num_other_idle = 0;
     for (int i = 0; i < reserved_slots_; i++) {
         int old = worker_thread_data::waiting;
-        if (reserved_worker_slots_[i].state_.compare_exchange_strong(old, worker_thread_data::running)) {
+        if (reserved_worker_slots_[i].state_.compare_exchange_strong(
+                    old, worker_thread_data::running)) {
             // Put a worker from waiting to running. That should be enough
             return;
         }
@@ -306,7 +303,8 @@ void exec_context::wakeup_workers() {
     if (num_other_idle > 0) {
         for (int i = 0; i < reserved_slots_; i++) {
             int old = worker_thread_data::idle;
-            if (reserved_worker_slots_[i].state_.compare_exchange_strong(old, worker_thread_data::running)) {
+            if (reserved_worker_slots_[i].state_.compare_exchange_strong(
+                        old, worker_thread_data::running)) {
                 // CONCORE_PROFILING_SCOPE_N("waking")
                 // CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", i);
                 reserved_worker_slots_[i].has_data_.signal();

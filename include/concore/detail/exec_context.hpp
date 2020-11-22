@@ -31,6 +31,7 @@ struct worker_thread_data {
         idle = 0, //!< We don't have any tasks and we are sleeping
         waiting,  //!< No tasks, but we are spinning in the hope to catch a task
         running,  //!< We have some tasks, or we think we have some tasks to execute
+        invalid,  //!< This is set for reserved workers that are not in use
     };
 
     //! The thread object for this worker
