@@ -89,63 +89,6 @@ class sink_receiver;
 template <class S>
 struct sender_traits;
 
-// Associated execution context property:
-
-// TODO: see 2.2.11.1 Associated execution context property
-struct context_t {};
-
-constexpr context_t context;
-
-// Blocking properties:
-
-// TODO: see 2.2.12.1 Blocking properties
-struct blocking_t {};
-
-constexpr blocking_t blocking;
-
-// Properties to allow adaptation of blocking and directionality:
-
-// TODO: see 2.2.12.2 Properties to indicate if blocking and directionality may be adapted
-struct blocking_adaptation_t {};
-
-constexpr blocking_adaptation_t blocking_adaptation;
-
-// Properties to indicate if submitted tasks represent continuations:
-
-// TODO: see 2.2.12.3 Properties to indicate if submitted tasks represent continuations
-struct relationship_t {};
-
-constexpr relationship_t relationship;
-
-// Properties to indicate likely task submission in the future:
-
-// TODO: see 2.2.12.4 Properties to indicate likely task submission in the future
-struct outstanding_work_t {};
-
-constexpr outstanding_work_t outstanding_work;
-
-// Properties for bulk execution guarantees:
-
-// TODO: see 2.2.12.5 Properties for bulk execution guarantees
-struct bulk_guarantee_t {};
-
-constexpr bulk_guarantee_t bulk_guarantee;
-
-// Properties for mapping of execution on to threads:
-
-// TODO: see 2.2.12.6 Properties for mapping of execution on to threads
-struct mapping_t {};
-
-constexpr mapping_t mapping;
-
-// Memory allocation properties:
-
-// TODO: see 2.2.13 Properties for customizing memory allocation
-template <typename ProtoAllocator>
-struct allocator_t {};
-
-constexpr allocator_t<void> allocator;
-
 // Executor type traits:
 
 // TODO: see 2.3.1 Associated shape type

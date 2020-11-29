@@ -73,7 +73,7 @@ thread_pool_scheduler& thread_pool_scheduler::operator=(
         thread_pool_scheduler&& r) noexcept = default;
 
 bool thread_pool_scheduler::running_in_this_thread() const noexcept {
-    return false; // TODO
+    return &concore::detail::get_exec_context() == impl_->ctx_;
 }
 
 bool operator==(const thread_pool_scheduler& l, const thread_pool_scheduler& r) noexcept {

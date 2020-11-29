@@ -34,28 +34,6 @@ public:
     thread_pool_sender& operator=(thread_pool_sender&& r) noexcept;
     ~thread_pool_sender();
 
-    // TODO:
-    // see-below require(execution::blocking_t::never_t) const;
-    // see-below require(execution::blocking_t::possibly_t) const;
-    // see-below require(execution::blocking_t::always_t) const;
-    // see-below require(execution::relationship_t::continuation_t) const;
-    // see-below require(execution::relationship_t::fork_t) const;
-    // see-below require(execution::outstanding_work_t::tracked_t) const;
-    // see-below require(execution::outstanding_work_t::untracked_t) const;
-    // see-below require(const execution::allocator_t<void>& a) const;
-    // template<class ProtoAllocator>
-    // see-below require(const execution::allocator_t<ProtoAllocator>& a) const;
-
-    // static constexpr execution::bulk_guarantee_t query(execution::bulk_guarantee_t) const;
-    // static constexpr execution::mapping_t query(execution::mapping_t) const;
-    // execution::blocking_t query(execution::blocking_t) const;
-    // execution::relationship_t query(execution::relationship_t) const;
-    // execution::outstanding_work_t query(execution::outstanding_work_t) const;
-    // see-below query(execution::context_t) const noexcept;
-    // see-below query(execution::allocator_t<void>) const noexcept;
-    // template<class ProtoAllocator>
-    // see-below query(execution::allocator_t<ProtoAllocator>) const noexcept;
-
     /**
      * \brief   Checks if this thread is part of the thread pool
      *
@@ -97,16 +75,6 @@ public:
     thread_pool_scheduler& operator=(thread_pool_scheduler&& r) noexcept;
     ~thread_pool_scheduler() = default;
 
-    // TODO:
-    // see-below require(const execution::allocator_t<void>& a) const;
-    // template<class ProtoAllocator>
-    // see-below require(const execution::allocator_t<ProtoAllocator>& a) const;
-
-    // see-below query(execution::context_t) const noexcept;
-    // see-below query(execution::allocator_t<void>) const noexcept;
-    // template<class ProtoAllocator>
-    // see-below query(execution::allocator_t<ProtoAllocator>) const noexcept;
-
     /**
      * \brief   Checks if this thread is part of the thread pool
      *
@@ -140,29 +108,6 @@ public:
     thread_pool_executor(thread_pool_executor&& r) noexcept = default;
     thread_pool_executor& operator=(thread_pool_executor&& r) noexcept = default;
     ~thread_pool_executor() = default;
-
-    // TODO:
-    // see-below require(execution::blocking_t::never_t) const;
-    // see-below require(execution::blocking_t::possibly_t) const;
-    // see-below require(execution::blocking_t::always_t) const;
-    // see-below require(execution::relationship_t::continuation_t) const;
-    // see-below require(execution::relationship_t::fork_t) const;
-    // see-below require(execution::outstanding_work_t::tracked_t) const;
-    // see-below require(execution::outstanding_work_t::untracked_t) const;
-    // see-below require(const execution::allocator_t<void>& a) const;
-    // template<class ProtoAllocator>
-    // see-below require(const execution::allocator_t<ProtoAllocator>& a) const;
-
-    // TODO:
-    // static constexpr execution::bulk_guarantee_t query(execution::bulk_guarantee_t::parallel_t)
-    // const; static constexpr execution::mapping_t query(execution::mapping_t::thread_t) const;
-    // execution::blocking_t query(execution::blocking_t) const;
-    // execution::relationship_t query(execution::relationship_t) const;
-    // execution::outstanding_work_t query(execution::outstanding_work_t) const;
-    // see-below query(execution::context_t) const noexcept;
-    // see-below query(execution::allocator_t<void>) const noexcept;
-    // template<class ProtoAllocator>
-    // see-below query(execution::allocator_t<ProtoAllocator>) const noexcept;
 
     /**
      * \brief   Checks if this thread is part of the thread pool
@@ -204,8 +149,6 @@ public:
      */
     template <typename F>
     void bulk_execute(F&& f, size_t n) const {
-        // TODO: this is suboptimal, better use conc_for and/or SIMD instructions
-        // #prama simd
         for (size_t i = 0; i < n; i++)
             internal_execute([i, f]() { f(i); });
     }
@@ -242,11 +185,19 @@ inline namespace v1 {
  * When destructing this object, the implementation ensures to wait on all the in-progress items.
  *
  * Any scheduler or executor objects that are created cannot exceed the lifetime of this object.
+ *
+ * Properties of the static_thread_pool executor:
+ *      - blocking.always
+ *      - relationship.fork
+ *      - outstanding_work.untracked
+ *      - bulk_guarantee.parallel
+ *      - mapping.thread
  */
 class static_thread_pool {
 public:
-    // TODO: document
+    //! The type of scheduler that this object exposes
     using scheduler_type = detail::thread_pool_scheduler;
+    //! The type of executor that this object exposes
     using executor_type = detail::thread_pool_executor;
 
     /**
