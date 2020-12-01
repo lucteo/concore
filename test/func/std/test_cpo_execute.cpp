@@ -13,18 +13,6 @@ bool can_call(const Ex& ex) {
     bool called = false;
     auto f = [&] { called = true; };
     concore::std_execution::execute(ex, std::move(f));
-
-    using namespace concore::std_execution::detail::cpo_execute;
-
-    // using E = Ex;
-    // using F = typeof(f);
-
-    // sizeof(Tester<concore::std_execution::detail::cpo_execute::member_execute_result_t<Ex, typeof(f)>>);
-    // sizeof(TesterInt<sizeof(static_cast<member_execute_result_t<E, F>*>(nullptr))>);
-
-    // has_inner_execute_test_fun<E, F>(1);
-    // sizeof(Tester<typeof(static_cast<member_execute_result_t<E, F>*>(nullptr))>);
-    // sizeof(TesterInt<sizeof(has_inner_execute_test_fun(static_cast<E*>(nullptr), static_cast<F*>(nullptr), static_cast<member_execute_result_t<E, F>*>(nullptr)))>);
     return called;
 }
 
