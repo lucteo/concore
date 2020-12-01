@@ -5,6 +5,11 @@
 #include <exception>
 #include <type_traits>
 
+#include "_cpo_execute.hpp"
+#if CONCORE_CXX_HAS_CONCEPTS
+#include "_executor.hpp"
+#endif
+
 namespace concore {
 
 namespace std_execution {
@@ -17,11 +22,6 @@ struct receiver_invocation_error : std::runtime_error, std::nested_exception {
         : runtime_error("receiver_invocation_error")
         , nested_exception() {}
 };
-
-// Invocable archetype
-
-// TODO: see 2.2.2 Invocable archetype
-using invocable_archetype = int;
 
 // Customization points:
 
@@ -70,14 +70,6 @@ concept sender_to = true;
 // TODO: see 2.2.8 Concept scheduler
 template <class S>
 concept scheduler = true;
-
-// TODO: see 2.2.9 Concepts executor and executor_of
-template <class E>
-concept executor = true;
-
-// TODO: see 2.2.9 Concepts executor and executor_of
-template <class E, class F>
-concept executor_of = true;
 
 #endif
 

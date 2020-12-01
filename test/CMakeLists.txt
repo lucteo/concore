@@ -29,6 +29,8 @@ set(func_sourceFiles
 
     "func/std/test_execution.cpp"
     "func/std/test_thread_pool.cpp"
+    "func/std/test_concepts.cpp"
+    "func/std/test_cpo_execute.cpp"
 
     "func/profiling_helper_test.cpp" # Must be last
 )
