@@ -59,7 +59,7 @@ public:
     thread_pool_sender& operator=(const thread_pool_sender& r) noexcept;
     thread_pool_sender(thread_pool_sender&& r) noexcept;
     thread_pool_sender& operator=(thread_pool_sender&& r) noexcept;
-    ~thread_pool_sender();
+    ~thread_pool_sender() = default;
 
     /**
      * \brief   Checks if this thread is part of the thread pool
@@ -103,7 +103,7 @@ public:
     thread_pool_scheduler& operator=(const thread_pool_scheduler& r) noexcept;
     thread_pool_scheduler(thread_pool_scheduler&& r) noexcept;
     thread_pool_scheduler& operator=(thread_pool_scheduler&& r) noexcept;
-    ~thread_pool_scheduler();
+    ~thread_pool_scheduler() = default;
 
     /**
      * \brief   Checks if this thread is part of the thread pool

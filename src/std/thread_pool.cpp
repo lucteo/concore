@@ -73,7 +73,6 @@ thread_pool_sender::thread_pool_sender(const thread_pool_sender& r) noexcept = d
 thread_pool_sender& thread_pool_sender::operator=(const thread_pool_sender& r) noexcept = default;
 thread_pool_sender::thread_pool_sender(thread_pool_sender&& r) noexcept = default;
 thread_pool_sender& thread_pool_sender::operator=(thread_pool_sender&& r) noexcept = default;
-thread_pool_sender::~thread_pool_sender() = default;
 
 thread_pool_scheduler::thread_pool_scheduler(pool_data* impl) noexcept
     : impl_(impl) {}
@@ -83,7 +82,6 @@ thread_pool_scheduler& thread_pool_scheduler::operator=(
 thread_pool_scheduler::thread_pool_scheduler(thread_pool_scheduler&& r) noexcept = default;
 thread_pool_scheduler& thread_pool_scheduler::operator=(
         thread_pool_scheduler&& r) noexcept = default;
-thread_pool_scheduler::~thread_pool_scheduler() = default;
 
 bool thread_pool_scheduler::running_in_this_thread() const noexcept {
     return &concore::detail::get_exec_context() == impl_->ctx_;
