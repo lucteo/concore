@@ -63,6 +63,18 @@ private:
 
 task_group get_associated_group(const static_thread_pool& pool) { return pool.impl_->grp_; }
 
+void pool_enqueue(pool_data& pool, task_function&& t) {
+    pool.ctx_->enqueue(task{std::move(t), pool.grp_});
+}
+
+thread_pool_sender::thread_pool_sender(pool_data* impl) noexcept
+    : impl_(impl) {}
+thread_pool_sender::thread_pool_sender(const thread_pool_sender& r) noexcept = default;
+thread_pool_sender& thread_pool_sender::operator=(const thread_pool_sender& r) noexcept = default;
+thread_pool_sender::thread_pool_sender(thread_pool_sender&& r) noexcept = default;
+thread_pool_sender& thread_pool_sender::operator=(thread_pool_sender&& r) noexcept = default;
+thread_pool_sender::~thread_pool_sender() = default;
+
 thread_pool_scheduler::thread_pool_scheduler(pool_data* impl) noexcept
     : impl_(impl) {}
 thread_pool_scheduler::thread_pool_scheduler(const thread_pool_scheduler& r) noexcept = default;
@@ -71,6 +83,7 @@ thread_pool_scheduler& thread_pool_scheduler::operator=(
 thread_pool_scheduler::thread_pool_scheduler(thread_pool_scheduler&& r) noexcept = default;
 thread_pool_scheduler& thread_pool_scheduler::operator=(
         thread_pool_scheduler&& r) noexcept = default;
+thread_pool_scheduler::~thread_pool_scheduler() = default;
 
 bool thread_pool_scheduler::running_in_this_thread() const noexcept {
     return &concore::detail::get_exec_context() == impl_->ctx_;
@@ -88,10 +101,6 @@ thread_pool_executor::thread_pool_executor(pool_data* impl) noexcept
 
 bool thread_pool_executor::running_in_this_thread() const noexcept {
     return &concore::detail::get_exec_context() == impl_->ctx_;
-}
-
-void thread_pool_executor::internal_execute(task_function&& t) const {
-    impl_->ctx_->enqueue(task{std::move(t), impl_->grp_});
 }
 
 bool operator==(const thread_pool_executor& l, const thread_pool_executor& r) noexcept {

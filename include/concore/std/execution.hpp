@@ -5,9 +5,17 @@
 #include <exception>
 #include <type_traits>
 
+#include "_cpo_set_value.hpp"
+#include "_cpo_set_done.hpp"
+#include "_cpo_set_error.hpp"
 #include "_cpo_execute.hpp"
+#include "_cpo_connect.hpp"
+#include "_cpo_start.hpp"
+#include "_cpo_submit.hpp"
+#include "_cpo_schedule.hpp"
+#include "_cpo_bulk_execute.hpp"
 #if CONCORE_CXX_HAS_CONCEPTS
-#include "_executor.hpp"
+#include "_concepts.hpp"
 #endif
 
 namespace concore {
@@ -22,56 +30,6 @@ struct receiver_invocation_error : std::runtime_error, std::nested_exception {
         : runtime_error("receiver_invocation_error")
         , nested_exception() {}
 };
-
-// Customization points:
-
-// TODO: see 2.2.3 Customization points
-// inline namespace unspecified {
-// inline constexpr unspecified set_value = unspecified;
-
-// inline constexpr unspecified set_done = unspecified;
-
-// inline constexpr unspecified set_error = unspecified;
-
-// inline constexpr unspecified execute = unspecified;
-
-// inline constexpr unspecified submit = unspecified;
-
-// inline constexpr unspecified schedule = unspecified;
-
-// inline constexpr unspecified bulk_execute = unspecified;
-// } // namespace unspecified
-
-// Concepts:
-
-#if CONCORE_CXX_HAS_CONCEPTS
-
-// TODO: see 2.2.4 Concept receiver
-template <class T, class E = std::exception_ptr>
-concept receiver = true; // std::move_constructible<std::remove_cvref_t<R>> &&
-                         // constructible_from<remove_cvref_t<R>, R>; // TODO
-
-// TODO: see 2.2.5 Concept receiver_of
-template <class T, class... An>
-concept receiver_of = true;
-
-// TODO: see 2.2.6 Concepts sender and sender_to
-template <class S>
-concept sender = true;
-
-// TODO: see 2.2.7 Concept typed_sender
-template <class S>
-concept typed_sender = true;
-
-// TODO: see 2.2.6 Concepts sender and sender_to
-template <class S, class R>
-concept sender_to = true;
-
-// TODO: see 2.2.8 Concept scheduler
-template <class S>
-concept scheduler = true;
-
-#endif
 
 // Sender and receiver utilities type
 // TODO: see 2.2.10.1 Class sink_receiver

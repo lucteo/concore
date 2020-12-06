@@ -1,6 +1,10 @@
 #pragma once
 
 #include <concore/detail/cxx_features.hpp>
+#if CONCORE_CXX_HAS_CONCEPTS
+#include "_concepts.hpp"
+#endif
+#include "_cpo_set_value.hpp"
 #include <concore/task.hpp>
 
 #include <exception>
@@ -25,6 +29,29 @@ struct pool_data;
 //! Gets the task group associated with the given pool. Used for testing
 task_group get_associated_group(const static_thread_pool& pool);
 
+//! Enqueue a task into the task pool
+void pool_enqueue(pool_data& pool, task_function&& t);
+
+//! Operation struct that models operation_state concept.
+//! Returned when the user calls 'connect' on the thread pool sender.
+template <typename Receiver>
+struct pool_sender_op {
+
+    pool_sender_op(pool_data* pool, Receiver&& r)
+        : pool_(pool)
+        , receiver_(std::move(r)) {}
+
+    void start() noexcept {
+        auto t = [this]() noexcept { concore::std_execution::set_value(std::move(receiver_)); };
+        pool_enqueue(*pool_, std::move(t));
+    }
+
+private:
+    pool_data* pool_{nullptr};
+    Receiver receiver_;
+};
+
+//! The sender type exposed by the thread pool
 class thread_pool_sender {
 public:
     explicit thread_pool_sender(pool_data* impl) noexcept;
@@ -46,11 +73,13 @@ public:
     // using value_types = Variant<Tuple<>>;
     // template <template <class...> class Variant>
     // using error_types = Variant<exception_ptr>;
-    // static constexpr bool sends_done = true;
 
-    // TODO:
-    // template <receiver_of R>
-    // void connect(R&& r) const;
+    static constexpr bool sends_done = true;
+
+    template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
+    pool_sender_op<R> connect(R&& r) const {
+        return pool_sender_op<R>(impl_, (R &&) r);
+    }
 
 private:
     //! The implementation data; use pimpl idiom.
@@ -64,6 +93,7 @@ private:
 bool operator==(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
 bool operator!=(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
 
+//! The scheduler type exposed by the thread pool
 class thread_pool_scheduler {
 public:
     using sender_type = thread_pool_sender;
@@ -73,7 +103,7 @@ public:
     thread_pool_scheduler& operator=(const thread_pool_scheduler& r) noexcept;
     thread_pool_scheduler(thread_pool_scheduler&& r) noexcept;
     thread_pool_scheduler& operator=(thread_pool_scheduler&& r) noexcept;
-    ~thread_pool_scheduler() = default;
+    ~thread_pool_scheduler();
 
     /**
      * \brief   Checks if this thread is part of the thread pool
@@ -83,7 +113,13 @@ public:
      */
     bool running_in_this_thread() const noexcept;
 
-    thread_pool_sender schedule() noexcept;
+    /**
+     * @brief Returns a sender object corresponding to this thread pool
+     * @return The required sender object.
+     *
+     * The sender object can be used to send work on the thread pool.
+     */
+    thread_pool_sender schedule() noexcept { return thread_pool_sender(impl_); }
 
 private:
     //! The implementation data; use pimpl idiom.
@@ -131,7 +167,7 @@ public:
      */
     template <typename F>
     void execute(F&& f) const {
-        internal_execute(task_function{f});
+        pool_enqueue(*impl_, task_function{f});
     }
 
     /**
@@ -150,13 +186,10 @@ public:
     template <typename F>
     void bulk_execute(F&& f, size_t n) const {
         for (size_t i = 0; i < n; i++)
-            internal_execute([i, f]() { f(i); });
+            pool_enqueue(*impl_, [i, f]() { f(i); });
     }
 
 private:
-    //! Called by execute to start executing the given task function
-    void internal_execute(task_function&& t) const;
-
     //! The implementation data; use pimpl idiom.
     //! Parent object must be active for the lifetime of this object
     pool_data* impl_;

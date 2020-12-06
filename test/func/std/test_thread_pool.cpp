@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/std/thread_pool.hpp>
+#include <concore/std/execution.hpp>
 #include "test_common/task_utils.hpp"
 
 #include <array>
@@ -289,4 +290,25 @@ TEST_CASE(
 
     // Ensure that we have executed all the tasks
     REQUIRE(num_executed.load() == num_tasks);
+}
+
+TEST_CASE("static_thread_pool scheduler can schedule work", "[execution]") {
+    struct my_receiver {
+        bool* executed_;
+
+        void set_value() noexcept { *executed_ = true; }
+        void set_done() noexcept { REQUIRE(false); }
+        void set_error(std::exception_ptr) noexcept { REQUIRE(false); }
+    };
+
+    static_thread_pool my_pool{1};
+    auto scheduler = my_pool.scheduler();
+
+    bool executed = false;
+    auto op = scheduler.schedule().connect(my_receiver{&executed});
+    concore::std_execution::start(op);
+
+    // Ensure that the receiver is called
+    my_pool.wait();
+    REQUIRE(executed);
 }
