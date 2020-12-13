@@ -1,6 +1,6 @@
 #pragma once
 
-#include <concore/detail/cxx_features.hpp>
+#include <concore/detail/concept_macros.hpp>
 
 namespace concore {
 
@@ -9,112 +9,71 @@ namespace std_execution {
 namespace detail {
 namespace cpo_execute {
 
-#if CONCORE_CXX_HAS_CONCEPTS
+using concore::detail::valOfType;
+
+// clang-format off
+CONCORE_CONCEPT_REQUIRES_CASE3(meets_tag_invoke,
+    (requires(const T2& e, T3&& f) {
+        tag_invoke(T1{}, (T2 &&) e, (T3 &&) f);
+    }));
+CONCORE_CONCEPT_REQUIRES_CASE2(meets_inner_execute,
+    (requires(const T1& e, T2&& f) {
+        e.execute((T2 &&) f);
+    }));
+CONCORE_CONCEPT_REQUIRES_CASE2(meets_outer_execute,
+    (requires(const T1& e, T2&& f) {
+        execute((T1 &&) e, (T2 &&) f);
+    }));
+// clang-format on
+
+CONCORE_NONCONCEPT_REQUIRES_DEFAULTCASE();
+CONCORE_NONCONCEPT_REQUIRES_CASE3(
+        meets_tag_invoke, tag_invoke(T1{}, valOfType<T2>(), valOfType<T3>()));
+CONCORE_NONCONCEPT_REQUIRES_CASE2(meets_inner_execute, valOfType<T1>().execute(valOfType<T2>()));
+CONCORE_NONCONCEPT_REQUIRES_CASE2(meets_outer_execute, execute(valOfType<T1>(), valOfType<T2>()));
+
+// clang-format off
+template <typename Tag, typename E, typename F>
+CONCORE_CONCEPT_OR_BOOL(has_tag_invoke_execute)
+    = meets_tag_invoke<Tag, E, F>;
 
 template <typename Tag, typename E, typename F>
-concept has_tag_invoke_execute = requires(const E& e, F&& f) {
-    tag_invoke(Tag{}, (E &&) e, (F &&) f);
-};
+CONCORE_CONCEPT_OR_BOOL(has_inner_execute)
+    = !has_tag_invoke_execute<Tag, E, F>
+    && meets_inner_execute<E, F>;
 
 template <typename Tag, typename E, typename F>
-concept has_inner_execute = !has_tag_invoke_execute<Tag, E, F> && requires(const E& e, F&& f) {
-    e.execute((F &&) f);
-};
-
-template <typename Tag, typename E, typename F>
-concept has_outer_execute = !has_tag_invoke_execute<Tag, E, F> && !has_inner_execute<Tag, E, F> &&
-                            requires(const E& e, F&& f) {
-    execute((E &&) e, (F &&) f);
-};
-
-template <typename Tag, typename E, typename F>
-concept can_tag_invoke = !has_inner_execute<Tag, E, F> && requires(const E& e, F&& f) {
-    tag_invoke(Tag{}, (E &&) e, (F &&) f);
-};
-
-inline const struct execute_t final {
-    template <typename Executor, typename Fn>
-    requires has_tag_invoke_execute<execute_t, Executor, Fn> //
-            void operator()(Executor&& e, Fn&& f) const
-            noexcept(noexcept(tag_invoke(*this, (Executor &&) e, (Fn &&) f))) {
-        tag_invoke(execute_t{}, (Executor &&) e, (Fn &&) f);
-    }
-    template <typename Executor, typename Fn>
-    requires has_inner_execute<execute_t, Executor, Fn> //
-            void operator()(Executor&& e, Fn&& f) const
-            noexcept(noexcept(((Executor &&) e).execute((Fn &&) f))) {
-        ((Executor &&) e).execute((Fn &&) f);
-    }
-    template <typename Executor, typename Fn>
-    requires has_outer_execute<execute_t, Executor, Fn> //
-            void operator()(Executor&& e, Fn&& f) const
-            noexcept(noexcept(execute((Executor &&) e, (Fn &&) f))) {
-        execute((Executor &&) e, (Fn &&) f);
-    }
-    // TODO: sender
-} execute{};
-
-#else
-
-template <typename T>
-T valOfType();
-
-template <typename...>
-struct tag_tag_invoke {};
-
-template <typename...>
-struct tag_inner_execute {};
-
-template <typename...>
-struct tag_outer_execute {};
-
-template <typename T, typename E, typename F,
-        typename = decltype(tag_invoke(T{}, valOfType<E>(), valOfType<F>()))>
-char tester(tag_tag_invoke<T, E, F>*);
-template <typename E, typename F, typename = decltype(valOfType<E>().execute(valOfType<F>()))>
-char tester(tag_inner_execute<E, F>*);
-template <typename E, typename F, typename = decltype(execute(valOfType<E>(), valOfType<F>()))>
-char tester(tag_outer_execute<E, F>*);
-double tester(...);
-
-template <typename T, typename E, typename F>
-inline constexpr bool has_tag_invoke_execute = sizeof(tester(static_cast<tag_tag_invoke<T, E, F>*>(
-                                                       nullptr))) == 1;
-
-template <typename T, typename E, typename F>
-inline constexpr bool has_inner_execute =
-        !has_tag_invoke_execute<T, E, F> &&
-        sizeof(tester(static_cast<tag_inner_execute<E, F>*>(nullptr))) == 1;
-
-template <typename T, typename E, typename F>
-inline constexpr bool has_outer_execute =
-        !has_tag_invoke_execute<T, E, F> && !has_inner_execute<T, E, F> &&
-        sizeof(tester(static_cast<tag_outer_execute<E, F>*>(nullptr))) == 1;
+CONCORE_CONCEPT_OR_BOOL(has_outer_execute)
+    = !has_tag_invoke_execute<Tag, E, F>
+    && !has_inner_execute<Tag, E, F>
+    && meets_outer_execute<E, F>;
+// clang-format on
 
 inline const struct execute_t final {
     template <typename Executor, typename Fn,
-            std::enable_if_t<has_tag_invoke_execute<execute_t, Executor, Fn>, int> = 0>
+            CONCORE_NONCONCEPT_EXTRA_TEMPLATE_COND(
+                    (has_tag_invoke_execute<execute_t, Executor, Fn>))>
+    CONCORE_CONCEPT_REQUIRES_COND((has_tag_invoke_execute<execute_t, Executor, Fn>))
     void operator()(Executor&& e, Fn&& f) const
             noexcept(noexcept(tag_invoke(*this, (Executor &&) e, (Fn &&) f))) {
         tag_invoke(execute_t{}, (Executor &&) e, (Fn &&) f);
     }
-
     template <typename Executor, typename Fn,
-            std::enable_if_t<has_inner_execute<execute_t, Executor, Fn>, int> = 0>
+            CONCORE_NONCONCEPT_EXTRA_TEMPLATE_COND((has_inner_execute<execute_t, Executor, Fn>))>
+    CONCORE_CONCEPT_REQUIRES_COND((has_inner_execute<execute_t, Executor, Fn>))
     void operator()(Executor&& e, Fn&& f) const
             noexcept(noexcept(((Executor &&) e).execute((Fn &&) f))) {
         ((Executor &&) e).execute((Fn &&) f);
     }
-
     template <typename Executor, typename Fn,
-            std::enable_if_t<has_outer_execute<execute_t, Executor, Fn>, int> = 0>
+            CONCORE_NONCONCEPT_EXTRA_TEMPLATE_COND((has_outer_execute<execute_t, Executor, Fn>))>
+    CONCORE_CONCEPT_REQUIRES_COND((has_outer_execute<execute_t, Executor, Fn>))
     void operator()(Executor&& e, Fn&& f) const
             noexcept(noexcept(execute((Executor &&) e, (Fn &&) f))) {
         execute((Executor &&) e, (Fn &&) f);
     }
     // TODO: sender
 } execute{};
-#endif
 
 } // namespace cpo_execute
 } // namespace detail
