@@ -106,4 +106,80 @@ TEST_CASE("struct with tag_invoke extension point models the executor concept",
     REQUIRE(concore::std_execution::executor<NS3::my_executor>);
 }
 
+namespace test_models {
+
+struct my_executor {
+    friend inline bool operator==(my_executor, my_executor) { return false; }
+    friend inline bool operator!=(my_executor, my_executor) { return true; }
+
+    template <typename F>
+    void execute(F&& f) const {
+        ((F &&) f)();
+    }
+};
+struct my_receiver0 {
+    friend inline bool operator==(my_receiver0, my_receiver0) { return false; }
+    friend inline bool operator!=(my_receiver0, my_receiver0) { return true; }
+
+    void set_value() {}
+    void set_done() noexcept {}
+    void set_error(std::exception_ptr) noexcept {}
+};
+struct my_receiver_int {
+    friend inline bool operator==(my_receiver_int, my_receiver_int) { return false; }
+    friend inline bool operator!=(my_receiver_int, my_receiver_int) { return true; }
+
+    void set_value(int) {}
+    void set_done() noexcept {}
+    void set_error(std::exception_ptr) noexcept {}
+};
+struct my_operation {
+    friend inline bool operator==(my_operation, my_operation) { return false; }
+    friend inline bool operator!=(my_operation, my_operation) { return true; }
+
+    void start() noexcept {}
+};
+struct my_sender0 {
+    friend inline bool operator==(my_sender0, my_sender0) { return false; }
+    friend inline bool operator!=(my_sender0, my_sender0) { return true; }
+
+    template <typename R>
+    my_operation connect(R&& r) {
+        return my_operation{};
+    }
+};
+struct my_sender_int {
+    friend inline bool operator==(my_sender_int, my_sender_int) { return false; }
+    friend inline bool operator!=(my_sender_int, my_sender_int) { return true; }
+
+    template <typename R>
+    my_operation connect(R&& r) {
+        return my_operation{};
+    }
+};
+struct my_scheduler {
+    friend inline bool operator==(my_scheduler, my_scheduler) { return false; }
+    friend inline bool operator!=(my_scheduler, my_scheduler) { return true; }
+
+    void schedule() noexcept {}
+};
+} // namespace test_models
+
+TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using my_type = test_models::my_executor;
+
+    using void_fun = decltype([]() {});
+
+    REQUIRE(executor<my_type>);
+    REQUIRE(executor_of<my_type, void_fun>);
+    REQUIRE_FALSE(receiver<my_type>);
+    REQUIRE_FALSE(receiver_of<my_type>);
+    REQUIRE_FALSE(operation_state<my_type>);
+    // REQUIRE_FALSE(sender<my_type>);
+    // REQUIRE_FALSE(sender_to<my_type, test_models::my_receiver0>);
+    REQUIRE_FALSE(typed_sender<my_type>);
+    // REQUIRE_FALSE(scheduler<my_type>);
+}
+
 #endif

@@ -2,12 +2,6 @@
 #include <concore/std/execution.hpp>
 #include <concore/std/thread_pool.hpp>
 
-template <typename T>
-struct Tester;
-
-template <int N>
-struct TesterInt;
-
 template <typename Ex>
 bool can_call(const Ex& ex) {
     bool called = false;
