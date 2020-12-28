@@ -84,6 +84,25 @@ void tag_invoke(concore::std_execution::submit_t, my_sender_tag_invoke& s, my_re
     r.set_value(s.value_);
 }
 
+struct my_sender_no_submit {
+    friend inline bool operator==(my_sender_no_submit, my_sender_no_submit) { return false; }
+    friend inline bool operator!=(my_sender_no_submit, my_sender_no_submit) { return true; }
+
+    template <template <class...> class Tuple, template <class...> class Variant>
+    using value_types = Variant<Tuple<int>>;
+    template <template <class...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+    static constexpr bool sends_done = true;
+
+    int value_{0};
+
+    op_state connect(my_receiver& r) {
+        int val = value_;
+        return op_state([val, &r] { r.set_value(val); });
+    }
+};
+
+
 template <typename S>
 void test_submit() {
     my_receiver recv;
@@ -103,4 +122,8 @@ TEST_CASE("sender object with external function fulfills submit CPO", "[executio
 
 TEST_CASE("sender object with tag_invoke submit fulfills submit CPO", "[execution][cpo_submit]") {
     test_submit<my_sender_tag_invoke>();
+}
+
+TEST_CASE("submit CPO falls back to connect CPO", "[execution][cpo_submit]") {
+    test_submit<my_sender_no_submit>();
 }
