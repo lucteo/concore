@@ -24,22 +24,16 @@ CONCORE_DEF_REQUIRES(meets_outer_fun,                                          /
         set_value(CONCORE_DECLVAL(R), CONCORE_DECLVAL(Vs)...)                  // pre-concepts
 );
 
-// clang-format off
 template <typename Tag, typename R, typename... Vs>
-CONCORE_CONCEPT_OR_BOOL(has_tag_invoke)
-    = meets_tag_invoke<Tag, R, Vs...>;
+CONCORE_CONCEPT_OR_BOOL(has_tag_invoke) = meets_tag_invoke<Tag, R, Vs...>;
 
 template <typename Tag, typename R, typename... Vs>
-CONCORE_CONCEPT_OR_BOOL(has_inner_fun)
-    = !has_tag_invoke<Tag, R, Vs...>
-    && meets_inner_fun<R, Vs...>;
+CONCORE_CONCEPT_OR_BOOL(
+        has_inner_fun) = !has_tag_invoke<Tag, R, Vs...> && meets_inner_fun<R, Vs...>;
 
 template <typename Tag, typename R, typename... Vs>
-CONCORE_CONCEPT_OR_BOOL(has_outer_fun)
-    = !has_tag_invoke<Tag, R, Vs...>
-    && !has_inner_fun<Tag, R, Vs...>
-    && meets_outer_fun<R, Vs...>;
-// clang-format on
+CONCORE_CONCEPT_OR_BOOL(has_outer_fun) = !has_tag_invoke<Tag, R, Vs...> &&
+                                         !has_inner_fun<Tag, R, Vs...> && meets_outer_fun<R, Vs...>;
 
 inline const struct set_value_t final {
     CONCORE_TEMPLATE_COND(
@@ -61,6 +55,10 @@ inline const struct set_value_t final {
         set_value((R &&) r, (Vs &&) vs...);
     }
 } set_value{};
+
+template <typename R, typename... Vs>
+CONCORE_CONCEPT_OR_BOOL(has_set_value) = meets_tag_invoke<set_value_t, R, Vs...> ||
+                                         meets_inner_fun<R, Vs...> || meets_outer_fun<R, Vs...>;
 
 } // namespace cpo_set_value
 } // namespace detail

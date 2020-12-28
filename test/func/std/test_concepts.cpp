@@ -133,6 +133,24 @@ struct my_receiver_int {
     void set_done() noexcept {}
     void set_error(std::exception_ptr) noexcept {}
 };
+
+struct my_receiver0_ec {
+    friend inline bool operator==(my_receiver0_ec, my_receiver0_ec) { return false; }
+    friend inline bool operator!=(my_receiver0_ec, my_receiver0_ec) { return true; }
+
+    void set_value() {}
+    void set_done() noexcept {}
+    void set_error(std::error_code) noexcept {}
+};
+struct my_receiver_int_ec {
+    friend inline bool operator==(my_receiver_int_ec, my_receiver_int_ec) { return false; }
+    friend inline bool operator!=(my_receiver_int_ec, my_receiver_int_ec) { return true; }
+
+    void set_value(int) {}
+    void set_done() noexcept {}
+    void set_error(std::error_code) noexcept {}
+};
+
 struct my_operation {
     friend inline bool operator==(my_operation, my_operation) { return false; }
     friend inline bool operator!=(my_operation, my_operation) { return true; }
@@ -143,43 +161,132 @@ struct my_sender0 {
     friend inline bool operator==(my_sender0, my_sender0) { return false; }
     friend inline bool operator!=(my_sender0, my_sender0) { return true; }
 
-    template <typename R>
-    my_operation connect(R&& r) {
-        return my_operation{};
-    }
+    template <template <class...> class Tuple, template <class...> class Variant>
+    using value_types = Variant<Tuple<>>;
+    template <template <class...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+    static constexpr bool sends_done = true;
+
+    my_operation connect(my_receiver0&& r) { return my_operation{}; }
 };
 struct my_sender_int {
     friend inline bool operator==(my_sender_int, my_sender_int) { return false; }
     friend inline bool operator!=(my_sender_int, my_sender_int) { return true; }
 
-    template <typename R>
-    my_operation connect(R&& r) {
-        return my_operation{};
-    }
+    template <template <class...> class Tuple, template <class...> class Variant>
+    using value_types = Variant<Tuple<int>>;
+    template <template <class...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+    static constexpr bool sends_done = true;
+
+    my_operation connect(my_receiver_int&& r) { return my_operation{}; }
 };
 struct my_scheduler {
     friend inline bool operator==(my_scheduler, my_scheduler) { return false; }
     friend inline bool operator!=(my_scheduler, my_scheduler) { return true; }
 
-    void schedule() noexcept {}
+    my_sender0 schedule() noexcept { return {}; }
 };
 } // namespace test_models
 
 TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
     using namespace concore::std_execution;
-    using my_type = test_models::my_executor;
+    using namespace test_models;
 
     using void_fun = decltype([]() {});
 
-    REQUIRE(executor<my_type>);
-    REQUIRE(executor_of<my_type, void_fun>);
-    REQUIRE_FALSE(receiver<my_type>);
-    REQUIRE_FALSE(receiver_of<my_type>);
-    REQUIRE_FALSE(operation_state<my_type>);
-    // REQUIRE_FALSE(sender<my_type>);
-    // REQUIRE_FALSE(sender_to<my_type, test_models::my_receiver0>);
-    REQUIRE_FALSE(typed_sender<my_type>);
-    // REQUIRE_FALSE(scheduler<my_type>);
+    REQUIRE(executor<my_executor>);
+    REQUIRE(executor_of<my_executor, void_fun>);
+    REQUIRE_FALSE(receiver<my_executor>);
+    REQUIRE_FALSE(receiver_of<my_executor>);
+    REQUIRE_FALSE(operation_state<my_executor>);
+    // REQUIRE_FALSE(sender<my_executor>);
+    // REQUIRE_FALSE(sender_to<my_executor, test_models::my_receiver0>);
+    // REQUIRE_FALSE(typed_sender<my_executor>);
+    // REQUIRE_FALSE(scheduler<my_executor>);
+}
+
+TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(receiver<my_receiver0>);
+    REQUIRE(receiver<my_receiver_int>);
+    REQUIRE(receiver<my_receiver0_ec, std::error_code>);
+    REQUIRE(receiver<my_receiver_int_ec, std::error_code>);
+}
+
+TEST_CASE("receiver types satisfy the receiver_of concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(receiver_of<my_receiver0>);
+    REQUIRE(receiver_of<my_receiver_int, std::exception_ptr, int>);
+    REQUIRE(receiver_of<my_receiver0_ec, std::error_code>);
+    REQUIRE(receiver_of<my_receiver_int_ec, std::error_code, int>);
+}
+
+TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(sender<my_sender0>);
+    REQUIRE(sender<my_sender_int>);
+}
+
+TEST_CASE("sender types satisfy the typed_sender concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(typed_sender<my_sender0>);
+    REQUIRE(typed_sender<my_sender_int>);
+}
+
+TEST_CASE("sender & receiver types satisfy the sender_to concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(sender_to<my_sender0, my_receiver0>);
+    REQUIRE(sender_to<my_sender_int, my_receiver_int>);
+}
+
+TEST_CASE("not all combinations of senders & receivers satisfy the sender_to concept",
+        "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE_FALSE(sender_to<my_sender0, my_receiver_int>);
+    REQUIRE_FALSE(sender_to<my_sender0, my_receiver0_ec>);
+    REQUIRE_FALSE(sender_to<my_sender0, my_receiver_int_ec>);
+    REQUIRE_FALSE(sender_to<my_sender_int, my_receiver0>);
+    REQUIRE_FALSE(sender_to<my_sender_int, my_receiver0_ec>);
+    REQUIRE_FALSE(sender_to<my_sender_int, my_receiver_int_ec>);
+}
+
+TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(scheduler<my_scheduler>);
+    auto snd = my_scheduler{}.schedule();
+    REQUIRE(sender<decltype(snd)>);
+}
+
+TEST_CASE("other types don't satisfy the scheduler concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE_FALSE(scheduler<my_executor>);
+    REQUIRE_FALSE(scheduler<my_sender0>);
+    REQUIRE_FALSE(scheduler<my_receiver0>);
+    REQUIRE_FALSE(scheduler<my_operation>);
+}
+
+TEST_CASE("operation types satisfy the operation_state concept", "[execution][concepts]") {
+    using namespace concore::std_execution;
+    using namespace test_models;
+
+    REQUIRE(operation_state<my_operation>);
 }
 
 #endif

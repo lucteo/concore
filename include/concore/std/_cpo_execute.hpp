@@ -3,7 +3,6 @@
 #include <concore/detail/concept_macros.hpp>
 
 namespace concore {
-
 namespace std_execution {
 
 namespace detail {
@@ -25,22 +24,15 @@ CONCORE_DEF_REQUIRES(meets_outer_fun,                                   //
         execute(CONCORE_DECLVAL(E), CONCORE_DECLVAL(F))                 // pre-concepts
 );
 
-// clang-format off
 template <typename Tag, typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_tag_invoke)
-    = meets_tag_invoke<Tag, E, F>;
+CONCORE_CONCEPT_OR_BOOL(has_tag_invoke) = meets_tag_invoke<Tag, E, F>;
 
 template <typename Tag, typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_inner_fun)
-    = !has_tag_invoke<Tag, E, F>
-    && meets_inner_fun<E, F>;
+CONCORE_CONCEPT_OR_BOOL(has_inner_fun) = !has_tag_invoke<Tag, E, F> && meets_inner_fun<E, F>;
 
 template <typename Tag, typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_outer_fun)
-    = !has_tag_invoke<Tag, E, F>
-    && !has_inner_fun<Tag, E, F>
-    && meets_outer_fun<E, F>;
-// clang-format on
+CONCORE_CONCEPT_OR_BOOL(has_outer_fun) = !has_tag_invoke<Tag, E, F> &&
+                                         !has_inner_fun<Tag, E, F> && meets_outer_fun<E, F>;
 
 inline const struct execute_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename E, typename F), (has_tag_invoke<execute_t, E, F>))
@@ -58,7 +50,6 @@ inline const struct execute_t final {
             noexcept(noexcept(execute((E &&) e, (F &&) f))) { //
         execute((E &&) e, (F &&) f);
     }
-    // TODO: sender
 } execute{};
 
 } // namespace cpo_execute

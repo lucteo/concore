@@ -41,7 +41,7 @@ namespace detail {
     char tester_##varName(stag_##varName<tnames>*);                                                \
     double tester_##varName(...);                                                                  \
     template <tparams>                                                                             \
-    inline constexpr bool varName =                                                                \
+    CONCORE_CONCEPT_OR_BOOL(varName) =                                                             \
             sizeof(tester_##varName(static_cast<stag_##varName<tnames>*>(nullptr))) == 1;
 
 #define CONCORE_TEMPLATE_COND(tparams, cond) template <tparams, std::enable_if_t<cond, int> = 0>

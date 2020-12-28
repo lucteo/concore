@@ -2,7 +2,8 @@
 
 #include <concore/detail/cxx_features.hpp>
 #if CONCORE_CXX_HAS_CONCEPTS
-#include "_concepts.hpp"
+#include "_concept_scheduler.hpp"
+#include "_concepts_receiver.hpp"
 #endif
 #include "_cpo_set_value.hpp"
 #include <concore/task.hpp>
@@ -69,11 +70,10 @@ public:
      */
     bool running_in_this_thread() const noexcept;
 
-    // template <template <class...> class Tuple, template <class...> class Variant>
-    // using value_types = Variant<Tuple<>>;
-    // template <template <class...> class Variant>
-    // using error_types = Variant<exception_ptr>;
-
+    template <template <class...> class Tuple, template <class...> class Variant>
+    using value_types = Variant<Tuple<>>;
+    template <template <class...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
     static constexpr bool sends_done = true;
 
     template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>

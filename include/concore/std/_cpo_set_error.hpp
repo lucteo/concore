@@ -33,25 +33,15 @@ CONCORE_DEF_REQUIRES(meets_outer_fun,                             //
         set_error(CONCORE_DECLVAL(R), CONCORE_DECLVAL(E)) // pre-concepts
 );
 
-// clang-format off
 template <typename Tag, typename R, typename E>
-CONCORE_CONCEPT_OR_BOOL(has_tag_invoke)
-    = meets_tag_invoke<Tag, R, E>;
+CONCORE_CONCEPT_OR_BOOL(has_tag_invoke) = meets_tag_invoke<Tag, R, E>;
 
 template <typename Tag, typename R, typename E>
-CONCORE_CONCEPT_OR_BOOL(has_inner_fun)
-    = !has_tag_invoke<Tag, R, E>
-    && meets_inner_fun<R, E>;
+CONCORE_CONCEPT_OR_BOOL(has_inner_fun) = !has_tag_invoke<Tag, R, E> && meets_inner_fun<R, E>;
 
 template <typename Tag, typename R, typename E>
-CONCORE_CONCEPT_OR_BOOL(has_outer_fun)
-    = meets_outer_fun<R, E>;
-// template <typename Tag, typename R, typename E>
-// CONCORE_CONCEPT_OR_BOOL(has_outer_fun)
-//     = !has_tag_invoke<Tag, R, E>
-//     && !has_inner_fun<Tag, R, E>
-//     && meets_outer_fun<R, E>;
-// clang-format on
+CONCORE_CONCEPT_OR_BOOL(has_outer_fun) = !has_tag_invoke<Tag, R, E> &&
+                                         !has_inner_fun<Tag, R, E> && meets_outer_fun<R, E>;
 
 inline const struct set_error_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename R, typename E), (has_tag_invoke<set_error_t, R, E>))
@@ -67,6 +57,10 @@ inline const struct set_error_t final {
         set_error((R &&) r, (E &&) e);
     }
 } set_error{};
+
+template <typename R, typename E>
+CONCORE_CONCEPT_OR_BOOL(has_set_error) =
+        meets_tag_invoke<set_error_t, R, E> || meets_inner_fun<R, E> || meets_outer_fun<R, E>;
 
 } // namespace cpo_set_error
 } // namespace detail

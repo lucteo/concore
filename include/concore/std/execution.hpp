@@ -14,9 +14,13 @@
 #include "_cpo_submit.hpp"
 #include "_cpo_schedule.hpp"
 #include "_cpo_bulk_execute.hpp"
-#if CONCORE_CXX_HAS_CONCEPTS
-#include "_concepts.hpp"
-#endif
+#include "_concepts_executor.hpp"
+#include "_concepts_receiver.hpp"
+#include "_concepts_sender.hpp"
+#include "_concept_sender_to.hpp"
+#include "_concept_operation_state.hpp"
+#include "_concept_scheduler.hpp"
+#include "_as_receiver.hpp"
 
 namespace concore {
 
@@ -34,10 +38,6 @@ struct receiver_invocation_error : std::runtime_error, std::nested_exception {
 // Sender and receiver utilities type
 // TODO: see 2.2.10.1 Class sink_receiver
 class sink_receiver;
-
-// TODO: see 2.2.10.2 Class template sender_traits
-template <class S>
-struct sender_traits;
 
 // Executor type traits:
 

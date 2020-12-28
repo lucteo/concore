@@ -31,7 +31,11 @@ set(func_sourceFiles
     "func/std/test_thread_pool.cpp"
     "func/std/test_concepts.cpp"
     "func/std/test_cpo_execute.cpp"
+    "func/std/test_cpo_start.cpp"
+    "func/std/test_cpo_schedule.cpp"
     "func/std/test_cpo_receiver.cpp"
+    "func/std/test_cpo_connect.cpp"
+    "func/std/test_cpo_submit.cpp"
 
     "func/profiling_helper_test.cpp" # Must be last
 )
