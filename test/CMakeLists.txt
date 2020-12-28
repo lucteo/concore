@@ -30,6 +30,7 @@ set(func_sourceFiles
     "func/std/test_execution.cpp"
     "func/std/test_thread_pool.cpp"
     "func/std/test_concepts.cpp"
+    "func/std/test_concept_wrappers.cpp"
     "func/std/test_cpo_execute.cpp"
     "func/std/test_cpo_start.cpp"
     "func/std/test_cpo_schedule.cpp"

@@ -112,9 +112,9 @@ CONCORE_CONCEPT_OR_BOOL(receiver) = std::is_move_constructible<concore::detail::
                 T>::value&& detail::has_set_done<concore::detail::remove_cvref_t<T>>&& detail::
                 has_set_error<concore::detail::remove_cvref_t<T>, E>;
 
-template <typename T, typename... Vs>
+template <typename T, typename E = std::exception_ptr, typename... Vs>
 CONCORE_CONCEPT_OR_BOOL(receiver_of) =
-        receiver<T>&& detail::has_set_value<concore::detail::remove_cvref_t<T>, Vs...>;
+        receiver<T, E>&& detail::has_set_value<concore::detail::remove_cvref_t<T>, Vs...>;
 
 #endif
 

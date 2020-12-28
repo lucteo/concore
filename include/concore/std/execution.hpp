@@ -21,6 +21,9 @@
 #include "_concept_operation_state.hpp"
 #include "_concept_scheduler.hpp"
 #include "_as_receiver.hpp"
+#include "_as_invocable.hpp"
+#include "_as_operation.hpp"
+#include "_as_sender.hpp"
 
 namespace concore {
 

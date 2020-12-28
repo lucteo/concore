@@ -102,7 +102,6 @@ struct my_sender_no_submit {
     }
 };
 
-
 template <typename S>
 void test_submit() {
     my_receiver recv;

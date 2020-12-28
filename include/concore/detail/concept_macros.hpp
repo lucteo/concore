@@ -14,8 +14,11 @@ namespace detail {
 #define CONCORE_LIST(...) __VA_ARGS__
 
 #if CONCORE_CXX_HAS_CONCEPTS
-//! Defines a concept, or, if not available, ca constexpr bool variable
+//! Defines a concept, or, if not available, a constexpr bool variable
 #define CONCORE_CONCEPT_OR_BOOL(name) concept name
+
+//! Defines a concept-constrained typename, or, if not available, a simple typename
+#define CONCORE_CONCEPT_OR_TYPENAME(name) name
 
 //! Defines a concept (or a bool variable) with the result of a 'requires' constraint.
 //! This is compatible with compilers that do not support concepts.
@@ -32,6 +35,8 @@ namespace detail {
 #else
 
 #define CONCORE_CONCEPT_OR_BOOL(name) inline constexpr bool name
+
+#define CONCORE_CONCEPT_OR_TYPENAME(name) typename
 
 #define CONCORE_DEF_REQUIRES(                                                                      \
         varName, tparams, tnames, conceptRequiresExpr, nonConceptRequiresExpr)                     \

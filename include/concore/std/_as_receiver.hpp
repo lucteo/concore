@@ -4,9 +4,7 @@
 #include <exception>
 
 namespace concore {
-
 namespace std_execution {
-
 inline namespace v1 {
 
 /**
@@ -20,11 +18,11 @@ inline namespace v1 {
  */
 template <typename F>
 struct as_receiver {
-    explicit as_receiver(F&& f)
+    explicit as_receiver(F&& f) noexcept
         : f_((F &&) f) {}
 
     //! Called whenever the sender completed the work with success
-    void set_value() noexcept(CONCORE_DECLVAL(F)()) { f_(); }
+    void set_value() noexcept(noexcept(f_())) { f_(); }
     //! Called whenever the work was canceled
     void set_done() noexcept {}
     //! Called whenever there was an error while performing the work in the sender.
@@ -39,6 +37,5 @@ private:
 };
 
 } // namespace v1
-
 } // namespace std_execution
 } // namespace concore
