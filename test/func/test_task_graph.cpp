@@ -34,7 +34,7 @@ TEST_CASE("one can define a simple linear chain of tasks", "[task_graph]") {
     }
 
     // Start executing the chain from the first task
-    e(tasks[0]);
+    e.execute(tasks[0]);
 
     // Wait for all the tasks to complete
     REQUIRE(tc.wait_for_all());
@@ -60,7 +60,7 @@ TEST_CASE("chained_task objects are copyable", "[task_graph]") {
     REQUIRE(&copy != &t1);
 
     // start executing from the copy
-    e(copy);
+    e.execute(copy);
 
     // both tasks are executed
     REQUIRE(tc.wait_for_all());
@@ -81,7 +81,7 @@ TEST_CASE("multiple links between the tasks (same direction) are fine", "[task_g
     concore::add_dependency(t1, t2);
 
     // Start with the first task, and wait for both tasks to execute
-    e(t1);
+    e.execute(t1);
     REQUIRE(tc.wait_for_all());
 }
 
@@ -126,7 +126,7 @@ TEST_CASE("circular dependencies lead to tasks not being executed", "[task_graph
     concore::add_dependency(t3, t4);
 
     // Start with the first task
-    e(t1);
+    e.execute(t1);
     // The tasks will never complete
     REQUIRE(!tc.wait_for_all(10ms));
 
@@ -160,7 +160,7 @@ TEST_CASE("a lot of continuations added to a chained_task", "[task_graph]") {
     }
 
     // Start executing at the first task
-    e(tasks[0]);
+    e.execute(tasks[0]);
 
     // All tasks should execute
     REQUIRE(tc.wait_for_all());
@@ -193,7 +193,7 @@ TEST_CASE("a lot of predecessors added to a chained_task", "[task_graph]") {
 
     // Execute about half of the tasks (not the first one though)
     for (int i = 1; i < num_tasks / 2; i++)
-        e(tasks[i]);
+        e.execute(tasks[i]);
 
     // After waiting a bit, the first task is still not executed
     std::this_thread::sleep_for(5ms);
@@ -201,7 +201,7 @@ TEST_CASE("a lot of predecessors added to a chained_task", "[task_graph]") {
 
     // Now, execute the other half (still don't execute the first task)
     for (int i = num_tasks / 2; i < num_tasks; i++)
-        e(tasks[i]);
+        e.execute(tasks[i]);
 
     // Now, all the tasks, including the first one should be executed
     REQUIRE(tc.wait_for_all());
@@ -227,7 +227,7 @@ TEST_CASE("tree-like structure of chained_tasks", "[task_graph]") {
         add_dependency(tasks[i], tasks[2 * i + 2]);
     }
     // Start executing the first tasks
-    e(tasks[0]);
+    e.execute(tasks[0]);
     // Expect all the tasks in the graph to be executed
     REQUIRE(tc.wait_for_all());
 }
@@ -252,7 +252,7 @@ TEST_CASE("reverse tree-like structure of chained_tasks", "[task_graph]") {
     }
     // Execute the bottom of the tree
     for (int i = num_tasks / 2; i < num_tasks; i++)
-        e(tasks[i]);
+        e.execute(tasks[i]);
 
     // Expect all the tasks in the graph to be executed -- execution is propagated up
     REQUIRE(tc.wait_for_all());
@@ -294,7 +294,7 @@ TEST_CASE("hand-crafted graph of chained_tasks", "[task_graph]") {
     add_dependencies({tasks[14], tasks[8], tasks[15], tasks[12], tasks[16]}, tasks[17]);
 
     // Execute from the first task
-    e(tasks[0]);
+    e.execute(tasks[0]);
 
     // Expect all the tasks in the graph to be executed
     REQUIRE(tc.wait_for_all());
@@ -329,7 +329,7 @@ TEST_CASE("a chained_task can be reused after it was run", "[task_graph]") {
             add_dependency(tasks[i - 1], tasks[i]);
 
         // Execute from the first task; expect all tasks to be executed
-        e(tasks[0]);
+        e.execute(tasks[0]);
         REQUIRE(tc.wait_for_all());
         tc.reset(num_tasks);
         std::this_thread::sleep_for(10ms); // ensure the task is truly finished
@@ -341,7 +341,7 @@ TEST_CASE("a chained_task can be reused after it was run", "[task_graph]") {
 
     // If we run the first task again, without setting the dependencies, only the first task is run
     tc.reset(1);
-    e(tasks[0]);
+    e.execute(tasks[0]);
     REQUIRE(tc.wait_for_all());
     // Wait a bit, so that other tasks have time to run
     std::this_thread::sleep_for(10ms);
@@ -363,7 +363,7 @@ TEST_CASE("exceptions can occur in chained_task", "[task_graph]") {
     });
     auto t2 = concore::task([&]() {
         task2_executed = true;
-        concore::global_executor{}(std::move(finish_task));
+        concore::global_executor{}.execute(std::move(finish_task));
     });
     // Chain them in a task_graph
     auto ct1 = concore::chained_task(std::move(t1), concore::global_executor{});
@@ -399,7 +399,7 @@ TEST_CASE("exceptions in task graphs are caught by the group", "[task_graph]") {
     auto t2 = concore::task(
             [&]() {
                 task2_executed = true;
-                concore::global_executor{}(std::move(finish_task));
+                concore::global_executor{}.execute(std::move(finish_task));
                 throw std::logic_error("err");
             },
             grp_ex);
@@ -428,7 +428,7 @@ TEST_CASE("chained_task can be created without an executor", "[task_graph]") {
     auto t1 = concore::task([&]() { task1_executed = true; });
     auto t2 = concore::task([&]() {
         task2_executed = true;
-        concore::global_executor{}(std::move(finish_task));
+        concore::global_executor{}.execute(std::move(finish_task));
     });
     // Chain them in a task_graph
     auto ct1 = concore::chained_task(std::move(t1));
@@ -472,7 +472,7 @@ TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_gr
     auto t5 = concore::chained_task(
             [&]() {
                 executed[4] = true;
-                concore::global_executor{}(std::move(finish_task));
+                concore::global_executor{}.execute(std::move(finish_task));
             },
             throwing_executor{});
 

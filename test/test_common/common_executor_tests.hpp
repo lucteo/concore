@@ -19,7 +19,7 @@ inline void test_can_execute_a_task(E executor) {
     std::atomic<int> val{0};
     // Enqueue a task that changes 'val'
     auto f = [&val]() { val = 1; };
-    executor(f);
+    executor.execute(f);
     // Wait until the value changes
     while (val.load() == 0)
         std::this_thread::sleep_for(1ms);
@@ -38,7 +38,7 @@ void test_can_execute_multiple_tasks(E executor) {
 
     // Enqueue the tasks
     for (int i = 0; i < num_tasks; i++)
-        executor([&, i]() {
+        executor.execute([&, i]() {
             results[i] = true;
             tc.task_finished();
         });
@@ -77,7 +77,7 @@ void test_tasks_do_run_in_parallel(E executor) {
 
         // Create the tasks
         for (int i = 0; i < num_tasks; i++)
-            executor([&, i]() {
+            executor.execute([&, i]() {
                 // Record the order we have at the start of the task
                 starts[starts_end_idx++] = i;
                 // Randomly wait a bit of time -- not all tasks have the same length

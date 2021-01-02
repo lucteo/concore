@@ -234,9 +234,6 @@ struct spawn_executor {
     //! @overload
     void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t)); }
 
-    //! @copydoc execute()
-    void operator()(task t) const { execute(std::move(t)); }
-
     friend inline bool operator==(spawn_executor, spawn_executor) { return true; }
     friend inline bool operator!=(spawn_executor, spawn_executor) { return false; }
 };
@@ -261,9 +258,6 @@ struct spawn_continuation_executor {
     }
     //! @overload
     void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t), false); }
-
-    //! @copydoc execute()
-    void operator()(task t) const { execute(std::move(t)); }
 
     friend inline bool operator==(spawn_continuation_executor, spawn_continuation_executor) {
         return true;

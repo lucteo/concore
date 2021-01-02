@@ -92,12 +92,12 @@ void pipeline_data::run(line_ptr&& line) {
         auto fun = [this, line = std::move(line)]() mutable {
             execute_stage_task(stages_[line->stage_idx_], std::move(line));
         };
-        executor_(task{std::move(fun), group_});
+        executor_.execute(task{std::move(fun), group_});
     } else if (stage.ord_ == stage_ordering::out_of_order) {
         auto fun = [this, line = std::move(line)]() mutable {
             execute_stage_task(stages_[line->stage_idx_], std::move(line));
         };
-        stage.ser_(task{std::move(fun), group_});
+        stage.ser_.execute(task{std::move(fun), group_});
     } else if (stage.ord_ == stage_ordering::in_order) {
         auto push_task_fun = [this, line = std::move(line)]() mutable {
             auto& stage = stages_[line->stage_idx_];
@@ -109,7 +109,7 @@ void pipeline_data::run(line_ptr&& line) {
                 stage.add_pending(std::move(line));
             }
         };
-        stage.ser_(task{std::move(push_task_fun), group_});
+        stage.ser_.execute(task{std::move(push_task_fun), group_});
     }
 }
 

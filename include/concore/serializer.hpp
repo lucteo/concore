@@ -88,9 +88,6 @@ public:
     //! @overload
     void execute(task t) const { do_enqueue(std::move(t)); }
 
-    //! @copydoc execute()
-    void operator()(task t) const { do_enqueue(std::move(t)); }
-
     /**
      * @brief      Sets the exception handler for enqueueing tasks
      *

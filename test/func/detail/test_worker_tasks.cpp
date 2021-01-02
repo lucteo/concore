@@ -21,7 +21,7 @@ TEST_CASE("worker_tasks: pushing then popping behave like a stack", "[worker_tas
 
     // Push a lot of tasks
     for (int i = 0; i < num_tasks; i++) {
-        tasks.push([&out_location, i]() { out_location = i; });
+        tasks.push(concore::task{[&out_location, i]() { out_location = i; }});
     }
 
     // Pop them, and ensure they come up in reverse order
@@ -50,7 +50,7 @@ TEST_CASE("worker_tasks: stealing gets far away tasks", "[worker_tasks]") {
 
     // Push a lot of tasks
     for (int i = 0; i < num_tasks; i++) {
-        tasks.push([&out_location, i]() { out_location = i; });
+        tasks.push(concore::task{[&out_location, i]() { out_location = i; }});
     }
 
     // Steal them, and ensure they come up in reverse order
@@ -79,8 +79,8 @@ TEST_CASE("worker_tasks: push,push,pop,steal cycles leave the stack empty", "[wo
     concore::task extracted_task;
 
     for (int i = 0; i < num_tasks; i++) {
-        tasks.push([&out_location, i]() { out_location = i; });
-        tasks.push([&out_location, i]() { out_location = 2 * i; });
+        tasks.push(concore::task{[&out_location, i]() { out_location = i; }});
+        tasks.push(concore::task{[&out_location, i]() { out_location = 2 * i; }});
 
         REQUIRE(tasks.try_pop(extracted_task));
         extracted_task();
@@ -95,8 +95,8 @@ TEST_CASE("worker_tasks: push,push,pop,steal cycles leave the stack empty", "[wo
 
     // One more time, but steal before pop
     for (int i = 0; i < num_tasks; i++) {
-        tasks.push([&out_location, i]() { out_location = i; });
-        tasks.push([&out_location, i]() { out_location = 2 * i; });
+        tasks.push(concore::task{[&out_location, i]() { out_location = i; }});
+        tasks.push(concore::task{[&out_location, i]() { out_location = 2 * i; }});
 
         REQUIRE(tasks.try_steal(extracted_task));
         extracted_task();
@@ -126,7 +126,7 @@ TEST_CASE("worker_tasks: can steal in parallel with push", "[worker_tasks]") {
         barrier.wait_for_all();
 
         for (int i = 0; i < num_tasks; i++) {
-            tasks.push([&res, i]() { res[i] = true; });
+            tasks.push(concore::task{[&res, i]() { res[i] = true; }});
 
             // Don't let us accumulate too many tasks, so that the performance of the thief doesn't
             // decrease quadratically.
@@ -181,7 +181,7 @@ TEST_CASE("worker_tasks: can steal in parallel with push/pop", "[worker_tasks]")
 
         concore::task extracted_task;
         for (int i = 0; i < num_tasks; i++) {
-            tasks.push([&res, i]() { res[i] = true; });
+            tasks.push(concore::task{[&res, i]() { res[i] = true; }});
 
             // Every two pushes, do a pop
             if ((i % 2) == 1) {

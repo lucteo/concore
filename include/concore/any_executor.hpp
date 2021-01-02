@@ -146,9 +146,6 @@ public:
         wrapper_->execute(std::move(t));
     }
 
-    // TODO (now): Remove this
-    void operator()(task t) const { execute(std::move(t)); }
-
     //! Checks if this executor is wrapping another executor
     explicit operator bool() const noexcept { return wrapper_ != nullptr; }
 

@@ -185,12 +185,12 @@ void test_task_group_and_serializers(concore::any_executor executor) {
     };
     // Start the tasks
     for (int i = 0; i < 10; i++)
-        executor(concore::task(ftor, grp));
+        executor.execute(concore::task(ftor, grp));
 
     // Add another task at the end; this time outside of the task_group
     std::atomic<bool> reached_end_task{false};
     auto grpEnd = concore::task_group::create();
-    executor(concore::task{[&]() { reached_end_task = true; }, grpEnd});
+    executor.execute(concore::task{[&]() { reached_end_task = true; }, grpEnd});
 
     // Wait a bit for the tasks to start, and cancel the task group
     std::this_thread::sleep_for(3ms);

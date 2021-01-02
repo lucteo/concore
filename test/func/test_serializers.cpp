@@ -57,7 +57,7 @@ void check_execute_with_exceptions(Creator creat) {
     // Create the tasks, and add them to the executor
     for (int i = 0; i < num_tasks; i++) {
         concore::task t{[]() { throw std::logic_error("something went wrong"); }, grp};
-        executor(std::move(t));
+        executor.execute(std::move(t));
     }
 
     // Wait for all the tasks to complete
@@ -89,7 +89,7 @@ void check_parallelism(concore::any_executor e, int max_par, int min_par = 1) {
 
     // Create the tasks, and add them to the executor
     for (int i = 0; i < num_tasks; i++)
-        e([&]() {
+        e.execute([&]() {
             cur_parallelism++;
             std::this_thread::sleep_for(1ms);
             results[end_idx++] = cur_parallelism.load();
@@ -127,7 +127,7 @@ void check_in_order_execution(concore::any_executor e) {
 
     // Create the tasks, and add them to the executor
     for (int i = 0; i < num_tasks; i++)
-        e([&, i]() {
+        e.execute([&, i]() {
             results[end_idx++] = i;
             tc.task_finished();
         });
@@ -154,7 +154,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     }
     SECTION("serializer has execution syntax") {
         auto e = concore::serializer(ge);
-        e(task);
+        e.execute(task);
     }
 
     SECTION("n_serializer is copyable") {
@@ -166,7 +166,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     }
     SECTION("n_serializer has execution syntax") {
         auto e = concore::n_serializer(4);
-        e(task);
+        e.execute(task);
     }
 
     SECTION("rw_serializer.reader is copyable") {
@@ -178,7 +178,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     }
     SECTION("rw_serializer.reader has execution syntax") {
         auto e = concore::rw_serializer().reader();
-        e(task);
+        e.execute(task);
     }
 
     SECTION("rw_serializer.writer is copyable") {
@@ -190,7 +190,7 @@ TEST_CASE("serializers are executors", "[ser]") {
     }
     SECTION("rw_serializer.writer has execution syntax") {
         auto e = concore::rw_serializer().writer();
-        e(task);
+        e.execute(task);
     }
 }
 
@@ -351,7 +351,7 @@ TEST_CASE("rw_serializer will execute WRITEs as soon as possible", "[ser]") {
     for (int i = 0; i < num_tasks; i++) {
         auto e = i == write_pos ? concore::any_executor(rws.writer())
                                 : concore::any_executor(rws.reader());
-        e([&, i]() {
+        e.execute([&, i]() {
             results[end_idx++] = i;
             // Randomly wait a bit of time
             int rnd = 1 + std::rand() % 6; // generates a number in range [1..6]

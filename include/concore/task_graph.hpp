@@ -99,6 +99,10 @@ public:
      */
     explicit chained_task(task t, any_executor executor = {})
         : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
+    //! @overload
+    template <typename F>
+    explicit chained_task(F f, any_executor executor = {})
+        : impl_(std::make_shared<detail::chained_task_impl>(task{std::forward<F>(f)}, executor)) {}
 
     /**
      * @brief      The call operator.

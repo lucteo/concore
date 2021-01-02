@@ -57,12 +57,6 @@ struct tbb_executor {
         tbb::task::enqueue(tbb_task, static_cast<tbb::priority_t>(prio_));
     }
 
-    template <typename F>
-    void operator()(F&& f) const {
-        execute(std::forward<F>(f));
-    }
-    // TODO (now): Remove this
-
     friend inline bool operator==(tbb_executor l, tbb_executor r) { return l.prio_ == r.prio_; }
     friend inline bool operator!=(tbb_executor l, tbb_executor r) { return !(l == r); }
 

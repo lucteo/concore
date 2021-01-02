@@ -74,9 +74,6 @@ public:
         //! @overload
         void execute(task t) const { do_enqueue(std::move(t)); }
 
-        //! @copydoc execute()
-        void operator()(task t) const { do_enqueue(std::move(t)); }
-
         friend inline bool operator==(reader_type l, reader_type r) { return l.impl_ == r.impl_; }
         friend inline bool operator!=(reader_type l, reader_type r) { return !(l == r); }
 

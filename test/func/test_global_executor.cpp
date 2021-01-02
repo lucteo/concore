@@ -54,7 +54,7 @@ TEST_CASE("global_executor executes tasks according to their prio") {
         // Create the tasks; start with the low prio ones
         for (int p = 0; p < num_prios; p++) {
             for (int i = 0; i < num_tasks_per_prio; i++)
-                executors[p]([&, p]() {
+                executors[p].execute([&, p]() {
                     task_prios[end_idx++] = p;
                     std::this_thread::sleep_for(1ms);
                     tc.task_finished();

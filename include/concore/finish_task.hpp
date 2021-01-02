@@ -66,7 +66,7 @@ struct finish_event {
     void notify_done() const {
         assert(impl_);
         if (impl_->ref_count_-- == 1) {
-            impl_->executor_(std::move(impl_->task_));
+            impl_->executor_.execute(std::move(impl_->task_));
         }
     }
 
@@ -132,6 +132,14 @@ struct finish_task {
     explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
                   std::move(t), spawn_continuation_executor{}, count)) {}
+    template <typename F>
+    finish_task(F f, any_executor e, int count = 1)
+        : event_(std::make_shared<detail::finish_event_impl>(
+                  task{std::forward<F>(f)}, std::move(e), count)) {}
+    template <typename F>
+    explicit finish_task(F f, int count = 1)
+        : event_(std::make_shared<detail::finish_event_impl>(
+                  task{std::forward<F>(f)}, spawn_continuation_executor{}, count)) {}
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }

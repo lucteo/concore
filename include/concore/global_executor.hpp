@@ -52,12 +52,6 @@ struct global_executor {
     }
     void execute(task t) const { do_enqueue(detail::get_exec_context(), std::move(t), prio_); }
 
-    template <typename F>
-    void operator()(F&& f) const {
-        execute(std::forward<F>(f));
-    }
-    // TODO (now): Remove this
-
     friend inline bool operator==(global_executor l, global_executor r) {
         return l.prio_ == r.prio_;
     }

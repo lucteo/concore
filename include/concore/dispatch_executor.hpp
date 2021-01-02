@@ -72,12 +72,6 @@ struct dispatch_executor {
         dispatch_group_async_f(g.group_, queue, context, work);
     }
 
-    template <typename F>
-    void operator()(F&& f) const {
-        execute(std::forward<F>(f));
-    }
-    // TODO (now): Remove this
-
     friend inline bool operator==(dispatch_executor l, dispatch_executor r) {
         return l.prio_ == r.prio_;
     }

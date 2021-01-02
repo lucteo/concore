@@ -68,7 +68,7 @@ void do_iter(int n, E& executor, std::chrono::time_point<std::chrono::high_resol
     // CONCORE_PROFILING_SET_TEXT_FMT(32, "n=%d", n);
     if (n > 0) {
         benchmark::DoNotOptimize(executor);
-        executor([n, &executor, &end]() {
+        executor.execute([n, &executor, &end]() {
             // Call us with a decremented count
             do_iter(n - 1, executor, end);
         });
@@ -81,7 +81,7 @@ static void test_latency(E executor, benchmark::State& state) {
     const int num_tasks = state.range(0);
 
     // Add a task to the executor, just to ensure that the executor is warmed up
-    executor([]() { benchmark::DoNotOptimize(std::thread::hardware_concurrency()); });
+    executor.execute([]() { benchmark::DoNotOptimize(std::thread::hardware_concurrency()); });
     std::this_thread::sleep_for(200ms);
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
@@ -111,7 +111,7 @@ static void test_latency_ser(E executor, benchmark::State& state) {
     const int num_tasks = state.range(0);
 
     // Add a task to the executor, just to ensure that the executor is warmed up
-    executor([]() { benchmark::DoNotOptimize(std::thread::hardware_concurrency()); });
+    executor.execute([]() { benchmark::DoNotOptimize(std::thread::hardware_concurrency()); });
     std::this_thread::sleep_for(200ms);
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
@@ -122,7 +122,7 @@ static void test_latency_ser(E executor, benchmark::State& state) {
         auto start = std::chrono::high_resolution_clock::now();
 
         for (int i = num_tasks - 1; i >= 0; i--) {
-            executor([i, &end]() {
+            executor.execute([i, &end]() {
                 CONCORE_PROFILING_SCOPE_N("ser task");
                 CONCORE_PROFILING_SET_TEXT_FMT(32, "%d", i);
                 if (i == 0)

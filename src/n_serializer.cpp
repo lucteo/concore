@@ -55,8 +55,8 @@ struct n_serializer::impl : std::enable_shared_from_this<impl> {
     //! Enqueue the next task to be executed in the given executor.
     void enqueue_next(any_executor& executor) {
         // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
-        auto t = [p_this = shared_from_this()]() { p_this->execute_one(); };
-        detail::enqueue_next(executor, std::move(t), except_fun_);
+        auto f = [p_this = shared_from_this()]() { p_this->execute_one(); };
+        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
     }
 };
 

@@ -23,7 +23,7 @@ static void execute_lots_of_tasks(E executor, benchmark::State& state) {
     task_countdown tc{num_tasks};
 
     // Ensure that the executor is warmed up
-    executor([problem_size]() { benchmark::DoNotOptimize(bad_fib(problem_size)); });
+    executor.execute([problem_size]() { benchmark::DoNotOptimize(bad_fib(problem_size)); });
     std::this_thread::sleep_for(200ms);
 
     // NOLINTNEXTLINE(clang-analyzer-deadcode.DeadStores)
@@ -31,7 +31,7 @@ static void execute_lots_of_tasks(E executor, benchmark::State& state) {
         {
             CONCORE_PROFILING_SCOPE_N("perf iter");
             for (int i = 0; i < num_tasks; i++) {
-                executor([&tc, problem_size]() {
+                executor.execute([&tc, problem_size]() {
                     CONCORE_PROFILING_SCOPE_N("my task");
                     benchmark::DoNotOptimize(bad_fib(problem_size));
                     tc.task_finished();

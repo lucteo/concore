@@ -130,13 +130,13 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
     //! Enqueue the next READ task to be executed in the given executor.
     void enqueue_next_read(any_executor& executor) {
-        auto t = [p_this = shared_from_this()]() { p_this->execute_read(); };
-        detail::enqueue_next(executor, std::move(t), except_fun_);
+        auto f = [p_this = shared_from_this()]() { p_this->execute_read(); };
+        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
     }
     //! Enqueue the next WRITE task to be executed in the given executor.
     void enqueue_next_write(any_executor& executor) {
-        auto t = [p_this = shared_from_this()]() { p_this->execute_write(); };
-        detail::enqueue_next(executor, std::move(t), except_fun_);
+        auto f = [p_this = shared_from_this()]() { p_this->execute_write(); };
+        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
     }
 };
 

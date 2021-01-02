@@ -25,12 +25,6 @@ struct delegating_executor {
         fun_(task{std::forward<F>(f)});
     }
 
-    // TODO (now): Remove this
-    template <typename F>
-    void operator()(F&& f) const {
-        execute(std::forward<F>(f));
-    }
-
     friend inline bool operator==(delegating_executor l, delegating_executor r) { return false; }
     friend inline bool operator!=(delegating_executor l, delegating_executor r) { return true; }
 

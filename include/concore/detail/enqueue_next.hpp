@@ -11,7 +11,7 @@ namespace detail {
 template <typename E>
 inline void enqueue_next(E& executor, task&& t, except_fun_t except_fun) noexcept {
     try {
-        executor(std::move(t));
+        executor.execute(std::move(t));
     } catch (...) {
         except_fun(std::current_exception());
     }

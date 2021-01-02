@@ -45,6 +45,6 @@ inline bool enqueue_and_wait(
         concore::any_executor e, concore::task_function f, int num_tasks = 10) {
     auto grp = concore::task_group::create();
     for (int i = 0; i < num_tasks; i++)
-        e(concore::task{f, grp});
+        e.execute(concore::task{f, grp});
     return bounded_wait(grp);
 }

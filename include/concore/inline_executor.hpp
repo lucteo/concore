@@ -20,12 +20,6 @@ struct inline_executor {
         std::forward<F>(f)();
     }
 
-    // TODO (now): Remove this
-    template <typename F>
-    void operator()(F&& f) const noexcept(noexcept(std::forward<F>(f)())) {
-        std::forward<F>(f)();
-    }
-
     friend inline bool operator==(inline_executor, inline_executor) { return true; }
     friend inline bool operator!=(inline_executor, inline_executor) { return false; }
 };
