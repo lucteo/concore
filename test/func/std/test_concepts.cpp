@@ -1,13 +1,13 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/execution.hpp>
+#include <concore/thread_pool.hpp>
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
 TEST_CASE("thread_pool executor models the executor concept", "[execution][concepts]") {
-    auto pool = concore::std_execution::static_thread_pool(2);
+    auto pool = concore::static_thread_pool(2);
     auto ex = pool.executor();
-    REQUIRE(concore::std_execution::executor<decltype(ex)>);
+    REQUIRE(concore::executor<decltype(ex)>);
 }
 
 struct not_quite_executor {
@@ -39,7 +39,7 @@ struct not_quite_executor {
 };
 
 TEST_CASE("not all classes model the executor concept", "[execution][concepts]") {
-    REQUIRE_FALSE(concore::std_execution::executor<not_quite_executor>);
+    REQUIRE_FALSE(concore::executor<not_quite_executor>);
 }
 
 namespace NS1 {
@@ -60,7 +60,7 @@ struct my_executor {
 } // namespace NS1
 
 TEST_CASE("structure with friend 'execute' models the executor concept", "[execution][concepts]") {
-    REQUIRE(concore::std_execution::executor<NS1::my_executor>);
+    REQUIRE(concore::executor<NS1::my_executor>);
 }
 
 namespace NS2 {
@@ -81,7 +81,7 @@ inline void execute(const my_executor& ex, F&& f) {
 } // namespace NS2
 
 TEST_CASE("struct with external 'execute' models the executor concept", "[execution][concepts]") {
-    REQUIRE(concore::std_execution::executor<NS2::my_executor>);
+    REQUIRE(concore::executor<NS2::my_executor>);
 }
 
 namespace NS3 {
@@ -96,14 +96,14 @@ struct my_executor {
 };
 
 template <typename F>
-inline void tag_invoke(concore::std_execution::execute_t, const my_executor& ex, F&& f) {
+inline void tag_invoke(concore::execute_t, const my_executor& ex, F&& f) {
     ex((F &&) f);
 }
 } // namespace NS3
 
 TEST_CASE("struct with tag_invoke extension point models the executor concept",
         "[execution][concepts]") {
-    REQUIRE(concore::std_execution::executor<NS3::my_executor>);
+    REQUIRE(concore::executor<NS3::my_executor>);
 }
 
 namespace test_models {
@@ -190,7 +190,7 @@ struct my_scheduler {
 } // namespace test_models
 
 TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     using void_fun = decltype([]() {});
@@ -207,7 +207,7 @@ TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
 }
 
 TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(receiver<my_receiver0>);
@@ -217,7 +217,7 @@ TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]"
 }
 
 TEST_CASE("receiver types satisfy the receiver_of concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(receiver_of<my_receiver0>);
@@ -227,7 +227,7 @@ TEST_CASE("receiver types satisfy the receiver_of concept", "[execution][concept
 }
 
 TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(sender<my_sender0>);
@@ -235,7 +235,7 @@ TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
 }
 
 TEST_CASE("sender types satisfy the typed_sender concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(typed_sender<my_sender0>);
@@ -243,7 +243,7 @@ TEST_CASE("sender types satisfy the typed_sender concept", "[execution][concepts
 }
 
 TEST_CASE("sender & receiver types satisfy the sender_to concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(sender_to<my_sender0, my_receiver0>);
@@ -252,7 +252,7 @@ TEST_CASE("sender & receiver types satisfy the sender_to concept", "[execution][
 
 TEST_CASE("not all combinations of senders & receivers satisfy the sender_to concept",
         "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE_FALSE(sender_to<my_sender0, my_receiver_int>);
@@ -264,7 +264,7 @@ TEST_CASE("not all combinations of senders & receivers satisfy the sender_to con
 }
 
 TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(scheduler<my_scheduler>);
@@ -273,7 +273,7 @@ TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts
 }
 
 TEST_CASE("other types don't satisfy the scheduler concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE_FALSE(scheduler<my_executor>);
@@ -283,7 +283,7 @@ TEST_CASE("other types don't satisfy the scheduler concept", "[execution][concep
 }
 
 TEST_CASE("operation types satisfy the operation_state concept", "[execution][concepts]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     REQUIRE(operation_state<my_operation>);

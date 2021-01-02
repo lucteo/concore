@@ -1,4 +1,4 @@
-#include <concore/std/thread_pool.hpp>
+#include <concore/thread_pool.hpp>
 #include <concore/global_executor.hpp>
 #include <concore/task_group.hpp>
 #include <concore/spawn.hpp>
@@ -7,7 +7,6 @@
 #include <concore/detail/exec_context.hpp>
 
 namespace concore {
-namespace std_execution {
 namespace detail {
 
 init_data get_init_data_for_pool(size_t num_threads) {
@@ -137,5 +136,4 @@ static_thread_pool::executor_type static_thread_pool::executor() noexcept {
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore

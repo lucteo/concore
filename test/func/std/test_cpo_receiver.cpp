@@ -1,28 +1,28 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/execution.hpp>
+#include <concore/thread_pool.hpp>
 
-using namespace concore::std_execution::detail::cpo_set_error;
+using namespace concore::detail::cpo_set_error;
 
 template <typename R> // requires meets_outer_fun<R, std::bad_alloc>
 void test_receiver_done_and_error(R&& r) {
-    concore::std_execution::set_done(r);
+    concore::set_done(r);
     CHECK(r.state_ == 1);
-    concore::std_execution::set_error(r, std::bad_alloc{});
+    concore::set_error(r, std::bad_alloc{});
     CHECK(r.state_ == 2);
 }
 
 template <typename R>
 void test_receiver0(R&& r) {
     test_receiver_done_and_error(r);
-    concore::std_execution::set_value(r);
+    concore::set_value(r);
     CHECK(r.state_ == 0);
 }
 
 template <typename R>
 void test_receiver1(R&& r) {
     test_receiver_done_and_error(r);
-    concore::std_execution::set_value(r, 10);
+    concore::set_value(r, 10);
     CHECK(r.state_ == 0);
     CHECK(r.val1_ == 10);
 }
@@ -30,7 +30,7 @@ void test_receiver1(R&& r) {
 template <typename R>
 void test_receiver2(R&& r) {
     test_receiver_done_and_error(r);
-    concore::std_execution::set_value(r, 10, 3.14);
+    concore::set_value(r, 10, 3.14);
     CHECK(r.state_ == 0);
     CHECK(r.val1_ == 10);
     CHECK(r.val2_ == 3.14);
@@ -121,9 +121,9 @@ struct my_receiver {
     double val2_{0.0};
 };
 
-using concore::std_execution::set_done_t;
-using concore::std_execution::set_error_t;
-using concore::std_execution::set_value_t;
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
 
 void tag_invoke(set_value_t, my_receiver& r) { r.state_ = 0; }
 

@@ -4,7 +4,6 @@
 #include <exception>
 
 namespace concore {
-namespace std_execution {
 inline namespace v1 {
 
 /**
@@ -37,5 +36,4 @@ private:
 };
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

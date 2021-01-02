@@ -1,12 +1,11 @@
 #pragma once
 
 #include <concore/detail/concept_macros.hpp>
-#include "_concepts_receiver.hpp"
-#include "_concepts_sender.hpp"
-#include "_concept_operation_state.hpp"
+#include <concore/_concepts/_concepts_receiver.hpp>
+#include <concore/_concepts/_concepts_sender.hpp>
+#include <concore/_concepts/_concept_operation_state.hpp>
 
 namespace concore {
-namespace std_execution {
 
 namespace detail {
 namespace cpo_connect {
@@ -106,5 +105,4 @@ using detail::cpo_connect::connect_t;
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore

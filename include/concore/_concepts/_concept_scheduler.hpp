@@ -4,14 +4,12 @@
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
-#include "_cpo_schedule.hpp"
+#include <concore/_cpo/_cpo_schedule.hpp>
 
 #include <concepts>
 #include <type_traits>
 
 namespace concore {
-
-namespace std_execution {
 
 namespace detail {}; // namespace detail
 
@@ -33,12 +31,11 @@ inline namespace v1 {
 template <typename S>
 concept scheduler = std::move_constructible<std::remove_cvref_t<S>>&&
         std::equality_comparable<std::remove_cvref_t<S>>&& requires(S&& s) {
-    concore::std_execution::schedule((S &&) s);
+    concore::schedule((S &&) s);
 };
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore
 
 #endif

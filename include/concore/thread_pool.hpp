@@ -2,10 +2,10 @@
 
 #include <concore/detail/cxx_features.hpp>
 #if CONCORE_CXX_HAS_CONCEPTS
-#include "_concept_scheduler.hpp"
-#include "_concepts_receiver.hpp"
+#include <concore/_concepts/_concept_scheduler.hpp>
+#include <concore/_concepts/_concepts_receiver.hpp>
 #endif
-#include "_cpo_set_value.hpp"
+#include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/task.hpp>
 
 #include <exception>
@@ -16,8 +16,6 @@ namespace concore {
 inline namespace v1 {
 class task_group;
 }
-
-namespace std_execution {
 
 inline namespace v1 {
 class static_thread_pool;
@@ -43,7 +41,7 @@ struct pool_sender_op {
         , receiver_(std::move(r)) {}
 
     void start() noexcept {
-        auto t = [this]() noexcept { concore::std_execution::set_value(std::move(receiver_)); };
+        auto t = [this]() noexcept { concore::set_value(std::move(receiver_)); };
         pool_enqueue(*pool_, std::move(t));
     }
 
@@ -350,7 +348,5 @@ private:
 };
 
 } // namespace v1
-
-} // namespace std_execution
 
 } // namespace concore

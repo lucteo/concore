@@ -4,14 +4,12 @@
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
-#include "_cpo_execute.hpp"
+#include <concore/_cpo/_cpo_execute.hpp>
 
 #include <concepts>
 #include <type_traits>
 
 namespace concore {
-
-namespace std_execution {
 
 namespace detail {
 
@@ -25,7 +23,7 @@ concept executor_of_impl = std::invocable<std::remove_cvref_t<F>&>&&
                 std::move_constructible<std::remove_cvref_t<F>>&& std::copy_constructible<E>&&
                         std::is_nothrow_copy_constructible_v<E>&&
                                 std::equality_comparable<E>&& requires(const E& e, F&& f) {
-    concore::std_execution::execute(e, (F &&) f);
+    concore::execute(e, (F &&) f);
 };
 
 }; // namespace detail
@@ -76,7 +74,6 @@ concept executor_of = executor<E>&& detail::executor_of_impl<E, F>;
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore
 
 #endif

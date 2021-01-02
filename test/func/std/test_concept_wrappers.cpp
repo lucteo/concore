@@ -1,6 +1,9 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/as_receiver.hpp>
+#include <concore/as_invocable.hpp>
+#include <concore/as_operation.hpp>
+#include <concore/as_sender.hpp>
+#include <concore/execution.hpp>
 
 namespace test_models {
 
@@ -117,14 +120,14 @@ struct test_receiver {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 TEST_CASE("as_receiver transforms a functor into a receiver", "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     static_assert(receiver_of<as_receiver<decltype([] {})>>);
 }
 #endif
 
 TEST_CASE("as_receiver passed to a sender will call the given ftor",
         "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     bool called = false;
@@ -132,7 +135,7 @@ TEST_CASE("as_receiver passed to a sender will call the given ftor",
     auto recv = as_receiver<decltype(f)>(std::move(f));
 
     CHECK_FALSE(called);
-    concore::std_execution::submit(signal_sender{}, recv);
+    concore::submit(signal_sender{}, recv);
     CHECK(called);
 
 #if CONCORE_CXX_HAS_CONCEPTS
@@ -142,7 +145,7 @@ TEST_CASE("as_receiver passed to a sender will call the given ftor",
 
 #if CONCORE_CXX_HAS_CONCEPTS
 TEST_CASE("as_invocable transforms a receiver into a functor", "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
     static_assert(std::invocable<as_invocable<my_receiver0>>);
 }
@@ -150,7 +153,7 @@ TEST_CASE("as_invocable transforms a receiver into a functor", "[execution][conc
 
 TEST_CASE("as_invocable properly calls the right methods in the receiver",
         "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     struct logging_receiver {
@@ -187,14 +190,14 @@ TEST_CASE("as_invocable properly calls the right methods in the receiver",
 #if CONCORE_CXX_HAS_CONCEPTS
 TEST_CASE("as_operation transforms an executor and a receiver into an operation_state",
         "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
     static_assert(operation_state<as_operation<my_executor, my_receiver0>>);
 }
 #endif
 
 TEST_CASE("as_operation produces a good operation", "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     bool called = false;
@@ -202,18 +205,18 @@ TEST_CASE("as_operation produces a good operation", "[execution][concept_wrapper
     test_receiver recv{called};
     auto op = as_operation<my_executor, test_receiver>(my_executor{}, recv);
     CHECK_FALSE(called);
-    concore::std_execution::start(op);
+    concore::start(op);
     CHECK(called);
 }
 
 TEST_CASE("as_sender transforms an executor into a sender", "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
     static_assert(sender_to<as_sender<my_executor>, my_receiver0>);
 }
 
 TEST_CASE("as_sender produces a good sender", "[execution][concept_wrappers]") {
-    using namespace concore::std_execution;
+    using namespace concore;
     using namespace test_models;
 
     bool called = false;
@@ -221,6 +224,6 @@ TEST_CASE("as_sender produces a good sender", "[execution][concept_wrappers]") {
     test_receiver recv{called};
     auto snd = as_sender<my_executor>(my_executor{});
     CHECK_FALSE(called);
-    concore::std_execution::submit(snd, recv);
+    concore::submit(snd, recv);
     CHECK(called);
 }

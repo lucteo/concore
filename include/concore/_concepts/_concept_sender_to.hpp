@@ -1,12 +1,10 @@
 #pragma once
 
-#include "_concepts_sender.hpp"
-#include "_concepts_receiver.hpp"
-#include "_cpo_connect.hpp"
+#include <concore/_concepts/_concepts_sender.hpp>
+#include <concore/_concepts/_concepts_receiver.hpp>
+#include <concore/_cpo/_cpo_connect.hpp>
 
 namespace concore {
-
-namespace std_execution {
 
 inline namespace v1 {
 
@@ -25,7 +23,7 @@ inline namespace v1 {
  */
 template <typename S, typename R>
 concept sender_to = sender<S>&& receiver_partial<R>&& requires(S&& s, R&& r) {
-    concore::std_execution::connect((S &&) s, (R &&) r);
+    concore::connect((S &&) s, (R &&) r);
 };
 
 #else
@@ -38,5 +36,4 @@ CONCORE_CONCEPT_OR_BOOL(
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore

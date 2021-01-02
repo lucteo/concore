@@ -1,10 +1,9 @@
 #pragma once
 
 #include <concore/detail/concept_macros.hpp>
-#include "_concepts_sender.hpp"
+#include <concore/_concepts/_concepts_sender.hpp>
 
 namespace concore {
-namespace std_execution {
 
 namespace detail {
 namespace cpo_schedule {
@@ -87,5 +86,4 @@ using detail::cpo_schedule::schedule_t;
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore

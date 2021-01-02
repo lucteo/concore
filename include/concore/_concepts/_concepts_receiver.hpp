@@ -3,9 +3,9 @@
 #include <concore/detail/concept_macros.hpp>
 #include <concore/detail/extra_type_traits.hpp>
 
-#include "_cpo_set_value.hpp"
-#include "_cpo_set_done.hpp"
-#include "_cpo_set_error.hpp"
+#include <concore/_cpo/_cpo_set_value.hpp>
+#include <concore/_cpo/_cpo_set_done.hpp>
+#include <concore/_cpo/_cpo_set_error.hpp>
 
 #if CONCORE_CXX_HAS_CONCEPTS
 #include <concepts>
@@ -14,8 +14,6 @@
 #include <utility>
 
 namespace concore {
-
-namespace std_execution {
 
 #if !CONCORE_CXX_HAS_CONCEPTS
 namespace detail {
@@ -34,7 +32,7 @@ inline namespace v1 {
 template <typename T>
 concept receiver_partial = std::move_constructible<std::remove_cvref_t<T>>&&
         std::constructible_from<std::remove_cvref_t<T>, T>&& requires(std::remove_cvref_t<T>&& t) {
-    { concore::std_execution::set_done(std::move(t)) }
+    { concore::set_done(std::move(t)) }
     noexcept;
 };
 
@@ -65,9 +63,9 @@ template <typename T, typename E = std::exception_ptr>
 concept receiver = std::move_constructible<std::remove_cvref_t<T>>&&
         std::constructible_from<std::remove_cvref_t<T>, T>&& requires(
                 std::remove_cvref_t<T>&& t, E&& e) {
-    { concore::std_execution::set_done(std::move(t)) }
+    { concore::set_done(std::move(t)) }
     noexcept;
-    { concore::std_execution::set_error(std::move(t), (E &&) e) }
+    { concore::set_error(std::move(t), (E &&) e) }
     noexcept;
 };
 
@@ -95,7 +93,7 @@ template <typename T, typename E = std::exception_ptr, typename... Vs>
 concept receiver_of = receiver<T, E>&& std::move_constructible<std::remove_cvref_t<T>>&&
         std::constructible_from<std::remove_cvref_t<T>, T>&& requires(
                 std::remove_cvref_t<T>&& t, Vs&&... vs) {
-    concore::std_execution::set_value(std::move(t), (Vs &&) vs...);
+    concore::set_value(std::move(t), (Vs &&) vs...);
 };
 
 #else
@@ -120,5 +118,4 @@ CONCORE_CONCEPT_OR_BOOL(receiver_of) =
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore

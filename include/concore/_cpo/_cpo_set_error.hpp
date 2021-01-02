@@ -3,7 +3,6 @@
 #include <concore/detail/concept_macros.hpp>
 
 namespace concore {
-namespace std_execution {
 
 namespace detail {
 namespace cpo_set_error {
@@ -99,5 +98,4 @@ using detail::cpo_set_error::set_error;
 using detail::cpo_set_error::set_error_t;
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

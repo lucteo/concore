@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/execution.hpp>
+#include <concore/thread_pool.hpp>
 
 #include <functional>
 
@@ -18,15 +18,13 @@ struct my_oper_state_tag_invoke {
     bool started_{false};
 };
 
-void tag_invoke(concore::std_execution::start_t, my_oper_state_tag_invoke& op) {
-    op.started_ = true;
-}
+void tag_invoke(concore::start_t, my_oper_state_tag_invoke& op) { op.started_ = true; }
 
 template <typename O>
 void test_start() {
     O oper;
     CHECK_FALSE(oper.started_);
-    concore::std_execution::start(oper);
+    concore::start(oper);
     CHECK(oper.started_);
 }
 

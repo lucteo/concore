@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <concore/std/thread_pool.hpp>
-#include <concore/std/execution.hpp>
+#include <concore/thread_pool.hpp>
+#include <concore/execution.hpp>
 #include "test_common/task_utils.hpp"
 
 #include <array>
@@ -8,7 +8,7 @@
 #include <thread>
 #include <chrono>
 
-using namespace concore::std_execution;
+using namespace concore;
 using namespace std::chrono_literals;
 
 TEST_CASE("Can create a static_thread_pool", "[execution]") {
@@ -306,7 +306,7 @@ TEST_CASE("static_thread_pool scheduler can schedule work", "[execution]") {
 
     bool executed = false;
     auto op = scheduler.schedule().connect(my_receiver{&executed});
-    concore::std_execution::start(op);
+    concore::start(op);
 
     // Ensure that the receiver is called
     my_pool.wait();

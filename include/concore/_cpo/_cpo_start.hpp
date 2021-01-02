@@ -3,7 +3,6 @@
 #include <concore/detail/concept_macros.hpp>
 
 namespace concore {
-namespace std_execution {
 
 namespace detail {
 namespace cpo_start {
@@ -85,5 +84,4 @@ using detail::cpo_start::start;
 using detail::cpo_start::start_t;
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

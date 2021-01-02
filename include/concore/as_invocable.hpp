@@ -1,11 +1,10 @@
 #pragma once
 
-#include "_concepts_receiver.hpp"
+#include <concore/_concepts/_concepts_receiver.hpp>
 
 #include <utility>
 
 namespace concore {
-namespace std_execution {
 inline namespace v1 {
 
 /**
@@ -40,14 +39,14 @@ struct as_invocable {
     as_invocable& operator=(const as_invocable&) = delete;
     ~as_invocable() {
         if (receiver_)
-            concore::std_execution::set_done(std::move(*receiver_));
+            concore::set_done(std::move(*receiver_));
     }
     void operator()() noexcept {
         try {
-            concore::std_execution::set_value(std::move(*receiver_));
+            concore::set_value(std::move(*receiver_));
             receiver_ = nullptr;
         } catch (...) {
-            concore::std_execution::set_error(std::move(*receiver_), std::current_exception());
+            concore::set_error(std::move(*receiver_), std::current_exception());
             receiver_ = nullptr;
         }
     }
@@ -57,5 +56,4 @@ private:
 };
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

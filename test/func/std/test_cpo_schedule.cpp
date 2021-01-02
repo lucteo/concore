@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
+#include <concore/execution.hpp>
 
 struct my_sender {
     friend inline bool operator==(my_sender, my_sender) { return false; }
@@ -24,14 +24,14 @@ struct my_scheduler_ext {
 
 struct my_scheduler_tag_invoke {};
 
-my_sender tag_invoke(concore::std_execution::schedule_t, my_scheduler_tag_invoke& sched) {
+my_sender tag_invoke(concore::schedule_t, my_scheduler_tag_invoke& sched) {
     return my_sender{true};
 }
 
 template <typename Sched>
 void test_schedule() {
     Sched sched;
-    auto snd = concore::std_execution::schedule(sched);
+    auto snd = concore::schedule(sched);
     CHECK(snd.from_scheduler_);
 }
 

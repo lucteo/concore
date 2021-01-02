@@ -3,14 +3,13 @@
 #include <concore/detail/concept_macros.hpp>
 #include <concore/detail/extra_type_traits.hpp>
 
-#include "_cpo_start.hpp"
+#include <concore/_cpo/_cpo_start.hpp>
 
 #if CONCORE_CXX_HAS_CONCEPTS
 #include <concepts>
 #endif
 
 namespace concore {
-namespace std_execution {
 inline namespace v1 {
 
 #if CONCORE_CXX_HAS_CONCEPTS
@@ -31,7 +30,7 @@ inline namespace v1 {
 template <typename OpState>
 concept operation_state = std::destructible<OpState>&& std::is_object_v<OpState>&& requires(
         OpState& op) {
-    { concore::std_execution::start(op) }
+    { concore::start(op) }
     noexcept;
 };
 
@@ -44,5 +43,4 @@ CONCORE_CONCEPT_OR_BOOL(operation_state) = std::is_destructible_v<OpState>&& std
 #endif
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

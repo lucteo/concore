@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/execution.hpp>
+#include <concore/thread_pool.hpp>
 
 #include <functional>
 
@@ -71,7 +71,7 @@ struct my_sender_tag_invoke {
     int value_{0};
 };
 
-op_state tag_invoke(concore::std_execution::connect_t, my_sender_tag_invoke& s, my_receiver& r) {
+op_state tag_invoke(concore::connect_t, my_sender_tag_invoke& s, my_receiver& r) {
     int val = s.value_;
     return op_state([val, &r] { r.set_value(val); });
 }
@@ -80,7 +80,7 @@ template <typename S>
 void test_connect() {
     my_receiver recv;
     S snd{10};
-    auto op = concore::std_execution::connect(snd, recv);
+    auto op = concore::connect(snd, recv);
     CHECK(recv.value_ == 0);
     op.start();
     CHECK(recv.value_ == 10);

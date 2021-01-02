@@ -1,11 +1,10 @@
 #pragma once
 
-#include "_as_operation.hpp"
+#include <concore/as_operation.hpp>
 
 #include <utility>
 
 namespace concore {
-namespace std_execution {
 inline namespace v1 {
 
 /**
@@ -50,5 +49,4 @@ private:
 };
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

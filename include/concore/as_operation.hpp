@@ -2,14 +2,14 @@
 
 #include <concore/detail/extra_type_traits.hpp>
 
-#include "_as_invocable.hpp"
-#include "_concepts_executor.hpp"
-#include "_concepts_receiver.hpp"
+#include <concore/as_invocable.hpp>
+#include <concore/_concepts/_concepts_executor.hpp>
+#include <concore/_concepts/_concepts_receiver.hpp>
+#include <concore/_cpo/_cpo_execute.hpp>
 
 #include <utility>
 
 namespace concore {
-namespace std_execution {
 inline namespace v1 {
 
 /**
@@ -34,10 +34,9 @@ struct as_operation {
 
     void start() noexcept {
         try {
-            concore::std_execution::execute(
-                    std::move(executor_), as_invocable<receiver_type>(receiver_));
+            concore::execute(std::move(executor_), as_invocable<receiver_type>(receiver_));
         } catch (...) {
-            concore::std_execution::set_error(std::move(receiver_), std::current_exception());
+            concore::set_error(std::move(receiver_), std::current_exception());
         }
     }
 
@@ -47,5 +46,4 @@ private:
 };
 
 } // namespace v1
-} // namespace std_execution
 } // namespace concore

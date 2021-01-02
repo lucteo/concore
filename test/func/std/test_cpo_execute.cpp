@@ -1,12 +1,12 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/execution.hpp>
+#include <concore/thread_pool.hpp>
 
 template <typename Ex>
 bool can_call(const Ex& ex) {
     bool called = false;
     auto f = [&] { called = true; };
-    concore::std_execution::execute(ex, std::move(f));
+    concore::execute(ex, std::move(f));
     return called;
 }
 
@@ -80,7 +80,7 @@ struct my_executor {
 };
 
 template <typename F>
-inline void tag_invoke(concore::std_execution::execute_t, const my_executor& ex, F&& f) {
+inline void tag_invoke(concore::execute_t, const my_executor& ex, F&& f) {
     ex((F &&) f);
 }
 } // namespace NS4
@@ -110,7 +110,7 @@ struct my_executor {
 };
 
 template <typename F>
-inline void tag_invoke(concore::std_execution::execute_t, const my_executor& ex, F&& f) {
+inline void tag_invoke(concore::execute_t, const my_executor& ex, F&& f) {
     ex.fun_called = 2;
     ((F &&) f)();
 }
@@ -126,9 +126,9 @@ TEST_CASE("when multiple execute CPOs are defined, take the one with tag_invoke"
 TEST_CASE("can call global execute on thread_pool executor", "[execution][cpo_execute]") {
     bool called = false;
     {
-        concore::std_execution::static_thread_pool pool{2};
+        concore::static_thread_pool pool{2};
         auto f = [&] { called = true; };
-        concore::std_execution::execute(pool.executor(), std::move(f));
+        concore::execute(pool.executor(), std::move(f));
         pool.wait();
     }
     REQUIRE(called);

@@ -1,9 +1,8 @@
 #pragma once
 
-#include "_concept_sender_to.hpp"
+#include <concore/_concepts/_concept_sender_to.hpp>
 
 namespace concore {
-namespace std_execution {
 
 namespace detail {
 namespace cpo_submit {
@@ -58,8 +57,8 @@ inline const struct submit_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S, typename R), (has_fallback_fun<submit_t, S, R>))
     void operator()(S&& s, R&& r) const {
         // Fallback to connect
-        auto op = concore::std_execution::connect((S &&) s, (R &&) r);
-        concore::std_execution::start(op);
+        auto op = concore::connect((S &&) s, (R &&) r);
+        concore::start(op);
     }
 } submit{};
 
@@ -91,5 +90,4 @@ using detail::cpo_submit::submit_t;
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore

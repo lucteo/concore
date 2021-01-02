@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
-#include <concore/std/execution.hpp>
-#include <concore/std/thread_pool.hpp>
+#include <concore/execution.hpp>
+#include <concore/thread_pool.hpp>
 
 #include <functional>
 
@@ -80,7 +80,7 @@ struct my_sender_tag_invoke {
     }
 };
 
-void tag_invoke(concore::std_execution::submit_t, my_sender_tag_invoke& s, my_receiver& r) {
+void tag_invoke(concore::submit_t, my_sender_tag_invoke& s, my_receiver& r) {
     r.set_value(s.value_);
 }
 
@@ -107,7 +107,7 @@ void test_submit() {
     my_receiver recv;
     S snd{10};
     CHECK(recv.value_ == 0);
-    concore::std_execution::submit(snd, recv);
+    concore::submit(snd, recv);
     CHECK(recv.value_ == 10);
 }
 

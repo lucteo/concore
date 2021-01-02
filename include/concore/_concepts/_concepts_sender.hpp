@@ -3,17 +3,15 @@
 #include <concore/detail/concept_macros.hpp>
 #include <concore/detail/extra_type_traits.hpp>
 
-#include "_cpo_set_value.hpp"
-#include "_cpo_set_done.hpp"
-#include "_cpo_set_error.hpp"
+#include <concore/_cpo/_cpo_set_value.hpp>
+#include <concore/_cpo/_cpo_set_done.hpp>
+#include <concore/_cpo/_cpo_set_error.hpp>
 
 #if CONCORE_CXX_HAS_CONCEPTS
 #include <concepts>
 #endif
 
 namespace concore {
-
-namespace std_execution {
 
 namespace detail {
 
@@ -136,5 +134,4 @@ CONCORE_CONCEPT_OR_BOOL(
 
 } // namespace v1
 
-} // namespace std_execution
 } // namespace concore
