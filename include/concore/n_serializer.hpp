@@ -65,9 +65,9 @@ public:
     explicit n_serializer(int N, executor_t base_executor = {}, executor_t cont_executor = {});
 
     /**
-     * @brief      Function call operator.
+     * @brief      Executes the given functor in the context of the N serializer.
      *
-     * @param      t     The tasks to be enqueued in the serializer
+     * @param      f     The task functor to be enqueued in the serializer
      *
      * If there are no more than *N* tasks in the serializer, this task will be enqueued in the
      * `base_executor` given to the constructor (default is @ref global_executor). If there are
@@ -75,7 +75,16 @@ public:
      * list. When all the previous tasks are executed, this task will also be enqueued for
      * execution.
      */
-    void operator()(task t);
+    template <typename F>
+    void execute(F&& f) {
+        do_enqueue(task{std::forward<F>(f)});
+    }
+
+    //! @overload
+    void execute(task t) { do_enqueue(std::move(t)); }
+
+    //! @copydoc execute()
+    void operator()(task t) { do_enqueue(std::move(t)); }
 
     /**
      * @brief      Sets the exception handler for enqueueing tasks
@@ -98,6 +107,9 @@ private:
     //! We need this to be shared pointer for lifetime issue, but also to be able to copy the
     //! serializer easily.
     std::shared_ptr<impl> impl_;
+
+    //! Enqueues a task for execution
+    void do_enqueue(task t);
 };
 
 } // namespace v1

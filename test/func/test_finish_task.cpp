@@ -156,7 +156,7 @@ TEST_CASE("multiple calls to notify_done() in a row", "[finish_task]") {
     int count = 10;
 
     std::atomic<int> done_cnt{0};
-    concore::finish_task done_task([&] { done_cnt++; }, concore::immediate_executor, count);
+    concore::finish_task done_task([&] { done_cnt++; }, concore::inline_executor{}, count);
     auto event = done_task.event();
 
     CHECK(done_cnt.load() == 0);

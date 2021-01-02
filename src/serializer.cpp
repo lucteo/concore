@@ -29,9 +29,9 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
         : base_executor_(base_executor)
         , cont_executor_(cont_executor) {
         if (!base_executor)
-            base_executor_ = global_executor;
+            base_executor_ = global_executor{};
         if (!cont_executor)
-            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor;
+            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor{};
     }
 
     //! Adds a new task to this serializer
@@ -64,7 +64,7 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
 serializer::serializer(executor_t base_executor, executor_t cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}
 
-void serializer::operator()(task t) { impl_->enqueue(std::move(t)); }
+void serializer::do_enqueue(task t) { impl_->enqueue(std::move(t)); }
 
 void serializer::set_exception_handler(except_fun_t except_fun) {
     impl_->except_fun_ = std::move(except_fun);

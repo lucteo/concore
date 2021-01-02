@@ -7,21 +7,6 @@
 #include <initializer_list>
 
 namespace concore {
-
-namespace detail {
-
-//! Defines an executor that can spawn tasks in the current worker queue.
-struct spawn_executor {
-    void operator()(task t) const { do_spawn(detail::get_exec_context(), std::move(t)); }
-};
-
-//! Similar to a spawn_executor, but doesn't wake other workers
-struct spawn_continuation_executor {
-    void operator()(task t) const { do_spawn(detail::get_exec_context(), std::move(t), false); }
-};
-
-} // namespace detail
-
 inline namespace v1 {
 
 /**
@@ -234,7 +219,24 @@ inline void wait(task_group& grp) {
  *
  * @see spawn(), spawn_continuation_executor, global_executor
  */
-constexpr auto spawn_executor = detail::spawn_executor{};
+struct spawn_executor {
+    /**
+     * @brief Spawns the execution of the given functor
+     *
+     * @param f The functor object to be executed
+     *
+     * This will spawn a task that will call the given functor.
+     */
+    template <typename F>
+    void execute(F&& f) const {
+        do_spawn(detail::get_exec_context(), task{std::forward<F>(f)});
+    }
+    //! @overload
+    void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t)); }
+
+    //! @copydoc execute()
+    void operator()(task t) const { execute(std::move(t)); }
+};
 
 /**
  * Executor that spawns tasks instead of enqueueing them, but not waking other workers.
@@ -242,7 +244,24 @@ constexpr auto spawn_executor = detail::spawn_executor{};
  *
  * @see spawn(), spawn_executor, global_executor
  */
-constexpr auto spawn_continuation_executor = detail::spawn_continuation_executor{};
+struct spawn_continuation_executor {
+    /**
+     * @brief Spawns the execution of the given functor
+     *
+     * @param f The functor object to be executed
+     *
+     * This will spawn a task that will call the given functor.
+     */
+    template <typename F>
+    void execute(F&& f) const {
+        do_spawn(detail::get_exec_context(), task{std::forward<F>(f)}, false);
+    }
+    //! @overload
+    void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t), false); }
+
+    //! @copydoc execute()
+    void operator()(task t) const { execute(std::move(t)); }
+};
 
 } // namespace v1
 

@@ -17,8 +17,10 @@ namespace concore {
  * It is assumed that multiple tasks/threads can call the executor at the same time to enqueue tasks
  * with it.
  *
- * @see global_executor, immediate_executor, serializer
+ * @see global_executor, inline_executor, serializer
  */
 using executor_t = std::function<void(task)>;
+
+// TODO (now): Check if we still need this
 
 } // namespace concore

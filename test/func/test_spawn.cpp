@@ -11,19 +11,19 @@
 using namespace std::chrono_literals;
 
 TEST_CASE("spawn_executor is copyable") {
-    auto e1 = concore::spawn_executor;
-    auto e2 = concore::spawn_executor;
+    auto e1 = concore::spawn_executor{};
+    auto e2 = concore::spawn_executor{};
     // cppcheck-suppress redundantInitialization
     // cppcheck-suppress unreadVariable
     e2 = e1;
 }
 
 TEST_CASE("spawn_executor executes a task", "[spawn]") {
-    test_can_execute_a_task(concore::spawn_executor);
+    test_can_execute_a_task(concore::spawn_executor{});
 }
 
 TEST_CASE("spawn_executor executes all tasks", "[spawn]") {
-    test_can_execute_multiple_tasks(concore::spawn_executor);
+    test_can_execute_multiple_tasks(concore::spawn_executor{});
 }
 
 void task_fun(task_countdown& tc, int n) {

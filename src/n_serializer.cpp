@@ -27,9 +27,9 @@ struct n_serializer::impl : std::enable_shared_from_this<impl> {
         , cont_executor_(cont_executor)
         , processing_items_(N) {
         if (!base_executor)
-            base_executor_ = global_executor;
+            base_executor_ = global_executor{};
         if (!cont_executor)
-            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor;
+            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor{};
     }
 
     void enqueue(task&& t) {
@@ -63,7 +63,7 @@ struct n_serializer::impl : std::enable_shared_from_this<impl> {
 n_serializer::n_serializer(int N, executor_t base_executor, executor_t cont_executor)
     : impl_(std::make_shared<impl>(N, base_executor, cont_executor)) {}
 
-void n_serializer::operator()(task t) { impl_->enqueue(std::move(t)); }
+void n_serializer::do_enqueue(task t) { impl_->enqueue(std::move(t)); }
 
 void n_serializer::set_exception_handler(except_fun_t except_fun) {
     impl_->except_fun_ = std::move(except_fun);

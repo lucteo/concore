@@ -2,6 +2,8 @@
 
 #include "detail/exec_context_if.hpp"
 #include "detail/library_data.hpp"
+#include "detail/task_priority.hpp"
+#include "task.hpp"
 
 #include <utility>
 
@@ -11,90 +13,58 @@ inline namespace v1 {
 class task;
 }
 
-namespace detail {
-
-//! Structure that defines an executor for a given priority
-template <task_priority P = task_priority::normal>
-struct executor_with_prio {
-    void operator()(task&& t) const { do_enqueue(get_exec_context(), std::move(t), P); }
-};
-
-} // namespace detail
-
 inline namespace v1 {
 
 /**
- * @brief      The default global executor.
+ * @brief The default global executor type.
  *
  * This is an executor that passes the tasks directly to concore's task system. Whenever there is a
  * core available, the task is executed.
  *
  * Is is the default executor.
  *
- * The tasks enqueued here are considered to have the priority "normal".
+ * The executor takes as constructor parameter the priority of the task to be used when enqueueing
+ * the task.
  *
- * @see global_executor_critical_prio, global_executor_high_prio, global_executor_normal_prio,
- *      global_executor_low_prio, global_executor_background_prio
+ * Two executor objects are equivalent if their priorities match.
+ *
+ * @see inline_executor, spawn_executor
  */
-constexpr auto global_executor = detail::executor_with_prio<detail::task_priority::normal>{};
+struct global_executor {
 
-/**
- * @brief      Task executor that enqueues tasks with *critical* priority.
- *
- * Similar to @ref global_executor, but the task is considered to have the *critical* priority.
- * Tasks with critical priority take precedence over all other types of tasks in the task system.
- *
- * @see global_executor, global_executor_high_prio, global_executor_normal_prio,
- *      global_executor_low_prio, global_executor_background_prio
- */
-constexpr auto global_executor_critical_prio =
-        detail::executor_with_prio<detail::task_priority::critical>{};
+    //! The priority of the task to be used
+    using priority = detail::task_priority; //! The type of the priority
+    static constexpr auto prio_critical =
+            detail::task_priority::critical;                       //! Critical-priority tasks
+    static constexpr auto prio_high = detail::task_priority::high; //! High-priority tasks
+    static constexpr auto prio_normal =
+            detail::task_priority::normal;                       //! Tasks with normal priority
+    static constexpr auto prio_low = detail::task_priority::low; //! Tasks with low priority
+    static constexpr auto prio_background =
+            detail::task_priority::background; //! Tasks with lowest possible priority
 
-/**
- * @brief      Task executor that enqueues tasks with *high* priority.
- *
- * Similar to @ref global_executor, but the task is considered to have the *high* priority.
- * Tasks with high priority take precedence over normal priority tasks.
- *
- * @see global_executor, global_executor_critical_prio, global_executor_normal_prio,
- *      global_executor_low_prio, global_executor_background_prio
- */
-constexpr auto global_executor_high_prio =
-        detail::executor_with_prio<detail::task_priority::high>{};
+    explicit global_executor(priority prio = prio_normal)
+        : prio_(prio) {}
 
-/**
- * @brief      Task executor that enqueues tasks with *normal* priority.
- *
- * Same as global_executor.
- *
- * @see global_executor, global_executor_critical_prio, global_executor_high_prio,
- *      global_executor_low_prio, global_executor_background_prio
- */
-constexpr auto global_executor_normal_prio =
-        detail::executor_with_prio<detail::task_priority::normal>{};
+    template <typename F>
+    void execute(F&& f) const {
+        do_enqueue(detail::get_exec_context(), task{std::forward<F>(f)}, prio_);
+    }
 
-/**
- * @brief      Task executor that enqueues tasks with *low* priority.
- *
- * Similar to @ref global_executor, but the task is considered to have the *low* priority.
- * Tasks with low priority are executed after tasks of normal priority.
- *
- * @see global_executor, global_executor_critical_prio, global_executor_high_prio,
- *      global_executor_normal_prio, global_executor_background_prio
- */
-constexpr auto global_executor_low_prio = detail::executor_with_prio<detail::task_priority::low>{};
+    template <typename F>
+    void operator()(F&& f) const {
+        execute(std::forward<F>(f));
+    }
+    // TODO (now): Remove this
 
-/**
- * @brief      Task executor that enqueues tasks with *background* priority.
- *
- * Similar to @ref global_executor, but the task is considered to have the *background* priority.
- * Tasks with background are executed after all the other tasks in the system
- *
- * @see global_executor, global_executor_critical_prio, global_executor_high_prio,
- *      global_executor_normal_prio, global_executor_low_prio
- */
-constexpr auto global_executor_background_prio =
-        detail::executor_with_prio<detail::task_priority::background>{};
+    friend inline bool operator==(global_executor l, global_executor r) {
+        return l.prio_ == r.prio_;
+    }
+    friend inline bool operator!=(global_executor l, global_executor r) { return !(l == r); }
+
+private:
+    priority prio_;
+};
 
 } // namespace v1
 } // namespace concore

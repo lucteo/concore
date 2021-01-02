@@ -33,7 +33,7 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
         : task_fun_(std::move(t))
         , executor_(executor) {
         if (!executor)
-            executor_ = concore::spawn_executor;
+            executor_ = concore::spawn_executor{};
     }
 };
 

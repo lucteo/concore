@@ -4,7 +4,7 @@
 #include <concore/tbb_executor.hpp>
 #include <tbb/task_scheduler_init.h>
 #endif
-#include <concore/immediate_executor.hpp>
+#include <concore/inline_executor.hpp>
 #include <concore/spawn.hpp>
 #include <concore/serializer.hpp>
 #include <concore/n_serializer.hpp>
@@ -190,23 +190,23 @@ static void BM_latency_fun_call_n(benchmark::State& state) {
 
 static void BM_latency_global(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test global_executor");
-    test_latency(concore::global_executor, state);
+    test_latency(concore::global_executor{}, state);
 }
 
 static void BM_latency_spawn(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test spawn");
-    test_latency(concore::spawn_executor, state);
+    test_latency(concore::spawn_executor{}, state);
 }
 
 static void BM_latency_spawn_cont(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test spawn continuation");
-    test_latency(concore::spawn_continuation_executor, state);
+    test_latency(concore::spawn_continuation_executor{}, state);
 }
 
 static void BM_latency_dispatch(benchmark::State& state) {
 #if CONCORE_USE_LIBDISPATCH
     CONCORE_PROFILING_SCOPE_N("test dispatch_executor");
-    test_latency(concore::dispatch_executor, state);
+    test_latency(concore::dispatch_executor{}, state);
 #endif
 }
 
@@ -214,28 +214,29 @@ static void BM_latency_tbb(benchmark::State& state) {
 #if CONCORE_USE_TBB
     CONCORE_PROFILING_SCOPE_N("test tbb_executor");
     tbb::task_scheduler_init init(1 + std::thread::hardware_concurrency()); // make it a fair comp
-    test_latency(concore::tbb_executor, state);
+    test_latency(concore::tbb_executor{}, state);
 #endif
 }
 
 static void BM_latency_immediate(benchmark::State& state) {
-    CONCORE_PROFILING_SCOPE_N("test immediate_executor");
-    test_latency(concore::immediate_executor, state);
+    CONCORE_PROFILING_SCOPE_N("test inline_executor");
+    test_latency(concore::inline_executor{}, state);
 }
 
 static void BM_latency_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test serializer");
-    test_latency_ser(concore::serializer(concore::spawn_continuation_executor), state);
+    test_latency_ser(concore::serializer(concore::spawn_continuation_executor{}), state);
 }
 
 static void BM_latency_n_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test n_serializer");
-    test_latency_ser(concore::n_serializer(1, concore::spawn_continuation_executor), state);
+    test_latency_ser(concore::n_serializer(1, concore::spawn_continuation_executor{}), state);
 }
 
 static void BM_latency_rw_serializer(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test rw_serializer");
-    test_latency_ser(concore::rw_serializer(concore::spawn_continuation_executor).writer(), state);
+    test_latency_ser(
+            concore::rw_serializer(concore::spawn_continuation_executor{}).writer(), state);
 }
 
 static void BM___(benchmark::State& /*state*/) {}

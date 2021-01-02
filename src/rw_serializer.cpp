@@ -41,9 +41,9 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
         : base_executor_(base_executor)
         , cont_executor_(cont_executor) {
         if (!base_executor)
-            base_executor_ = global_executor;
+            base_executor_ = global_executor{};
         if (!cont_executor)
-            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor;
+            cont_executor_ = base_executor ? base_executor : spawn_continuation_executor{};
     }
 
     //! Adds a new READ task to this serializer
@@ -143,12 +143,12 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 rw_serializer::reader_type::reader_type(std::shared_ptr<impl> impl)
     : impl_(std::move(impl)) {}
 
-void rw_serializer::reader_type::operator()(task t) { impl_->enqueue_read(std::move(t)); }
+void rw_serializer::reader_type::do_enqueue(task t) { impl_->enqueue_read(std::move(t)); }
 
 rw_serializer::writer_type::writer_type(std::shared_ptr<impl> impl)
     : impl_(std::move(impl)) {}
 
-void rw_serializer::writer_type::operator()(task t) { impl_->enqueue_write(std::move(t)); }
+void rw_serializer::writer_type::do_enqueue(task t) { impl_->enqueue_write(std::move(t)); }
 
 rw_serializer::rw_serializer(executor_t base_executor, executor_t cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}

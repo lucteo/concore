@@ -6,7 +6,7 @@
 #include <concore/tbb_executor.hpp>
 #include <tbb/task_scheduler_init.h>
 #endif
-#include <concore/immediate_executor.hpp>
+#include <concore/inline_executor.hpp>
 #include <concore/profiling.hpp>
 
 #include "test_common/task_countdown.hpp"
@@ -89,13 +89,13 @@ static void BM_execute_lots_of_tasks_manual_threads(benchmark::State& state) {
 
 static void BM_execute_lots_of_tasks_global(benchmark::State& state) {
     CONCORE_PROFILING_SCOPE_N("test global_executor");
-    execute_lots_of_tasks(concore::global_executor, state);
+    execute_lots_of_tasks(concore::global_executor{}, state);
 }
 
 static void BM_execute_lots_of_tasks_dispatch(benchmark::State& state) {
 #ifdef __APPLE__
     CONCORE_PROFILING_SCOPE_N("test dispatch_executor");
-    execute_lots_of_tasks(concore::dispatch_executor, state);
+    execute_lots_of_tasks(concore::dispatch_executor{}, state);
 #endif
 }
 
@@ -103,13 +103,13 @@ static void BM_execute_lots_of_tasks_tbb(benchmark::State& state) {
 #ifdef CONCORE_USE_TBB
     CONCORE_PROFILING_SCOPE_N("test tbb_executor");
     tbb::task_scheduler_init init(1 + std::thread::hardware_concurrency()); // make it a fair comp
-    execute_lots_of_tasks(concore::tbb_executor, state);
+    execute_lots_of_tasks(concore::tbb_executor{}, state);
 #endif
 }
 
 static void BM_execute_lots_of_tasks_immediate(benchmark::State& state) {
-    CONCORE_PROFILING_SCOPE_N("test immediate_executor");
-    execute_lots_of_tasks(concore::immediate_executor, state);
+    CONCORE_PROFILING_SCOPE_N("test inline_executor");
+    execute_lots_of_tasks(concore::inline_executor{}, state);
 }
 
 #define BENCHMARK_CASE1(fun)                                                                       \

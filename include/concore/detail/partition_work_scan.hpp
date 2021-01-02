@@ -146,7 +146,7 @@ inline void algo(RandomIt first, int n, WorkType& work, task_group grp, int gran
     // Start the first task in each line
     for (int i = 0; i < num_div - 1; i++) {
         if (lines[i].first_task_)
-            global_executor(lines[i].first_task_);
+            global_executor{}.execute(lines[i].first_task_);
     }
 
     // Wait for all the task to complete

@@ -3,7 +3,7 @@
 #include "concore/task.hpp"
 #include "concore/executor_type.hpp"
 #include "concore/spawn.hpp"
-#include "concore/immediate_executor.hpp"
+#include "concore/inline_executor.hpp"
 
 #include <atomic>
 #include <memory>
@@ -131,7 +131,7 @@ struct finish_task {
         : event_(std::make_shared<detail::finish_event_impl>(std::move(t), std::move(e), count)) {}
     explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
-                  std::move(t), spawn_continuation_executor, count)) {}
+                  std::move(t), spawn_continuation_executor{}, count)) {}
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }
@@ -184,7 +184,7 @@ struct finish_wait {
     explicit finish_wait(int count = 1)
         : wait_grp_(task_group::create(task_group::current_task_group()))
         , event_(std::make_shared<detail::finish_event_impl>(
-                  task{[] {}, wait_grp_}, immediate_executor, count)) {}
+                  task{[] {}, wait_grp_}, inline_executor{}, count)) {}
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }

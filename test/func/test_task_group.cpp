@@ -209,19 +209,19 @@ void test_task_group_and_serializers(concore::executor_t executor) {
 
 TEST_CASE("task_group is inherited when using other concore task executors", "[task_group]") {
     SECTION("serializer") {
-        test_task_group_and_serializers(concore::serializer(concore::global_executor));
+        test_task_group_and_serializers(concore::serializer(concore::global_executor{}));
     }
     SECTION("n_serializer") {
-        test_task_group_and_serializers(concore::n_serializer(4, concore::global_executor));
+        test_task_group_and_serializers(concore::n_serializer(4, concore::global_executor{}));
     }
     SECTION("rw_serializer") {
-        concore::rw_serializer ser(concore::global_executor);
+        concore::rw_serializer ser(concore::global_executor{});
         test_task_group_and_serializers(ser.reader());
         test_task_group_and_serializers(ser.writer());
     }
     SECTION("sanity check: also test spawning with this method") {
-        test_task_group_and_serializers(concore::spawn_executor);
-        test_task_group_and_serializers(concore::spawn_continuation_executor);
+        test_task_group_and_serializers(concore::spawn_executor{});
+        test_task_group_and_serializers(concore::spawn_continuation_executor{});
     }
 }
 
