@@ -50,6 +50,7 @@ struct global_executor {
     void execute(F&& f) const {
         do_enqueue(detail::get_exec_context(), task{std::forward<F>(f)}, prio_);
     }
+    void execute(task t) const { do_enqueue(detail::get_exec_context(), std::move(t), prio_); }
 
     template <typename F>
     void operator()(F&& f) const {

@@ -16,9 +16,9 @@ inline namespace v1 {
 //! The implementation details of a rw_serializer
 struct rw_serializer::impl : std::enable_shared_from_this<impl> {
     //! The base executor used to actually execute the tasks, when we enqueue them
-    executor_t base_executor_;
+    any_executor base_executor_;
     //! The executor to be used when
-    executor_t cont_executor_;
+    any_executor cont_executor_;
     //! Handler to be called whenever we have an exception while enqueueing the next task
     except_fun_t except_fun_;
     //! The queue of READ tasks
@@ -37,7 +37,7 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
         } fields;
     };
 
-    impl(executor_t base_executor, executor_t cont_executor)
+    impl(any_executor base_executor, any_executor cont_executor)
         : base_executor_(base_executor)
         , cont_executor_(cont_executor) {
         if (!base_executor)
@@ -129,12 +129,12 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
     }
 
     //! Enqueue the next READ task to be executed in the given executor.
-    void enqueue_next_read(executor_t& executor) {
+    void enqueue_next_read(any_executor& executor) {
         auto t = [p_this = shared_from_this()]() { p_this->execute_read(); };
         detail::enqueue_next(executor, std::move(t), except_fun_);
     }
     //! Enqueue the next WRITE task to be executed in the given executor.
-    void enqueue_next_write(executor_t& executor) {
+    void enqueue_next_write(any_executor& executor) {
         auto t = [p_this = shared_from_this()]() { p_this->execute_write(); };
         detail::enqueue_next(executor, std::move(t), except_fun_);
     }
@@ -143,14 +143,14 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 rw_serializer::reader_type::reader_type(std::shared_ptr<impl> impl)
     : impl_(std::move(impl)) {}
 
-void rw_serializer::reader_type::do_enqueue(task t) { impl_->enqueue_read(std::move(t)); }
+void rw_serializer::reader_type::do_enqueue(task t) const { impl_->enqueue_read(std::move(t)); }
 
 rw_serializer::writer_type::writer_type(std::shared_ptr<impl> impl)
     : impl_(std::move(impl)) {}
 
-void rw_serializer::writer_type::do_enqueue(task t) { impl_->enqueue_write(std::move(t)); }
+void rw_serializer::writer_type::do_enqueue(task t) const { impl_->enqueue_write(std::move(t)); }
 
-rw_serializer::rw_serializer(executor_t base_executor, executor_t cont_executor)
+rw_serializer::rw_serializer(any_executor base_executor, any_executor cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}
 
 void rw_serializer::set_exception_handler(except_fun_t except_fun) {

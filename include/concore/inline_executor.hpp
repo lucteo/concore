@@ -16,7 +16,7 @@ inline namespace v1 {
  */
 struct inline_executor {
     template <typename F>
-    void execute(F&& f) const noexcept(noexcept(std::forward<F>(f)())) {
+    void execute(F&& f) const {
         std::forward<F>(f)();
     }
 

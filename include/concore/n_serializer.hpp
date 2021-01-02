@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "executor_type.hpp"
+#include "any_executor.hpp"
 #include "except_fun_type.hpp"
 
 #include <memory>
@@ -39,7 +39,7 @@ inline namespace v1 {
  *  - no more than *N* task is executed at once.
  *  - if N==1, behaves like the @ref serializer class.
  *
- * @see        serializer, rw_serializer, executor_t, global_executor, spawn_continuation_executor
+ * @see        serializer, rw_serializer, any_executor, global_executor, spawn_continuation_executor
  */
 class n_serializer : public std::enable_shared_from_this<n_serializer> {
 public:
@@ -62,7 +62,7 @@ public:
      *
      * @see        global_executor, spawn_continuation_executor
      */
-    explicit n_serializer(int N, executor_t base_executor = {}, executor_t cont_executor = {});
+    explicit n_serializer(int N, any_executor base_executor = {}, any_executor cont_executor = {});
 
     /**
      * @brief      Executes the given functor in the context of the N serializer.
@@ -76,15 +76,15 @@ public:
      * execution.
      */
     template <typename F>
-    void execute(F&& f) {
+    void execute(F&& f) const {
         do_enqueue(task{std::forward<F>(f)});
     }
 
     //! @overload
-    void execute(task t) { do_enqueue(std::move(t)); }
+    void execute(task t) const { do_enqueue(std::move(t)); }
 
     //! @copydoc execute()
-    void operator()(task t) { do_enqueue(std::move(t)); }
+    void operator()(task t) const { do_enqueue(std::move(t)); }
 
     /**
      * @brief      Sets the exception handler for enqueueing tasks
@@ -101,6 +101,9 @@ public:
      */
     void set_exception_handler(except_fun_t except_fun);
 
+    friend inline bool operator==(n_serializer l, n_serializer r) { return l.impl_ == r.impl_; }
+    friend inline bool operator!=(n_serializer l, n_serializer r) { return !(l == r); }
+
 private:
     struct impl;
     //! The implementation object of this n_serializer.
@@ -109,7 +112,7 @@ private:
     std::shared_ptr<impl> impl_;
 
     //! Enqueues a task for execution
-    void do_enqueue(task t);
+    void do_enqueue(task t) const;
 };
 
 } // namespace v1

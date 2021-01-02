@@ -21,8 +21,9 @@ template <typename E, typename F>
 concept executor_of_impl = std::invocable<std::remove_cvref_t<F>&>&&
         std::constructible_from<std::remove_cvref_t<F>, F>&&
                 std::move_constructible<std::remove_cvref_t<F>>&& std::copy_constructible<E>&&
-                        std::is_nothrow_copy_constructible_v<E>&&
-                                std::equality_comparable<E>&& requires(const E& e, F&& f) {
+                        // std::is_nothrow_copy_constructible_v<E>&&
+                        std::is_copy_constructible_v<E>&& std::equality_comparable<E>&& requires(
+                                const E& e, F&& f) {
     concore::execute(e, (F &&) f);
 };
 

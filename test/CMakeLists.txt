@@ -24,10 +24,11 @@ set(func_sourceFiles
     "func/test_conc_scan.cpp"
     "func/test_conc_sort.cpp"
     "func/test_pipeline.cpp"
+    "func/test_any_executor.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
+    "func/test_executors_match_concept.cpp"
 
-    "func/std/test_execution.cpp"
     "func/std/test_thread_pool.cpp"
     "func/std/test_concepts.cpp"
     "func/std/test_concept_wrappers.cpp"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "executor_type.hpp"
+#include "any_executor.hpp"
 #include "except_fun_type.hpp"
 
 #include <memory>
@@ -39,10 +39,16 @@ inline namespace v1 {
  *  - no more than 1 task is executed at once.
  *  - the tasks are executed in the order in which they are enqueued.
  *
- * @see        executor_t, global_executor, spawn_continuation_executor, n_serializer, rw_serializer
+ * @see        any_executor, global_executor, spawn_continuation_executor, n_serializer,
+ * rw_serializer
  */
 class serializer {
 public:
+    // serializer(const serializer&) = default;
+    // serializer(serializer&&) noexcept = default;
+    // serializer& operator=(const serializer&) = default;
+    // serializer& operator=(serializer&&) noexcept = default;
+
     /**
      * @brief      Constructor
      *
@@ -61,7 +67,7 @@ public:
      *
      * @see        global_executor, spawn_continuation_executor
      */
-    explicit serializer(executor_t base_executor = {}, executor_t cont_executor = {});
+    explicit serializer(any_executor base_executor = {}, any_executor cont_executor = {});
 
     /**
      * @brief Executes the given functor as a task in the context of the serializer
@@ -75,15 +81,15 @@ public:
      * execution.
      */
     template <typename F>
-    void execute(F&& f) {
+    void execute(F&& f) const {
         do_enqueue(task{std::forward<F>(f)});
     }
 
     //! @overload
-    void execute(task t) { do_enqueue(std::move(t)); }
+    void execute(task t) const { do_enqueue(std::move(t)); }
 
     //! @copydoc execute()
-    void operator()(task t) { do_enqueue(std::move(t)); }
+    void operator()(task t) const { do_enqueue(std::move(t)); }
 
     /**
      * @brief      Sets the exception handler for enqueueing tasks
@@ -100,6 +106,9 @@ public:
      */
     void set_exception_handler(except_fun_t except_fun);
 
+    friend inline bool operator==(serializer l, serializer r) { return l.impl_ == r.impl_; }
+    friend inline bool operator!=(serializer l, serializer r) { return !(l == r); }
+
 private:
     struct impl;
 
@@ -109,7 +118,7 @@ private:
     std::shared_ptr<impl> impl_;
 
     //! Enqueues a task for execution
-    void do_enqueue(task t);
+    void do_enqueue(task t) const;
 };
 
 } // namespace v1

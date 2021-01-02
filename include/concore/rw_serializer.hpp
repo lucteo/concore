@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "executor_type.hpp"
+#include "any_executor.hpp"
 #include "except_fun_type.hpp"
 
 #include <memory>
@@ -67,18 +67,21 @@ public:
          * *WRITE* tasks.
          */
         template <typename F>
-        void execute(F&& f) {
+        void execute(F&& f) const {
             do_enqueue(task{std::forward<F>(f)});
         }
 
         //! @overload
-        void execute(task t) { do_enqueue(std::move(t)); }
+        void execute(task t) const { do_enqueue(std::move(t)); }
 
         //! @copydoc execute()
-        void operator()(task t) { do_enqueue(std::move(t)); }
+        void operator()(task t) const { do_enqueue(std::move(t)); }
+
+        friend inline bool operator==(reader_type l, reader_type r) { return l.impl_ == r.impl_; }
+        friend inline bool operator!=(reader_type l, reader_type r) { return !(l == r); }
 
     private:
-        void do_enqueue(task t);
+        void do_enqueue(task t) const;
     };
 
     /**
@@ -104,18 +107,21 @@ public:
          * by one. No new *READ* tasks are executed while we have *WRITE* tasks in the waiting list.
          */
         template <typename F>
-        void execute(F&& f) {
+        void execute(F&& f) const {
             do_enqueue(task{std::forward<F>(f)});
         }
 
         //! @overload
-        void execute(task t) { do_enqueue(std::move(t)); }
+        void execute(task t) const { do_enqueue(std::move(t)); }
 
         //! @copydoc execute()
-        void operator()(task t) { do_enqueue(std::move(t)); }
+        void operator()(task t) const { do_enqueue(std::move(t)); }
+
+        friend inline bool operator==(writer_type l, writer_type r) { return l.impl_ == r.impl_; }
+        friend inline bool operator!=(writer_type l, writer_type r) { return !(l == r); }
 
     private:
-        void do_enqueue(task t);
+        void do_enqueue(task t) const;
     };
 
     /**
@@ -136,7 +142,7 @@ public:
      *
      * @see        global_executor, spawn_continuation_executor
      */
-    explicit rw_serializer(executor_t base_executor = {}, executor_t cont_executor = {});
+    explicit rw_serializer(any_executor base_executor = {}, any_executor cont_executor = {});
 
     /**
      * @brief      Returns an executor to enqueue *READ* tasks.

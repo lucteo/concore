@@ -171,7 +171,7 @@ TEST_CASE("task_group is inherited on spawn", "[task_group]") {
     SUCCEED("tasks properly canceled");
 }
 
-void test_task_group_and_serializers(concore::executor_t executor) {
+void test_task_group_and_serializers(concore::any_executor executor) {
     auto grp = concore::task_group::create();
     auto ftor = []() {
         CONCORE_PROFILING_SCOPE_N("ftor");

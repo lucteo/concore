@@ -236,6 +236,9 @@ struct spawn_executor {
 
     //! @copydoc execute()
     void operator()(task t) const { execute(std::move(t)); }
+
+    friend inline bool operator==(spawn_executor, spawn_executor) { return true; }
+    friend inline bool operator!=(spawn_executor, spawn_executor) { return false; }
 };
 
 /**
@@ -261,6 +264,13 @@ struct spawn_continuation_executor {
 
     //! @copydoc execute()
     void operator()(task t) const { execute(std::move(t)); }
+
+    friend inline bool operator==(spawn_continuation_executor, spawn_continuation_executor) {
+        return true;
+    }
+    friend inline bool operator!=(spawn_continuation_executor, spawn_continuation_executor) {
+        return false;
+    }
 };
 
 } // namespace v1

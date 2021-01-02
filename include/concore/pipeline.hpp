@@ -1,7 +1,7 @@
 #pragma once
 
 #include "concore/task_group.hpp"
-#include "concore/executor_type.hpp"
+#include "concore/any_executor.hpp"
 
 #include <memory>
 #include <functional>
@@ -66,8 +66,8 @@ struct pipeline_impl {
 
     explicit pipeline_impl(int max_concurrency);
     pipeline_impl(int max_concurrency, task_group grp);
-    pipeline_impl(int max_concurrency, task_group grp, executor_t exe);
-    pipeline_impl(int max_concurrency, executor_t exe);
+    pipeline_impl(int max_concurrency, task_group grp, any_executor exe);
+    pipeline_impl(int max_concurrency, any_executor exe);
     ~pipeline_impl();
 
     pipeline_impl(pipeline_impl&&) noexcept;
@@ -225,7 +225,7 @@ public:
      * @param      grp              The group in which tasks need to be executed
      * @param      exe              The executor to be used by the pipeline
      */
-    pipeline_builder(int max_concurrency, task_group grp, executor_t exe)
+    pipeline_builder(int max_concurrency, task_group grp, any_executor exe)
         : impl_(max_concurrency, std::move(grp), std::move(exe)) {}
     /**
      * @brief      Constructs a pipeline object
@@ -233,7 +233,7 @@ public:
      * @param      max_concurrency  The concurrency limit for the pipeline
      * @param      exe              The executor to be used by the pipeline
      */
-    pipeline_builder(int max_concurrency, executor_t exe)
+    pipeline_builder(int max_concurrency, any_executor exe)
         : impl_(max_concurrency, std::move(exe)) {}
 
     /**

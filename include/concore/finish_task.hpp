@@ -1,7 +1,7 @@
 #pragma once
 
 #include "concore/task.hpp"
-#include "concore/executor_type.hpp"
+#include "concore/any_executor.hpp"
 #include "concore/spawn.hpp"
 #include "concore/inline_executor.hpp"
 
@@ -16,10 +16,10 @@ namespace detail {
 //! Data needed for a finish event; used both for finish_task and finish_wait.
 struct finish_event_impl {
     task task_;
-    executor_t executor_;
+    any_executor executor_;
     std::atomic<int> ref_count_;
 
-    finish_event_impl(task t, executor_t e, int cnt)
+    finish_event_impl(task t, any_executor e, int cnt)
         : task_(std::move(t))
         , executor_(std::move(e))
         , ref_count_(cnt) {
@@ -127,7 +127,7 @@ private:
  * @see finish_event, finish_wait
  */
 struct finish_task {
-    finish_task(task&& t, executor_t e, int count = 1)
+    finish_task(task&& t, any_executor e, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(std::move(t), std::move(e), count)) {}
     explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(

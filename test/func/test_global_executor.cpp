@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/global_executor.hpp>
-#include <concore/executor_type.hpp>
+#include <concore/any_executor.hpp>
 
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_countdown.hpp"
@@ -35,7 +35,7 @@ TEST_CASE("global_executor executes tasks according to their prio") {
     for (int k = 0; k < num_runs; k++) {
         // The executors for all the priorities that we have
         constexpr int num_prios = 5;
-        std::array<concore::executor_t, num_prios> executors = {
+        std::array<concore::any_executor, num_prios> executors = {
                 concore::global_executor(concore::global_executor::prio_background),
                 concore::global_executor(concore::global_executor::prio_low),
                 concore::global_executor(concore::global_executor::prio_normal),

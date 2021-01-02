@@ -27,7 +27,7 @@ struct stage_data {
     //! The next expected order_idx; used in in_order stages to ensure ordering
     int expected_order_idx_{0};
 
-    stage_data(stage_ordering ord, stage_fun&& f, executor_t exe)
+    stage_data(stage_ordering ord, stage_fun&& f, any_executor exe)
         : ord_(ord)
         , fun_(std::move(f))
         , ser_(exe) {}
@@ -50,7 +50,7 @@ struct pipeline_data : std::enable_shared_from_this<pipeline_data> {
     //! The group to be used for all the tasks that we create here
     task_group group_;
     //! The executor to be used for executing tasks
-    executor_t executor_;
+    any_executor executor_;
 
     //! All the stages in the pipeline
     std::vector<stage_data> stages_;
@@ -62,7 +62,7 @@ struct pipeline_data : std::enable_shared_from_this<pipeline_data> {
     //! The current order index; used to assign each line a unique number
     std::atomic<int> cur_order_idx_{0};
 
-    pipeline_data(int max_concurrency, task_group grp, executor_t exe)
+    pipeline_data(int max_concurrency, task_group grp, any_executor exe)
         : group_(std::move(grp))
         , executor_(std::move(exe))
         , processing_items_(max_concurrency) {}
@@ -158,9 +158,9 @@ pipeline_impl::pipeline_impl(int max_concurrency)
     : data_(std::make_shared<pipeline_data>(max_concurrency, task_group{}, global_executor{})) {}
 pipeline_impl::pipeline_impl(int max_concurrency, task_group grp)
     : data_(std::make_shared<pipeline_data>(max_concurrency, std::move(grp), global_executor{})) {}
-pipeline_impl::pipeline_impl(int max_concurrency, task_group grp, executor_t exe)
+pipeline_impl::pipeline_impl(int max_concurrency, task_group grp, any_executor exe)
     : data_(std::make_shared<pipeline_data>(max_concurrency, std::move(grp), std::move(exe))) {}
-pipeline_impl::pipeline_impl(int max_concurrency, executor_t exe)
+pipeline_impl::pipeline_impl(int max_concurrency, any_executor exe)
     : data_(std::make_shared<pipeline_data>(max_concurrency, task_group{}, std::move(exe))) {}
 
 void pipeline_impl::do_add_stage(stage_ordering ord, stage_fun&& f) {

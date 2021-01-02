@@ -1,7 +1,7 @@
 #pragma once
 
 #include <concore/task_group.hpp>
-#include <concore/executor_type.hpp>
+#include <concore/any_executor.hpp>
 #include <concore/detail/library_data.hpp>
 #include <concore/detail/exec_context_if.hpp>
 
@@ -41,7 +41,8 @@ inline bool bounded_wait(std::chrono::milliseconds timeout = 1000ms) {
 }
 
 //! Enqueue N tasks in the executor, and wait for them to be executed
-inline bool enqueue_and_wait(concore::executor_t e, concore::task_function f, int num_tasks = 10) {
+inline bool enqueue_and_wait(
+        concore::any_executor e, concore::task_function f, int num_tasks = 10) {
     auto grp = concore::task_group::create();
     for (int i = 0; i < num_tasks; i++)
         e(concore::task{f, grp});

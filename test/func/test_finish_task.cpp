@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/finish_task.hpp>
+#include <concore/delegating_executor.hpp>
 #include "rapidcheck_utils.hpp"
 
 #include <thread>
@@ -210,27 +211,23 @@ TEST_CASE("multiple wait() calls on finish_wait do not wait", "[finish_task]") {
 
 TEST_CASE("finish_task using supplied executor", "[finish_task]") {
 
-    struct my_executor_type {
-        std::atomic<int>* counter_;
-
-        void operator()(concore::task&& t) const {
-            (*counter_)++;
-            t();
-        }
-    };
     std::atomic<bool> is_done{false};
-    std::atomic<int> counter_{0};
-    my_executor_type e{&counter_};
+    std::atomic<int> counter{0};
+    auto fun = [&counter](task t) {
+        counter++;
+        t();
+    };
+    concore::delegating_executor e{std::move(fun)};
     concore::finish_task done_task([&] { is_done = true; }, e, 1);
 
-    CHECK(counter_.load() == 0);
+    CHECK(counter.load() == 0);
     CHECK(!is_done.load());
     done_task.event().notify_done();
-    CHECK(counter_.load() == 1);
+    CHECK(counter.load() == 1);
     CHECK(is_done.load());
 
     // Notifying for done does not have any effect on the task
     done_task.event().notify_done();
-    CHECK(counter_.load() == 1);
+    CHECK(counter.load() == 1);
     CHECK(is_done.load());
 }

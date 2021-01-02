@@ -15,9 +15,9 @@ inline namespace v1 {
 //! The implementation details of a serializer
 struct serializer::impl : std::enable_shared_from_this<impl> {
     //! The base executor used to actually execute the tasks, when we enqueue them
-    executor_t base_executor_;
+    any_executor base_executor_;
     //! The executor to be used when
-    executor_t cont_executor_;
+    any_executor cont_executor_;
     //! Handler to be called whenever we have an exception while enqueueing the next task
     except_fun_t except_fun_;
     //! The queue of tasks that wait to be executed
@@ -25,7 +25,7 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     //! The number of tasks that are in the queue
     std::atomic<int> count_{0};
 
-    impl(executor_t base_executor, executor_t cont_executor)
+    impl(any_executor base_executor, any_executor cont_executor)
         : base_executor_(base_executor)
         , cont_executor_(cont_executor) {
         if (!base_executor)
@@ -54,17 +54,17 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     }
 
     //! Enqueue the next task to be executed in the given executor.
-    void enqueue_next(executor_t& executor) {
+    void enqueue_next(any_executor& executor) {
         // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
         task t = [p_this = shared_from_this()]() { p_this->execute_one(); };
         detail::enqueue_next(executor, std::move(t), except_fun_);
     }
 };
 
-serializer::serializer(executor_t base_executor, executor_t cont_executor)
+serializer::serializer(any_executor base_executor, any_executor cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}
 
-void serializer::do_enqueue(task t) { impl_->enqueue(std::move(t)); }
+void serializer::do_enqueue(task t) const { impl_->enqueue(std::move(t)); }
 
 void serializer::set_exception_handler(except_fun_t except_fun) {
     impl_->except_fun_ = std::move(except_fun);

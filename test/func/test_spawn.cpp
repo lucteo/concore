@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/spawn.hpp>
 #include <concore/init.hpp>
-#include <concore/executor_type.hpp>
+#include <concore/any_executor.hpp>
 
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_countdown.hpp"

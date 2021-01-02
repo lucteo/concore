@@ -444,10 +444,19 @@ TEST_CASE("chained_task can be created without an executor", "[task_graph]") {
 }
 
 struct throwing_executor {
-    void operator()(concore::task&& t) {
+    template <typename F>
+    void execute(F f) const {
+        concore::spawn(concore::task{std::forward<F>(f)});
+        throw std::logic_error("err");
+    }
+    void execute(concore::task&& t) const {
         concore::spawn(std::move(t));
         throw std::logic_error("err");
     }
+    void operator()(concore::task t) const { execute(std::move(t)); }
+
+    friend inline bool operator==(throwing_executor, throwing_executor) { return true; }
+    friend inline bool operator!=(throwing_executor, throwing_executor) { return false; }
 };
 
 TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_graph]") {

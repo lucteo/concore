@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "executor_type.hpp"
+#include "any_executor.hpp"
 #include "except_fun_type.hpp"
 #include "spawn.hpp"
 #include "profiling.hpp"
@@ -26,10 +26,10 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
     task task_fun_;
     std::atomic<int32_t> pred_count_{0};
     std::vector<chained_task> next_tasks_;
-    executor_t executor_;
+    any_executor executor_;
     except_fun_t except_fun_;
 
-    chained_task_impl(task t, executor_t executor)
+    chained_task_impl(task t, any_executor executor)
         : task_fun_(std::move(t))
         , executor_(executor) {
         if (!executor)
@@ -97,7 +97,7 @@ public:
      *
      * @see add_dependency(), add_dependencies(), task
      */
-    explicit chained_task(task t, executor_t executor = {})
+    explicit chained_task(task t, any_executor executor = {})
         : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
 
     /**
