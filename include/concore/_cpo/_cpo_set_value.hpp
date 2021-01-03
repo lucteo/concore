@@ -64,35 +64,7 @@ CONCORE_CONCEPT_OR_BOOL(has_set_value) = meets_tag_invoke<set_value_t, R, Vs...>
 
 inline namespace v1 {
 
-/**
- * @brief   Function-like object that can be used to set values in receivers
- *
- * @tparam  R       The type of receiver we want to use; must model `receiver_of<Vs...>`
- * @tparam  Vs...   The type of value(s) to be set to the receiver
- *
- * @param   r       The receiver object that is signaled about sender's success
- * @param   vs...   The values sent by the sender
- *
- * This is called by a sender whenever the sender has finished work and produces some values. This
- * can be called even if the sender doesn't have any values to send to the receiver.
- *
- * `receiver_of<R, Vs...>` must be true.
- */
 using detail::cpo_set_value::set_value;
-
-/**
- * @brief   Type to use for customization point for set_value
- *
- * This can be used for types that do not directly model the receiver concepts. One can define a
- * `tag_invoke` customization point to make the type be a receiver.
- *
- * For a type to be receiver, it needs to have the following customization points:
- *  - `tag_invoke(set_value_t, receiver, ...)`
- *  - `tag_invoke(set_done_t, receiver)`
- *  - `tag_invoke(set_error_t, receiver, err)`
- *
- * @see     set_value
- */
 using detail::cpo_set_value::set_value_t;
 
 } // namespace v1

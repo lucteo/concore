@@ -15,19 +15,6 @@ namespace detail {}; // namespace detail
 
 inline namespace v1 {
 
-/**
- * @brief   Concept that defines a scheduler
- *
- * @tparam  S   The type that is being checked to see if it's a scheduler
- *
- * A scheduler type allows a schedule() operation that creates a sender out of the scheduler. A
- * typical scheduler contains an execution context that will pass to the sender on its creation.
- *
- * The type that match this concept must be move and copy constructible and must also define the
- * schedule() CPO.
- *
- * @see sender
- */
 template <typename S>
 concept scheduler = std::move_constructible<std::remove_cvref_t<S>>&&
         std::equality_comparable<std::remove_cvref_t<S>>&& requires(S&& s) {

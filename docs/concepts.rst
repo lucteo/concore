@@ -133,23 +133,22 @@ executor
 
 Concore has defined the following executors:
 
-* :cpp:var:`global_executor <concore::v1::global_executor>`
-* :cpp:var:`global_executor_critical_prio <concore::v1::global_executor_critical_prio>`
-* :cpp:var:`global_executor_high_prio <concore::v1::global_executor_high_prio>`
-* :cpp:var:`global_executor_normal_prio <concore::v1::global_executor_normal_prio>`
-* :cpp:var:`global_executor_low_prio <concore::v1::global_executor_low_prio>`
-* :cpp:var:`global_executor_background_prio <concore::v1::global_executor_background_prio>`
-* :cpp:var:`spawn_executor <concore::v1::spawn_executor>`
-* :cpp:var:`spawn_continuation_executor <concore::v1::spawn_continuation_executor>`
-* :cpp:var:`immediate_executor <concore::v1::immediate_executor>`
-* :cpp:var:`dispatch_executor <concore::v1::dispatch_executor>`
-* :cpp:var:`tbb_executor <concore::v1::tbb_executor>`
+* :cpp:type:`global_executor <concore::v1::global_executor>`
+* :cpp:type:`spawn_executor <concore::v1::spawn_executor>`
+* :cpp:type:`spawn_continuation_executor <concore::v1::spawn_continuation_executor>`
+* :cpp:type:`inline_executor <concore::v1::inline_executor>`
+* :cpp:type:`delegating_executor <concore::v1::delegating_executor>`
+* :cpp:type:`dispatch_executor <concore::v1::dispatch_executor>`
+* :cpp:type:`tbb_executor <concore::v1::tbb_executor>`
+* :cpp:type:`any_executor <concore::v1::any_executor>`
 
-An executor can always be stored into a :cpp:type:`executor_t <concore::executor_t>` (which is an alias for :cpp_code:`std::function<void(task)>`). In other words, an executor can be thought of as objects that consume tasks.
+Executors execute tasks. Thus, for a given object `t` of type :cpp:class:`concore::v1::task`, and an executor `ex`, one can call: :cpp_code:`concore::execute(ex, t)`. This will ensure that the task will be executed in the context of the executor.
 
-For most of the cases, using a :cpp:var:`global_executor <concore::v1::global_executor>` is the right choice. This will add the task to a global queue from which concore's worker threads will extract and execute tasks.
+An executor can always be stored into a :cpp:type:`any_executor <concore::any_executor>`, which is a polymorphic executor that can hold another executor.
 
-Another popular alternative is to use the *spawn* functionality (either as a free function :cpp:func:`spawn() <concore::v1::spawn>`, or through :cpp:var:`spawn_executor <concore::v1::spawn_executor>`). This should be called from within the execution of a task and will add the given task to the local queue of the current worker thread; the thread will try to pick up the last task with priority. If using :cpp:var:`global_executor <concore::v1::global_executor>` favors fairness, :cpp:func:`spawn() <concore::v1::spawn>` favors locality.
+For most of the cases, using a :cpp:type:`global_executor <concore::v1::global_executor>` is the right choice. This will add the task to a global queue from which concore's worker threads will extract and execute tasks.
+
+Another popular alternative is to use the *spawn* functionality (either as a free function :cpp:func:`spawn() <concore::v1::spawn>`, or through :cpp:type:`spawn_executor <concore::v1::spawn_executor>`). This should be called from within the execution of a task and will add the given task to the local queue of the current worker thread; the thread will try to pick up the last task with priority. If using :cpp:type:`global_executor <concore::v1::global_executor>` favors fairness, :cpp:func:`spawn() <concore::v1::spawn>` favors locality.
 
 Using tasks and executors will allow users to build concurrent programs without worrying about threads and synchronization. But, they would still have to manage constraints and dependencies between the tasks manually. concore offers some features to ease this job.
 
@@ -322,10 +321,21 @@ All the operations related to task extraction are designed to be fast. The libra
 Extra concore features
 ----------------------
 
+Pipeline
+^^^^^^^^
+
+Concore provides an easy way to build pipelines that can implement different transformations on a data stream. One can create an instance of the :cpp:type:`pipeline <concore::v1::pipeline>` class, set up stages, set up the maximum allowed parallelism and let elements flow through the pipeline.
+
+Finish events
+^^^^^^^^^^^^^
+
+Sometimes the user is interested in the finalization of a specific task or set of tasks. One can use :cpp:type:`finish_event <concore::v1::finish_event>` to notify when the task/chain of tasks is finished. In conjunction with that, :cpp:type:`finish_task <concore::v1::finish_task>` can be used to start a task whenever the finish event was notified, or :cpp:type:`finish_wait <concore::v1::finish_wait>` to wait for that finalization condition.
+
+
 Algorithms
 ^^^^^^^^^^
 
-Concore provices a couple concurrent algorithms that of general use:
+Concore provides a couple concurrent algorithms that of general use:
 
 * :cpp:func:`conc_for() <concore::v1::conc_for>`
 * :cpp:func:`conc_reduce() <concore::v1::conc_reduce>`
@@ -336,3 +346,17 @@ A concurrent application typically means much more than transforming some STL al
 
 Probably the most useful of the algorithms is :cpp:func:`conc_for() <concore::v1::conc_for>`, which is highly useful for expressing embarrassing parallel problems.
 
+C++23 executors
+^^^^^^^^^^^^^^^
+
+Concore provides an implementation of the executors proposal that targets C++23. It's not a complete implementation, but it covers the most important parts:
+
+* concepts
+* customization point objects
+* thread pool
+* type wrappers
+
+Here are a list of things that are not yet supported:
+
+* properties and requirements -- they seem too complicated to be actually needed
+* extra conditions for customization point object behavior; i.e., a scheduler does not automatically become a sender -- the design for this is too messy, with too many circular dependencies

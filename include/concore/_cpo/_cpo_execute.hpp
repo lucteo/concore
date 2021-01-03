@@ -55,37 +55,7 @@ inline const struct execute_t final {
 } // namespace detail
 
 inline namespace v1 {
-/**
- * @brief   Function-like object that can be used to execute work on executors
- *
- * @tparam  E   The type of executor we want to use; must model `executor_of<F>`
- * @tparam  F   The type of functor we want toe execute through our executor
- *
- * @param   e   The executor object we are using for our execution
- * @param   f   The functor to be invoked
- *
- * This will tell the executor object to invoke the given functor, according to the rules defined in
- * the executor.
- *
- * `executor_of<E, F>` must be true.
- */
 using detail::cpo_execute::execute;
-
-/**
- * @brief   Type to use for customization point for execute
- *
- * This can be used for types that do not directly model the executor concepts. One can define a
- * `tag_invoke` customization point to make the type be an executor.
- *
- * For any given type `Ex`, and a functor type `Fn`, defining
- *      void tag_invoke(execute_t, Ex, Fn) {...}
- *
- * will make the `executor_of<Ex, Fn>` be true. that is, one can later call:
- *      execute(ex, f);
- * , where `ex` is an object of type `Ex`, and `fn` is an object of type `Fn`.
- *
- * @see     execute
- */
 using detail::cpo_execute::execute_t;
 } // namespace v1
 

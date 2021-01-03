@@ -79,30 +79,8 @@ CONCORE_DEF_REQUIRES(has_connect,                                               
 } // namespace detail
 
 inline namespace v1 {
-/**
- * @brief   Connect a sender with a receiver, returning an async operation object
- *
- * @param   snd The sender object, that triggers the work
- * @param   rcv The receiver object that receives the results of the work
- *
- * The type of the `rcv` parameter must model the `receiver` concept.
- *
- * Usage example:
- *      auto op = connect(snd, rcv);
- *      // later
- *      start(op);
- */
 using detail::cpo_connect::connect;
-
-/**
- * @brief   Customization-point-object tag for connect
- *
- * To add support for connect to a type S, with the receiver R, one can define:
- *      template <typename R>
- *      void tag_invoke(connect_t, S, R);
- */
 using detail::cpo_connect::connect_t;
-
 } // namespace v1
 
 } // namespace concore

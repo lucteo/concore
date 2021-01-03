@@ -63,7 +63,7 @@ breathe_projects = {"concore": "doxygen_out/xml"}
 breathe_default_project = "concore"
 
 build_doxygen = os.environ.get('READTHEDOCS', None) == 'True'
-build_doxygen = True
+# build_doxygen = True
 
 if build_doxygen:
     subprocess.call('doxygen', shell=True)

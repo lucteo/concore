@@ -66,35 +66,7 @@ CONCORE_CONCEPT_OR_BOOL(has_set_error) =
 
 inline namespace v1 {
 
-/**
- * @brief   Function-like object that can be used to notify receivers of errors
- *
- * @tparam  R       The type of receiver we want to use; must model `receiver`
- * @tparam  E       The type of error we want to pass to the receiver
- *
- * @param   r       The receiver object that is signaled about sender's error
- * @param   e       The error sent by the sender to the receiver
- *
- * This is called by a sender whenever the sender has an error to report to the sender. Sending an
- * error means that the sender is done processing.
- *
- * `receiver<R, E>` must be true.
- */
 using detail::cpo_set_error::set_error;
-
-/**
- * @brief   Type to use for customization point for set_error
- *
- * This can be used for types that do not directly model the receiver concepts. One can define a
- * `tag_invoke` customization point to make the type be a receiver.
- *
- * For a type to be receiver, it needs to have the following customization points:
- *  - `tag_invoke(set_value_t, receiver, ...)`
- *  - `tag_invoke(set_done_t, receiver)`
- *  - `tag_invoke(set_error_t, receiver, err)`
- *
- * @see     set_error
- */
 using detail::cpo_set_error::set_error_t;
 
 } // namespace v1

@@ -60,27 +60,7 @@ CONCORE_CONCEPT_OR_BOOL(
 
 inline namespace v1 {
 
-/**
- * @brief   Function-like object that can be used to start asynchronous operations
- *
- * @tparam  O       The type of the operation to be started
- *
- * @param   o       The operation that should be started
- *
- * This is called whenever one needs to start an asynchronous operation.
- *
- * `operation_state<O>` must be true.
- */
 using detail::cpo_start::start;
-
-/**
- * @brief   Type to use for customization point for starting async operations
- *
- * This can be used for types that do not directly model the operation_state concept. One can define
- * a `tag_invoke` customization point to make the type be an operation_state.
- *
- * @see     start
- */
 using detail::cpo_start::start_t;
 
 } // namespace v1

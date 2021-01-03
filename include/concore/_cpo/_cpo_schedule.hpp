@@ -65,23 +65,8 @@ inline const struct schedule_t final {
 } // namespace detail
 
 inline namespace v1 {
-/**
- * @brief   Transforms a scheduler (an execution context) into a single-shot sender
- *
- * @param   sched   The scheduler object
- *
- * Usage example:
- *      sender auto snd = schedule(sched);
- */
-using detail::cpo_schedule::schedule;
 
-/**
- * @brief   Customization-point-object tag for schedule
- *
- * To add support for schedule to a type S, one can define:
- *      template <typename S>
- *      auto tag_invoke(schedule_t, S);
- */
+using detail::cpo_schedule::schedule;
 using detail::cpo_schedule::schedule_t;
 
 } // namespace v1

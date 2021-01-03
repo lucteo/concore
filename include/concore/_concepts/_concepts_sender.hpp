@@ -75,46 +75,10 @@ struct sender_traits : detail::sender_traits_impl<S>::type {};
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
-/**
- * @brief   Concept that defines a sender
- *
- * @tparam  S   The type that is being checked to see if it's a sender
- *
- * A sender is is an object that does some work and then invokes a receiver when the work is done
- * (or when the work is being canceled, or an error occurred).
- *
- * The sender, after starts executing work, needs to exit in one of the three ways:
- *  - work is successfully done; it calls set_value() on the receiver
- *  - work is canceled; it calls set_done() on the receiver
- *  - work yields an error; it calls set_erro() on the receiver
- *
- * The sender starts working when submit(S, R) or start(connect(S, R)) is called passing the sender
- * object in. The sender should not execute any other work after calling one of the three exit
- * functions. The sender should not finish its work without calling one of these three exit
- * functions.
- *
- * A sender typically has a connect() method to connect to a receiver, but this is not mandatory. A
- * CPO can be provided instead for the connect() method.
- *
- * A sender typically exposes the type of the values it sets, and the type of errors it can
- * generate, but this is not mandatory.
- *
- * @see typed_sender, sender_to
- */
 template <typename S>
 concept sender =
         std::move_constructible<std::remove_cvref_t<S>>&& detail::is_sender<std::remove_cvref_t<S>>;
 
-/**
- * @brief   Concept that defines a typed sender
- *
- * @tparam  S   The type that is being checked to see if it's a typed sender
- *
- * This is just like the @ref sender concept, but it requres the type information; that is the types
- * that expose the types of values it sets to the receiver and the type of errors it can generate.
- *
- * @see sender, sender_to
- */
 template <typename S>
 concept typed_sender = sender<S>&& detail::has_sender_types<std::remove_cvref_t<S>>;
 

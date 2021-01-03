@@ -61,30 +61,10 @@ inline const struct bulk_execute_t final {
 } // namespace detail
 
 inline namespace v1 {
-/**
- * @brief   Function-like object that can be used to bulk_execute work on executors
- *
- * @tparam  E   The type of executor we want to use; must model `executor_of<F>`
- * @tparam  F   The type of functor we want toe bulk_execute through our executor
- *
- * @param   e   The executor object we are using for our execution
- * @param   f   The functor to be invoked
- *
- * This will tell the executor object to invoke the given functor, according to the rules defined in
- * the executor.
- *
- * `executor_of<E, F, N>` must be true.
- */
-using detail::cpo_bulk_execute::bulk_execute;
 
-/**
- * @brief   Customization-point-object tag for bulk_execute
- *
- * To add support for bulk_execute to a type T, one can define:
- *      template <typename F, typename N>
- *      void tag_invoke(bulk_execute_t, T, F, N);
- */
+using detail::cpo_bulk_execute::bulk_execute;
 using detail::cpo_bulk_execute::bulk_execute_t;
+
 } // namespace v1
 
 } // namespace concore

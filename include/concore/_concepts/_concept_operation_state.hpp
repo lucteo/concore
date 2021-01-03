@@ -14,19 +14,6 @@ inline namespace v1 {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
-/**
- * @brief   Concept that defines an operation state
- *
- * @tparam  OpState The type that is being checked to see if it's a operation_state
- *
- * An operation state is a pack between a sender and a receiver. It contains an associated execution
- * context and the operation that needs to be executed within that context (sender + receiver).
- *
- * A compatible type must implement the start() CPO. In addition, any object of this type must be
- * destructible. Only object types model operation states.
- *
- * @see sender, receiver, connect()
- */
 template <typename OpState>
 concept operation_state = std::destructible<OpState>&& std::is_object_v<OpState>&& requires(
         OpState& op) {

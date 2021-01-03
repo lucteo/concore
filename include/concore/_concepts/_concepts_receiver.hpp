@@ -36,29 +36,6 @@ concept receiver_partial = std::move_constructible<std::remove_cvref_t<T>>&&
     noexcept;
 };
 
-/**
- * @brief Concept that defines a bare-bone receiver
- *
- * @tparam T The type being checked to see if it's a bare-bone receiver
- * @tparam E The type of errors that the receiver accepts; default std::exception_ptr
- *
- * A receiver is called by a sender when it is done (one way or another) executing work. The
- * receiver is notified for the following cases:
- *  - work is successfully done; set_value() CPO is called
- *  - work is being canceled; set_done() CPO is called
- *  - error occurred during the work; set_error() CPO is called
- *
- * A bare-bone receiver is a receiver that only checks for the following CPOs:
- *  - set_done()
- *  - set_error(E)
- *
- * The set_value() CPO is ignored in a bare-bone receiver, as a receiver may have many ways to be
- * notified about the success of a sender.
- *
- * In addition to these, the type should be move constructible and copy constructible.
- *
- * @see receiver_of, set_done(), set_error()
- */
 template <typename T, typename E = std::exception_ptr>
 concept receiver = std::move_constructible<std::remove_cvref_t<T>>&&
         std::constructible_from<std::remove_cvref_t<T>, T>&& requires(
@@ -69,26 +46,6 @@ concept receiver = std::move_constructible<std::remove_cvref_t<T>>&&
     noexcept;
 };
 
-/**
- * @brief Concept that defines a receiver of a particular kind
- *
- * @tparam T     The type being checked to see if it's a bare-bone receiver
- * @tparam Vs... The types of the values accepted by the receiver
- * @tparam E     The type of errors that the receiver accepts; default std::exception_ptr
- *
- * A receiver is called by a sender when it is done (one way or another) executing work. The
- * receiver is notified for the following cases:
- *  - work is successfully done; set_value() CPO is called
- *  - work is being canceled; set_done() CPO is called
- *  - error occurred during the work; set_error() CPO is called
- *
- * This concept checks that all three CPOs are defined.
- *
- * This is an extension of the `receiver` concept, but also requiring the set_value() CPO to be
- * present, for a given set of value types.
- *
- * @see receiver, set_value(), set_done(), set_error()
- */
 template <typename T, typename E = std::exception_ptr, typename... Vs>
 concept receiver_of = receiver<T, E>&& std::move_constructible<std::remove_cvref_t<T>>&&
         std::constructible_from<std::remove_cvref_t<T>, T>&& requires(

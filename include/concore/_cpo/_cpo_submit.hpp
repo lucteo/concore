@@ -66,26 +66,8 @@ inline const struct submit_t final {
 } // namespace detail
 
 inline namespace v1 {
-/**
- * @brief   Submit work from a sender, by combining it with a receiver
- *
- * @param   snd The sender object, that triggers the work
- * @param   rcv The receiver object that receives the results of the work
- *
- * For S and R the types of the two parameters, the expression `sender_to<S, R>` must be true.
- *
- * Usage example:
- *      submit(snd, rcv);
- */
-using detail::cpo_submit::submit;
 
-/**
- * @brief   Customization-point-object tag for submit
- *
- * To add support for submit to a type S, with the receiver R, one can define:
- *      template <typename R>
- *      void tag_invoke(submit_t, S, R);
- */
+using detail::cpo_submit::submit;
 using detail::cpo_submit::submit_t;
 
 } // namespace v1

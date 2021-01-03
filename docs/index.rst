@@ -32,4 +32,5 @@ Table of content
 
    quickstart
    concepts
+   cxx23_executors
    api
