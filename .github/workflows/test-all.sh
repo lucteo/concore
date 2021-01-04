@@ -9,8 +9,10 @@ source ${CURDIR}/_test_common.sh
 set -e
 
 ${CURDIR}/test-gcc.sh
+${CURDIR}/test-gcc-concepts.sh
 ${CURDIR}/test-clang.sh
 ${CURDIR}/test-clang-7.sh
+${CURDIR}/test-clang-7-cxx14.sh
 ${CURDIR}/test-static-checks.sh
 ${CURDIR}/test-clang-format.sh
 ${CURDIR}/test-sanitizer.sh

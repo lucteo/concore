@@ -10,6 +10,15 @@ jobs:
         with:
           cc: gcc
           checks: build test install warnings
+  build-gcc-concepts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lucteo/action-cxx-toolkit:latest
+        with:
+          cc: gcc
+          cmakeflags: -Dconcore.use2020=yes
+          checks: build test install warnings
   build-clang:
     runs-on: ubuntu-latest
     strategy:
@@ -20,6 +29,16 @@ jobs:
       - uses: docker://lucteo/action-cxx-toolkit:latest
         with:
           cc: ${{ matrix.cc }}
+          conanflags: -s compiler.libcxx=libstdc++11
+          checks: build test
+  build-clang-cxx14:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@master
+      - uses: docker://lucteo/action-cxx-toolkit:latest
+        with:
+          cc: clang-7
+          cxxflags: -std=c++14
           conanflags: -s compiler.libcxx=libstdc++11
           checks: build test
   static-checks:
