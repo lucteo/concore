@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/global_executor.hpp>
-#include <concore/executor_type.hpp>
+#include <concore/any_executor.hpp>
 
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_countdown.hpp"
@@ -10,21 +10,23 @@
 using namespace std::chrono_literals;
 
 TEST_CASE("global_executor is copyable") {
-    auto e1 = concore::global_executor;
-    auto e2 = concore::global_executor;
+    auto e1 = concore::global_executor{};
+    auto e2 = concore::global_executor{};
     // cppcheck-suppress redundantInitialization
     // cppcheck-suppress unreadVariable
     e2 = e1;
 }
 
-TEST_CASE("global_executor executes a task") { test_can_execute_a_task(concore::global_executor); }
+TEST_CASE("global_executor executes a task") {
+    test_can_execute_a_task(concore::global_executor{});
+}
 
 TEST_CASE("global_executor executes all tasks") {
-    test_can_execute_multiple_tasks(concore::global_executor);
+    test_can_execute_multiple_tasks(concore::global_executor{});
 }
 
 TEST_CASE("global_executor runs tasks in parallel") {
-    test_tasks_do_run_in_parallel(concore::global_executor);
+    test_tasks_do_run_in_parallel(concore::global_executor{});
 }
 
 TEST_CASE("global_executor executes tasks according to their prio") {
@@ -33,13 +35,12 @@ TEST_CASE("global_executor executes tasks according to their prio") {
     for (int k = 0; k < num_runs; k++) {
         // The executors for all the priorities that we have
         constexpr int num_prios = 5;
-        std::array<concore::executor_t, num_prios> executors = {
-                concore::global_executor_background_prio,
-                concore::global_executor_low_prio,
-                concore::global_executor_normal_prio,
-                concore::global_executor_high_prio,
-                concore::global_executor_critical_prio,
-        };
+        std::array<concore::any_executor, num_prios> executors = {
+                concore::global_executor(concore::global_executor::prio_background),
+                concore::global_executor(concore::global_executor::prio_low),
+                concore::global_executor(concore::global_executor::prio_normal),
+                concore::global_executor(concore::global_executor::prio_high),
+                concore::global_executor(concore::global_executor::prio_critical)};
 
         constexpr int num_tasks_per_prio = 30;
         constexpr int num_tasks = num_prios * num_tasks_per_prio;
@@ -53,7 +54,7 @@ TEST_CASE("global_executor executes tasks according to their prio") {
         // Create the tasks; start with the low prio ones
         for (int p = 0; p < num_prios; p++) {
             for (int i = 0; i < num_tasks_per_prio; i++)
-                executors[p]([&, p]() {
+                executors[p].execute([&, p]() {
                     task_prios[end_idx++] = p;
                     std::this_thread::sleep_for(1ms);
                     tc.task_finished();

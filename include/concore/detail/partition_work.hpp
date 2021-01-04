@@ -4,10 +4,13 @@
 #include "concore/spawn.hpp"
 #include "concore/detail/platform.hpp"
 #include "concore/detail/algo_utils.hpp"
+#include "concore/low_level/spin_mutex.hpp"
 
 #include <vector>
 #include <array>
 #include <memory>
+#include <mutex>
+#include <cassert>
 
 namespace concore {
 namespace detail {
@@ -274,8 +277,8 @@ inline void auto_partition_work(typename WorkType::iterator first, int n, WorkTy
 template <bool needs_join, typename RandomIt, typename WorkType>
 inline void upfront_partition_work(
         RandomIt first, int n, WorkType& work, task_group& wait_grp, int tasks_per_worker) {
-    auto& ctx = detail::get_exec_context();
-    int num_tasks = ctx.num_worker_threads() * tasks_per_worker;
+    const auto& ctx = detail::get_exec_context();
+    int num_tasks = detail::num_worker_threads(ctx) * tasks_per_worker;
 
     int num_iter = num_tasks < n ? num_tasks : n;
     std::vector<WorkType> work_objs;
@@ -389,8 +392,8 @@ struct iterative_spawner {
 template <bool needs_join, typename It, typename WorkType>
 inline void iterative_partition_work(
         It first, It last, WorkType& work, task_group& wait_grp, int granularity) {
-    auto& ctx = detail::get_exec_context();
-    int num_tasks = ctx.num_worker_threads() * 2;
+    const auto& ctx = detail::get_exec_context();
+    int num_tasks = detail::num_worker_threads(ctx) * 2;
 
     std::vector<WorkType> work_objs;
     if (needs_join && num_tasks > 1)

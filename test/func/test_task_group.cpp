@@ -5,6 +5,7 @@
 #include <concore/serializer.hpp>
 #include <concore/n_serializer.hpp>
 #include <concore/rw_serializer.hpp>
+#include <concore/profiling.hpp>
 
 #include <thread>
 #include <atomic>
@@ -170,7 +171,7 @@ TEST_CASE("task_group is inherited on spawn", "[task_group]") {
     SUCCEED("tasks properly canceled");
 }
 
-void test_task_group_and_serializers(concore::executor_t executor) {
+void test_task_group_and_serializers(concore::any_executor executor) {
     auto grp = concore::task_group::create();
     auto ftor = []() {
         CONCORE_PROFILING_SCOPE_N("ftor");
@@ -184,12 +185,12 @@ void test_task_group_and_serializers(concore::executor_t executor) {
     };
     // Start the tasks
     for (int i = 0; i < 10; i++)
-        executor(concore::task(ftor, grp));
+        executor.execute(concore::task(ftor, grp));
 
     // Add another task at the end; this time outside of the task_group
     std::atomic<bool> reached_end_task{false};
     auto grpEnd = concore::task_group::create();
-    executor(concore::task{[&]() { reached_end_task = true; }, grpEnd});
+    executor.execute(concore::task{[&]() { reached_end_task = true; }, grpEnd});
 
     // Wait a bit for the tasks to start, and cancel the task group
     std::this_thread::sleep_for(3ms);
@@ -208,19 +209,19 @@ void test_task_group_and_serializers(concore::executor_t executor) {
 
 TEST_CASE("task_group is inherited when using other concore task executors", "[task_group]") {
     SECTION("serializer") {
-        test_task_group_and_serializers(concore::serializer(concore::global_executor));
+        test_task_group_and_serializers(concore::serializer(concore::global_executor{}));
     }
     SECTION("n_serializer") {
-        test_task_group_and_serializers(concore::n_serializer(4, concore::global_executor));
+        test_task_group_and_serializers(concore::n_serializer(4, concore::global_executor{}));
     }
     SECTION("rw_serializer") {
-        concore::rw_serializer ser(concore::global_executor);
+        concore::rw_serializer ser(concore::global_executor{});
         test_task_group_and_serializers(ser.reader());
         test_task_group_and_serializers(ser.writer());
     }
     SECTION("sanity check: also test spawning with this method") {
-        test_task_group_and_serializers(concore::spawn_executor);
-        test_task_group_and_serializers(concore::spawn_continuation_executor);
+        test_task_group_and_serializers(concore::spawn_executor{});
+        test_task_group_and_serializers(concore::spawn_continuation_executor{});
     }
 }
 

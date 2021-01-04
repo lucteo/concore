@@ -1,6 +1,7 @@
 
 #include <concore/conc_for.hpp>
 #include <concore/integral_iterator.hpp>
+#include <concore/profiling.hpp>
 #if CONCORE_USE_TBB
 #include <tbb/parallel_for.h>
 #endif

@@ -1,6 +1,11 @@
 #pragma once
 
 #include <concore/detail/cxx_features.hpp>
+#if CONCORE_CXX_HAS_CONCEPTS
+#include <concore/_concepts/_concept_scheduler.hpp>
+#include <concore/_concepts/_concepts_receiver.hpp>
+#endif
+#include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/task.hpp>
 
 #include <exception>
@@ -11,8 +16,6 @@ namespace concore {
 inline namespace v1 {
 class task_group;
 }
-
-namespace std_execution {
 
 inline namespace v1 {
 class static_thread_pool;
@@ -25,6 +28,29 @@ struct pool_data;
 //! Gets the task group associated with the given pool. Used for testing
 task_group get_associated_group(const static_thread_pool& pool);
 
+//! Enqueue a task into the task pool
+void pool_enqueue(pool_data& pool, task_function&& t);
+
+//! Operation struct that models operation_state concept.
+//! Returned when the user calls 'connect' on the thread pool sender.
+template <typename Receiver>
+struct pool_sender_op {
+
+    pool_sender_op(pool_data* pool, Receiver&& r)
+        : pool_(pool)
+        , receiver_(std::move(r)) {}
+
+    void start() noexcept {
+        auto t = [this]() noexcept { concore::set_value(std::move(receiver_)); };
+        pool_enqueue(*pool_, std::move(t));
+    }
+
+private:
+    pool_data* pool_{nullptr};
+    Receiver receiver_;
+};
+
+//! The sender type exposed by the thread pool
 class thread_pool_sender {
 public:
     explicit thread_pool_sender(pool_data* impl) noexcept;
@@ -32,29 +58,7 @@ public:
     thread_pool_sender& operator=(const thread_pool_sender& r) noexcept;
     thread_pool_sender(thread_pool_sender&& r) noexcept;
     thread_pool_sender& operator=(thread_pool_sender&& r) noexcept;
-    ~thread_pool_sender();
-
-    // TODO:
-    // see-below require(execution::blocking_t::never_t) const;
-    // see-below require(execution::blocking_t::possibly_t) const;
-    // see-below require(execution::blocking_t::always_t) const;
-    // see-below require(execution::relationship_t::continuation_t) const;
-    // see-below require(execution::relationship_t::fork_t) const;
-    // see-below require(execution::outstanding_work_t::tracked_t) const;
-    // see-below require(execution::outstanding_work_t::untracked_t) const;
-    // see-below require(const execution::allocator_t<void>& a) const;
-    // template<class ProtoAllocator>
-    // see-below require(const execution::allocator_t<ProtoAllocator>& a) const;
-
-    // static constexpr execution::bulk_guarantee_t query(execution::bulk_guarantee_t) const;
-    // static constexpr execution::mapping_t query(execution::mapping_t) const;
-    // execution::blocking_t query(execution::blocking_t) const;
-    // execution::relationship_t query(execution::relationship_t) const;
-    // execution::outstanding_work_t query(execution::outstanding_work_t) const;
-    // see-below query(execution::context_t) const noexcept;
-    // see-below query(execution::allocator_t<void>) const noexcept;
-    // template<class ProtoAllocator>
-    // see-below query(execution::allocator_t<ProtoAllocator>) const noexcept;
+    ~thread_pool_sender() = default;
 
     /**
      * \brief   Checks if this thread is part of the thread pool
@@ -64,15 +68,16 @@ public:
      */
     bool running_in_this_thread() const noexcept;
 
-    // template <template <class...> class Tuple, template <class...> class Variant>
-    // using value_types = Variant<Tuple<>>;
-    // template <template <class...> class Variant>
-    // using error_types = Variant<exception_ptr>;
-    // static constexpr bool sends_done = true;
+    template <template <class...> class Tuple, template <class...> class Variant>
+    using value_types = Variant<Tuple<>>;
+    template <template <class...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+    static constexpr bool sends_done = true;
 
-    // TODO:
-    // template <receiver_of R>
-    // void connect(R&& r) const;
+    template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
+    pool_sender_op<R> connect(R&& r) const {
+        return pool_sender_op<R>(impl_, (R &&) r);
+    }
 
 private:
     //! The implementation data; use pimpl idiom.
@@ -86,6 +91,7 @@ private:
 bool operator==(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
 bool operator!=(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
 
+//! The scheduler type exposed by the thread pool
 class thread_pool_scheduler {
 public:
     using sender_type = thread_pool_sender;
@@ -97,16 +103,6 @@ public:
     thread_pool_scheduler& operator=(thread_pool_scheduler&& r) noexcept;
     ~thread_pool_scheduler() = default;
 
-    // TODO:
-    // see-below require(const execution::allocator_t<void>& a) const;
-    // template<class ProtoAllocator>
-    // see-below require(const execution::allocator_t<ProtoAllocator>& a) const;
-
-    // see-below query(execution::context_t) const noexcept;
-    // see-below query(execution::allocator_t<void>) const noexcept;
-    // template<class ProtoAllocator>
-    // see-below query(execution::allocator_t<ProtoAllocator>) const noexcept;
-
     /**
      * \brief   Checks if this thread is part of the thread pool
      *
@@ -115,7 +111,13 @@ public:
      */
     bool running_in_this_thread() const noexcept;
 
-    thread_pool_sender schedule() noexcept;
+    /**
+     * @brief Returns a sender object corresponding to this thread pool
+     * @return The required sender object.
+     *
+     * The sender object can be used to send work on the thread pool.
+     */
+    thread_pool_sender schedule() noexcept { return thread_pool_sender(impl_); }
 
 private:
     //! The implementation data; use pimpl idiom.
@@ -141,29 +143,6 @@ public:
     thread_pool_executor& operator=(thread_pool_executor&& r) noexcept = default;
     ~thread_pool_executor() = default;
 
-    // TODO:
-    // see-below require(execution::blocking_t::never_t) const;
-    // see-below require(execution::blocking_t::possibly_t) const;
-    // see-below require(execution::blocking_t::always_t) const;
-    // see-below require(execution::relationship_t::continuation_t) const;
-    // see-below require(execution::relationship_t::fork_t) const;
-    // see-below require(execution::outstanding_work_t::tracked_t) const;
-    // see-below require(execution::outstanding_work_t::untracked_t) const;
-    // see-below require(const execution::allocator_t<void>& a) const;
-    // template<class ProtoAllocator>
-    // see-below require(const execution::allocator_t<ProtoAllocator>& a) const;
-
-    // TODO:
-    // static constexpr execution::bulk_guarantee_t query(execution::bulk_guarantee_t::parallel_t)
-    // const; static constexpr execution::mapping_t query(execution::mapping_t::thread_t) const;
-    // execution::blocking_t query(execution::blocking_t) const;
-    // execution::relationship_t query(execution::relationship_t) const;
-    // execution::outstanding_work_t query(execution::outstanding_work_t) const;
-    // see-below query(execution::context_t) const noexcept;
-    // see-below query(execution::allocator_t<void>) const noexcept;
-    // template<class ProtoAllocator>
-    // see-below query(execution::allocator_t<ProtoAllocator>) const noexcept;
-
     /**
      * \brief   Checks if this thread is part of the thread pool
      *
@@ -186,7 +165,7 @@ public:
      */
     template <typename F>
     void execute(F&& f) const {
-        internal_execute(task_function{f});
+        pool_enqueue(*impl_, task_function{f});
     }
 
     /**
@@ -204,16 +183,11 @@ public:
      */
     template <typename F>
     void bulk_execute(F&& f, size_t n) const {
-        // TODO: this is suboptimal, better use conc_for and/or SIMD instructions
-        // #prama simd
         for (size_t i = 0; i < n; i++)
-            internal_execute([i, f]() { f(i); });
+            pool_enqueue(*impl_, [i, f]() { f(i); });
     }
 
 private:
-    //! Called by execute to start executing the given task function
-    void internal_execute(task_function&& t) const;
-
     //! The implementation data; use pimpl idiom.
     //! Parent object must be active for the lifetime of this object
     pool_data* impl_;
@@ -242,21 +216,29 @@ inline namespace v1 {
  * When destructing this object, the implementation ensures to wait on all the in-progress items.
  *
  * Any scheduler or executor objects that are created cannot exceed the lifetime of this object.
+ *
+ * Properties of the static_thread_pool executor:
+ *      - blocking.always
+ *      - relationship.fork
+ *      - outstanding_work.untracked
+ *      - bulk_guarantee.parallel
+ *      - mapping.thread
  */
 class static_thread_pool {
 public:
-    // TODO: document
+    //! The type of scheduler that this object exposes
     using scheduler_type = detail::thread_pool_scheduler;
+    //! The type of executor that this object exposes
     using executor_type = detail::thread_pool_executor;
 
     /**
-     * \biref   Constructs a thread pool.
+     * \brief   Constructs a thread pool.
      *
      * \param   num_threads     The number of threads to statically create in the thread pool
      *
      * This thread pool will create the given number of "internal" threads. This number of threads
      * cannot be changed later on. In addition to these threads, the user might manually add other
-     * threads in the pool by caling the \ref attach() method.
+     * threads in the pool by calling the \ref attach() method.
      *
      * \see     attach()
      */
@@ -282,12 +264,12 @@ public:
     /**
      * \brief   Attach the current thread to the thread pool.
      *
-     * The thread that is calling this will temporary join this thread pool. The thread will behav
+     * The thread that is calling this will temporary join this thread pool. The thread will behave
      * as if it was created during the constructor of this class. The thread will be released from
      * the pool (and return to the caller) whenever the \ref stop() and \ref wait() are releasing
-     * the theads from this pool.
+     * the threads from this pool.
      *
-     * If the thread pool is stopped, this will exit immediatelly without attaching the current
+     * If the thread pool is stopped, this will exit immediately without attaching the current
      * thread to the thread pool.
      *
      * \see     stop(), wait()
@@ -300,12 +282,14 @@ public:
     /**
      * \brief   Signal all work to complete
      *
-     * This will signal the therad pool to stop working as soon as possible. This will return
-     * immediatelly without waiting on the worker threads to complete.
+     * This will signal the thread pool to stop working as soon as possible. This will return
+     * immediately without waiting on the worker threads to complete.
      *
      * After calling this, no new work will be taken by the thread pool.
      *
      * This will cause the threads attached to this pool to detach (after completing ongoing work).
+     *
+     * This is not thread-safe. Ensure that this is called from a single thread.
      */
     void stop();
 
@@ -364,7 +348,5 @@ private:
 };
 
 } // namespace v1
-
-} // namespace std_execution
 
 } // namespace concore

@@ -1,0 +1,70 @@
+#include <catch2/catch.hpp>
+#include <concore/any_executor.hpp>
+#include <concore/inline_executor.hpp>
+
+#include <atomic>
+#include <thread>
+
+TEST_CASE("any_executor is copyable", "[any_executor]") {
+    auto e1 = concore::any_executor{};
+    auto e2 = concore::any_executor{};
+    // cppcheck-suppress redundantInitialization
+    // cppcheck-suppress unreadVariable
+    e2 = e1;
+}
+
+TEST_CASE("any_executor executes a task", "[any_executor]") {
+    std::atomic<int> val{0};
+    auto f = [&val]() {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        val = 1;
+    };
+    concore::inline_executor base;
+    auto my_exec = concore::any_executor{base};
+    REQUIRE(my_exec);
+    concore::execute(my_exec, f);
+    REQUIRE(val.load() == 1);
+}
+
+TEST_CASE("any_executor can be null", "[any_executor]") {
+    concore::any_executor e1;
+    concore::any_executor e2{nullptr};
+    concore::any_executor e3{concore::inline_executor{}};
+    concore::any_executor e4{concore::inline_executor{}};
+
+    e3 = nullptr;
+    e4 = e3;
+
+    REQUIRE_FALSE(e1);
+    REQUIRE_FALSE(e2);
+    REQUIRE_FALSE(e3);
+    REQUIRE_FALSE(e4);
+}
+
+TEST_CASE("any_executor can be compared", "[any_executor]") {
+    concore::any_executor e1;
+    concore::any_executor e2{nullptr};
+    concore::any_executor e3{concore::inline_executor{}};
+    concore::any_executor e4;
+    e4 = concore::inline_executor{};
+
+    REQUIRE(e1 == e2);
+    REQUIRE(e1 != e3);
+    REQUIRE(e1 != e4);
+    REQUIRE(e2 != e3);
+    REQUIRE(e2 != e4);
+    REQUIRE(e3 == e4);
+}
+
+TEST_CASE("any_executor can expose the type_info for the wrapped executor", "[any_executor]") {
+    concore::any_executor e1;
+    concore::any_executor e2{nullptr};
+    concore::any_executor e3{concore::inline_executor{}};
+    concore::any_executor e4;
+    e4 = concore::inline_executor{};
+
+    REQUIRE(e1.target_type() == typeid(std::nullptr_t));
+    REQUIRE(e2.target_type() == typeid(std::nullptr_t));
+    REQUIRE(e3.target_type() == typeid(concore::inline_executor));
+    REQUIRE(e4.target_type() == typeid(concore::inline_executor));
+}

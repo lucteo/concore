@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "executor_type.hpp"
+#include "any_executor.hpp"
 #include "except_fun_type.hpp"
 
 #include <memory>
@@ -39,7 +39,7 @@ inline namespace v1 {
  *  - no more than *N* task is executed at once.
  *  - if N==1, behaves like the @ref serializer class.
  *
- * @see        serializer, rw_serializer, executor_t, global_executor, spawn_continuation_executor
+ * @see        serializer, rw_serializer, any_executor, global_executor, spawn_continuation_executor
  */
 class n_serializer : public std::enable_shared_from_this<n_serializer> {
 public:
@@ -62,12 +62,12 @@ public:
      *
      * @see        global_executor, spawn_continuation_executor
      */
-    explicit n_serializer(int N, executor_t base_executor = {}, executor_t cont_executor = {});
+    explicit n_serializer(int N, any_executor base_executor = {}, any_executor cont_executor = {});
 
     /**
-     * @brief      Function call operator.
+     * @brief      Executes the given functor in the context of the N serializer.
      *
-     * @param      t     The tasks to be enqueued in the serializer
+     * @param      f     The task functor to be enqueued in the serializer
      *
      * If there are no more than *N* tasks in the serializer, this task will be enqueued in the
      * `base_executor` given to the constructor (default is @ref global_executor). If there are
@@ -75,7 +75,13 @@ public:
      * list. When all the previous tasks are executed, this task will also be enqueued for
      * execution.
      */
-    void operator()(task t);
+    template <typename F>
+    void execute(F&& f) const {
+        do_enqueue(task{std::forward<F>(f)});
+    }
+
+    //! @overload
+    void execute(task t) const { do_enqueue(std::move(t)); }
 
     /**
      * @brief      Sets the exception handler for enqueueing tasks
@@ -92,12 +98,18 @@ public:
      */
     void set_exception_handler(except_fun_t except_fun);
 
+    friend inline bool operator==(n_serializer l, n_serializer r) { return l.impl_ == r.impl_; }
+    friend inline bool operator!=(n_serializer l, n_serializer r) { return !(l == r); }
+
 private:
     struct impl;
     //! The implementation object of this n_serializer.
     //! We need this to be shared pointer for lifetime issue, but also to be able to copy the
     //! serializer easily.
     std::shared_ptr<impl> impl_;
+
+    //! Enqueues a task for execution
+    void do_enqueue(task t) const;
 };
 
 } // namespace v1

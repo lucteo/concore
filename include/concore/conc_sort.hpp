@@ -95,9 +95,9 @@ inline void conc_sort(It begin, It end, const Comp& comp, task_group grp) {
     conc_quicksort(begin, n, comp, wait_grp);
 
     auto& ctx = detail::get_exec_context();
-    auto worker_data = ctx.enter_worker();
-    ctx.busy_wait_on(wait_grp);
-    ctx.exit_worker(worker_data);
+    auto worker_data = detail::enter_worker(ctx);
+    detail::busy_wait_on(ctx, wait_grp);
+    detail::exit_worker(ctx, worker_data);
 
     // If we have an exception, re-throw it
     if (thrown_exception)

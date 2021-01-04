@@ -1,6 +1,7 @@
 #pragma once
 
 #include "detail/platform.hpp"
+#include "detail/extra_type_traits.hpp"
 
 #if CONCORE_USE_LIBDISPATCH || DOXYGEN_BUILD
 
@@ -10,15 +11,6 @@
 
 namespace concore {
 namespace detail {
-namespace disp {
-
-//! The possible priorities of tasks, as handled by the dispatch executor
-enum class task_priority {
-    high = DISPATCH_QUEUE_PRIORITY_HIGH,      //! High-priority tasks
-    normal = DISPATCH_QUEUE_PRIORITY_DEFAULT, //! Tasks with normal priority
-    low = DISPATCH_QUEUE_PRIORITY_LOW,        //! Tasks with low priority
-};
-
 //! Wrapper over a libdispatch group object
 struct group_wrapper {
     dispatch_group_t group_{dispatch_group_create()};
@@ -28,75 +20,66 @@ struct group_wrapper {
         dispatch_release(group_);
     }
 };
-
-//! Structure that defines an executor for a given priority that uses libdispatch.
-//!
-//! Note that this will allocate memory for each task, to keep the task alive.
-//! As the tasks are dynamic, we prefer to get them as functors instead of the fixed `task` type.
-template <task_priority P = task_priority::normal>
-struct executor_with_prio {
-    template <typename T>
-    void operator()(T t) const {
-        CONCORE_PROFILING_SCOPE_N("enqueue");
-
-        using task_type = decltype(t);
-        static group_wrapper g;
-        auto queue = dispatch_get_global_queue(static_cast<long>(P), 0);
-        auto context = new task_type(std::move(t));
-        auto work = [](void* ctx) {
-            CONCORE_PROFILING_SCOPE_N("execute_task");
-            auto f = static_cast<task_type*>(ctx);
-            try {
-                (*f)();
-            } catch (...) {
-            }
-            // Delete the task after executing it
-            delete f;
-        };
-        dispatch_group_async_f(g.group_, queue, context, work);
-    }
-};
-
-} // namespace disp
 } // namespace detail
 
 inline namespace v1 {
-/**
- * @brief      Executor that enqueues task in libdispatch.
- *
- * The tasks that are enqueued by this executor will have *normal* priority inside libdispatch.
- *
- * This can be used as a bridge between concore and libdispatch.
- *
- * @see        global_executor
- */
-constexpr auto dispatch_executor =
-        detail::disp::executor_with_prio<detail::disp::task_priority::normal>{};
 
 /**
- * @brief      Task executor that enqueues tasks in libdispatch with *high* priority.
+ * @brief Executor that sends tasks to libdispatch
  *
- * This can be used as a bridge between concore and libdispatch.
+ * This executors wraps the task execution from libdispatch.
+ *
+ * This executor provides just basic support for executing tasks, but not other features like
+ * cancellation, waiting for tasks, etc.
+ *
+ * The executor takes as constructor parameter the priority of the task to be used when enqueueing
+ * the task.
+ *
+ * Two executor objects are equivalent if their priorities match.
+ *
+ * @see global_executor
  */
-constexpr auto dispatch_executor_high_prio =
-        detail::disp::executor_with_prio<detail::disp::task_priority::high>{};
-/**
- * @brief      Task executor that enqueues tasks in libdispatch with *normal* priority.
- *
- * Same as @ref dispatch_executor.
- *
- * This can be used as a bridge between concore and libdispatch.
- */
-constexpr auto dispatch_executor_normal_prio =
-        detail::disp::executor_with_prio<detail::disp::task_priority::normal>{};
+struct dispatch_executor {
 
-/**
- * @brief      Task executor that enqueues tasks in libdispatch with *low* priority.
- *
- * This can be used as a bridge between concore and libdispatch.
- */
-constexpr auto dispatch_executor_low_prio =
-        detail::disp::executor_with_prio<detail::disp::task_priority::low>{};
+    //! The priority of the task to be used
+    enum priority {
+        prio_high = DISPATCH_QUEUE_PRIORITY_HIGH,      //! High-priority tasks
+        prio_normal = DISPATCH_QUEUE_PRIORITY_DEFAULT, //! Tasks with normal priority
+        prio_low = DISPATCH_QUEUE_PRIORITY_LOW,        //! Tasks with low priority
+    };
+
+    explicit dispatch_executor(priority prio = prio_normal)
+        : prio_(prio) {}
+
+    template <typename F>
+    void execute(F&& f) const {
+        CONCORE_PROFILING_SCOPE_N("enqueue");
+
+        using task_type = detail::remove_cvref_t<decltype(f)>;
+        static detail::group_wrapper g;
+        auto queue = dispatch_get_global_queue(static_cast<long>(prio_), 0);
+        auto context = new task_type(std::forward<F>(f));
+        auto work = [](void* ctx) {
+            CONCORE_PROFILING_SCOPE_N("libdispatch execute");
+            auto ff = static_cast<task_type*>(ctx);
+            try {
+                (*ff)();
+            } catch (...) {
+            }
+            // Delete the task after executing it
+            delete ff;
+        };
+        dispatch_group_async_f(g.group_, queue, context, work);
+    }
+
+    friend inline bool operator==(dispatch_executor l, dispatch_executor r) {
+        return l.prio_ == r.prio_;
+    }
+    friend inline bool operator!=(dispatch_executor l, dispatch_executor r) { return !(l == r); }
+
+private:
+    priority prio_;
+};
 
 } // namespace v1
 } // namespace concore

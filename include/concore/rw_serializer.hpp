@@ -1,7 +1,7 @@
 #pragma once
 
 #include "task.hpp"
-#include "executor_type.hpp"
+#include "any_executor.hpp"
 #include "except_fun_type.hpp"
 
 #include <memory>
@@ -55,17 +55,30 @@ public:
     public:
         //! Constructor. Should only be called by @ref rw_serializer
         explicit reader_type(std::shared_ptr<impl> impl);
+
         /**
-         * @brief      Function call operator.
+         * @brief      Enqueue a functor as a write operation in the RW serializer
          *
-         * @param      t     The *READ* task to be enqueued
+         * @param      f     The *READ* functor to be enqueued
          *
          * Depending on the state of the parent @ref rw_serializer object this will enqueue the task
          * immediately (if there are no *WRITE* tasks), or it will place it in a waiting list to be
          * executed later. The tasks on the waiting lists will be enqueued once there are no more
          * *WRITE* tasks.
          */
-        void operator()(task t);
+        template <typename F>
+        void execute(F&& f) const {
+            do_enqueue(task{std::forward<F>(f)});
+        }
+
+        //! @overload
+        void execute(task t) const { do_enqueue(std::move(t)); }
+
+        friend inline bool operator==(reader_type l, reader_type r) { return l.impl_ == r.impl_; }
+        friend inline bool operator!=(reader_type l, reader_type r) { return !(l == r); }
+
+    private:
+        void do_enqueue(task t) const;
     };
 
     /**
@@ -79,17 +92,33 @@ public:
     public:
         //! Constructor. Should only be called by @ref rw_serializer
         explicit writer_type(std::shared_ptr<impl> impl);
+
         /**
-         * @brief      Function call operator.
+         * @brief      Enqueue a functor as a write operation in the RW serializer
          *
-         * @param      t     The *WRITE* task to be enqueued
+         * @param      f     The *WRITE* functor to be enqueued
          *
          * Depending on the state of the parent @ref rw_serializer object this will enqueue the task
          * immediately (if there are no other tasks executing), or it will place it in a waiting
          * list to be executed later. The tasks on the waiting lists will be enqueued, in order, one
          * by one. No new *READ* tasks are executed while we have *WRITE* tasks in the waiting list.
          */
-        void operator()(task t);
+        template <typename F>
+        void execute(F&& f) const {
+            do_enqueue(task{std::forward<F>(f)});
+        }
+
+        //! @overload
+        void execute(task t) const { do_enqueue(std::move(t)); }
+
+        //! @copydoc execute()
+        void operator()(task t) const { do_enqueue(std::move(t)); }
+
+        friend inline bool operator==(writer_type l, writer_type r) { return l.impl_ == r.impl_; }
+        friend inline bool operator!=(writer_type l, writer_type r) { return !(l == r); }
+
+    private:
+        void do_enqueue(task t) const;
     };
 
     /**
@@ -110,7 +139,7 @@ public:
      *
      * @see        global_executor, spawn_continuation_executor
      */
-    explicit rw_serializer(executor_t base_executor = {}, executor_t cont_executor = {});
+    explicit rw_serializer(any_executor base_executor = {}, any_executor cont_executor = {});
 
     /**
      * @brief      Returns an executor to enqueue *READ* tasks.

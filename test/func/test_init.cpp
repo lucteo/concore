@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/init.hpp>
 #include <concore/global_executor.hpp>
+#include <concore/profiling.hpp>
 
 #include "test_common/common_executor_tests.hpp"
 #include "test_common/task_utils.hpp"
@@ -37,7 +38,7 @@ TEST_CASE("can execute tasks if initialized multiple times", "[init]") {
     REQUIRE_FALSE(concore::is_initialized());
     concore::init();
     REQUIRE(concore::is_initialized());
-    test_can_execute_a_task(concore::global_executor);
+    test_can_execute_a_task(concore::global_executor{});
     concore::shutdown();
 }
 
@@ -52,7 +53,7 @@ TEST_CASE("limiting the number of threads is visible", "[init]") {
         auto start = std::chrono::steady_clock::now();
 
         REQUIRE(enqueue_and_wait(
-                concore::global_executor, []() { std::this_thread::sleep_for(3ms); }));
+                concore::global_executor{}, []() { std::this_thread::sleep_for(3ms); }));
 
         auto end = std::chrono::steady_clock::now();
         std::chrono::duration<double> diff = end - start;
@@ -97,7 +98,7 @@ TEST_CASE("init twice (manually) throws", "[init]") {
 TEST_CASE("init twice (first time automatic) throws", "[init]") {
     concore::shutdown();
     // Enqueueing a task here initializes the library
-    test_can_execute_a_task(concore::global_executor);
+    test_can_execute_a_task(concore::global_executor{});
 
     REQUIRE_THROWS_AS(concore::init(), concore::already_initialized);
 }

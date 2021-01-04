@@ -1,10 +1,11 @@
 #pragma once
 
 #include "concore/task.hpp"
-#include "concore/executor_type.hpp"
+#include "concore/any_executor.hpp"
 #include "concore/spawn.hpp"
-#include "concore/immediate_executor.hpp"
+#include "concore/inline_executor.hpp"
 
+#include <atomic>
 #include <memory>
 #include <cassert>
 
@@ -15,10 +16,10 @@ namespace detail {
 //! Data needed for a finish event; used both for finish_task and finish_wait.
 struct finish_event_impl {
     task task_;
-    executor_t executor_;
+    any_executor executor_;
     std::atomic<int> ref_count_;
 
-    finish_event_impl(task t, executor_t e, int cnt)
+    finish_event_impl(task t, any_executor e, int cnt)
         : task_(std::move(t))
         , executor_(std::move(e))
         , ref_count_(cnt) {
@@ -65,7 +66,7 @@ struct finish_event {
     void notify_done() const {
         assert(impl_);
         if (impl_->ref_count_-- == 1) {
-            impl_->executor_(std::move(impl_->task_));
+            impl_->executor_.execute(std::move(impl_->task_));
         }
     }
 
@@ -126,11 +127,19 @@ private:
  * @see finish_event, finish_wait
  */
 struct finish_task {
-    finish_task(task&& t, executor_t e, int count = 1)
+    finish_task(task&& t, any_executor e, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(std::move(t), std::move(e), count)) {}
     explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
-                  std::move(t), spawn_continuation_executor, count)) {}
+                  std::move(t), spawn_continuation_executor{}, count)) {}
+    template <typename F>
+    finish_task(F f, any_executor e, int count = 1)
+        : event_(std::make_shared<detail::finish_event_impl>(
+                  task{std::forward<F>(f)}, std::move(e), count)) {}
+    template <typename F>
+    explicit finish_task(F f, int count = 1)
+        : event_(std::make_shared<detail::finish_event_impl>(
+                  task{std::forward<F>(f)}, spawn_continuation_executor{}, count)) {}
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }
@@ -183,7 +192,7 @@ struct finish_wait {
     explicit finish_wait(int count = 1)
         : wait_grp_(task_group::create(task_group::current_task_group()))
         , event_(std::make_shared<detail::finish_event_impl>(
-                  task{[] {}, wait_grp_}, immediate_executor, count)) {}
+                  task{[] {}, wait_grp_}, inline_executor{}, count)) {}
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }

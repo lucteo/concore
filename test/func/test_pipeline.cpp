@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/pipeline.hpp>
 #include <concore/spawn.hpp>
+#include <concore/delegating_executor.hpp>
 
 #include "rapidcheck_utils.hpp"
 #include "test_common/task_utils.hpp"
@@ -299,10 +300,11 @@ TEST_CASE("pipeline uses the given executor", "[pipeline]") {
     std::atomic<int> cnt1{0};
     std::atomic<int> cnt2{0};
 
-    auto my_executor = [&](concore::task t) {
+    auto fun = [&num_executed](concore::task t) {
         num_executed++;
         concore::spawn(std::move(t));
     };
+    concore::delegating_executor my_executor{fun};
 
     // Construct the pipeline
     using concore::stage_ordering;

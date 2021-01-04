@@ -95,8 +95,8 @@ template <typename RandomIt, typename WorkType>
 inline void algo(RandomIt first, int n, WorkType& work, task_group grp, int granularity) {
     // If 'n' is far bigger than the the number of workers, we will make too many divisions, and
     // create more work; try to limit the number of divisions
-    auto& ctx = detail::get_exec_context();
-    int n2 = std::min(ctx.num_worker_threads() * 2, n);
+    const auto& ctx = detail::get_exec_context();
+    int n2 = std::min(detail::num_worker_threads(ctx) * 2, n);
     int num_tasks = 0;
 
     // Determine the number of divisions we need -- power of 2
@@ -146,7 +146,7 @@ inline void algo(RandomIt first, int n, WorkType& work, task_group grp, int gran
     // Start the first task in each line
     for (int i = 0; i < num_div - 1; i++) {
         if (lines[i].first_task_)
-            global_executor(lines[i].first_task_);
+            global_executor{}.execute(lines[i].first_task_);
     }
 
     // Wait for all the task to complete

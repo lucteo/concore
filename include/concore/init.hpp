@@ -17,7 +17,7 @@ struct init_data {
     //! The number of workers we need to create in the task system; 0 = num core available
     int num_workers_{0};
     //! The number of extra slots we reserve for other threads to temporary join the tasks system
-    int reserved_slots_{4};
+    int reserved_slots_{10};
     //! Function to be called at the start of each thread.
     //! Use this if you want to do things like setting thread priority, affinity, etc.
     std::function<void()> worker_start_fun_;

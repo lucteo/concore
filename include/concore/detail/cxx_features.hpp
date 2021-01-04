@@ -58,3 +58,9 @@
 #else
 #define CONCORE_CXX_HAS_PARTIAL_MODULES 0
 #endif
+
+#if CONCORE_CXX_HAS_CONCEPTS
+#define CONCORE_CONCEPT_TYPENAME(x) x
+#else
+#define CONCORE_CONCEPT_TYPENAME(x) typename
+#endif
