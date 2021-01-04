@@ -158,6 +158,7 @@
 namespace concore {
 inline namespace v1 {
 
+//! Helper class used to add profiling to locks
 template <class T>
 class profiling_lockable_wrapper {
 public:

@@ -25,33 +25,79 @@ inline namespace v1 {
 
 #if DOXYGEN_BUILD
 /**
+ * @file execution.hpp
+ * @brief   Contains the main definitions to support C++23 executors proposal.
+ *
+ * @details
+ *
+ * Concepts defined:
+ *      - @ref concore::executor
+ *      - @ref concore::executor_of
+ *      - @ref concore::receiver
+ *      - @ref concore::receiver_of
+ *      - @ref concore::sender
+ *      - @ref concore::typed_sender
+ *      - @ref concore::sender_to
+ *      - @ref concore::operation_state
+ *      - @ref concore::scheduler
+ *
+ * Customization point object functors:
+ *      - @ref concore::set_value()
+ *      - @ref concore::set_done()
+ *      - @ref concore::set_error()
+ *      - @ref concore::execute()
+ *      - @ref concore::connect()
+ *      - @ref concore::start()
+ *      - @ref concore::submit()
+ *      - @ref concore::schedule()
+ *      - @ref concore::bulk_execute()
+ *
+ * Customization point object tags:
+ *      - @ref concore::set_value_t
+ *      - @ref concore::set_done_t
+ *      - @ref concore::set_error_t
+ *      - @ref concore::execute_t
+ *      - @ref concore::connect_t
+ *      - @ref concore::start_t
+ *      - @ref concore::submit_t
+ *      - @ref concore::schedule_t
+ *      - @ref concore::bulk_execute_t
+ */
+
+/**
  * @brief   Customization point object that can be used to set values to receivers
  *
- * @param   r       The receiver object that is signaled about sender's success
- * @param   vs...   The values sent by the sender
+ * @param   r   The receiver object that is signaled about sender's success
+ * @param   vs  The values sent by the sender
+ *
+ * @details
  *
  * This is called by a sender whenever the sender has finished work and produces some values. This
  * can be called even if the sender doesn't have any values to send to the receiver.
  *
- * The `Receiver` type should model concepts `receiver` and `receiver_of<Vs...>`.
+ * The `Receiver` type should model concepts @ref concore::v1::receiver "receiver" and
+ * `receiver_of<Vs...>`.
  *
- * @see     set_done(), set_error()
+ * @see     set_done(), set_error(), receiver, receiver_of
  */
 template <typename Receiver, typename... Vs>
 void set_value(Receiver&& r, Vs&&... vs);
 
 /**
- * @brief   Type to use for customization point for set_value
+ * @brief   Type to use for customization point for @ref concore::set_value()
  *
- * This can be used for types that do not directly model the receiver concepts. One can define a
- * `tag_invoke` customization point to make the type be a receiver.
+ * To add support for @ref concore::set_value() to a type `T`, for value types `Vs...`, one can
+ * define:
+ * @code{.cpp}
+ *      void tag_invoke(set_value_t, T, Vs...);
+ * @endcode
  *
- * For a type to be receiver, it needs to have the following customization points:
- *  - `tag_invoke(set_value_t, receiver, ...)`
- *  - `tag_invoke(set_done_t, receiver)`
- *  - `tag_invoke(set_error_t, receiver, err)`
+ * A type models is a receiver if it has the following three customization point objects defined:
+ *  - @ref concore::set_value()
+ *  - @ref concore::set_done()
+ *  - @ref concore::set_error()
  *
- * @see     set_value()
+ * @see concore::set_value(), set_done_t, set_error_t
  */
 struct set_value_t {};
 
@@ -60,28 +106,32 @@ struct set_value_t {};
  *
  * @param   r       The receiver object that is signaled about sender's stop signal
  *
+ * @details
+ *
  * This is called by a sender whenever the sender is stopped, and the execution of the task cannot
  * continue. When this is called, @ref set_value() is not called anymore.
  *
- * The `Receiver` type should model concept `receiver`.
+ * The `Receiver` type should model concept @ref concore::v1::receiver "receiver".
  *
- * @see     set_value(), set_error()
+ * @see     set_value(), set_error(), receiver
  */
 template <typename Receiver>
 void set_done(Receiver&& r);
 
 /**
- * @brief   Type to use for customization point for set_done
+ * @brief   Type to use for customization point for @ref concore::set_done()
  *
- * This can be used for types that do not directly model the receiver concepts. One can define a
- * `tag_invoke` customization point to make the type be a receiver.
+ * To add support for @ref concore::set_done() to a type `T`, one can define:
+ * @code{.cpp}
+ *      void tag_invoke(set_done_t, T);
+ * @endcode
  *
- * For a type to be receiver, it needs to have the following customization points:
- *  - `tag_invoke(set_value_t, receiver, ...)`
- *  - `tag_invoke(set_done_t, receiver)`
- *  - `tag_invoke(set_error_t, receiver, err)`
+ * A type models is a receiver if it has the following three customization point objects defined:
+ *  - @ref concore::set_value()
+ *  - @ref concore::set_done()
+ *  - @ref concore::set_error()
  *
- * @see     set_done()
+ * @see concore::set_done(), set_value_t, set_error_t
  */
 struct set_done_t {};
 
@@ -91,28 +141,34 @@ struct set_done_t {};
  * @param   r       The receiver object that is signaled about sender's error
  * @param   e       The error to be to the receiver
  *
+ * @details
+ *
  * This is called by a sender whenever the sender has an error to report to the sender. Sending an
- * error means that the sender is done processing; it will not call set_value() and set_done().
+ * error means that the sender is done processing; it will not call @ref set_value() and @ref
+ * set_done().
  *
  * The `Receiver` type should model concept `receiver<E>`.
  *
- * @see     set_value(), set_done()
+ * @see     set_value(), set_done(), receiver
  */
 template <typename Receiver, typename Err>
 void set_error(Receiver&& r, Err&& e);
 
 /**
- * @brief   Type to use for customization point for set_error
+ * @brief   Type to use for customization point for @ref concore::set_error()
  *
- * This can be used for types that do not directly model the receiver concepts. One can define a
- * `tag_invoke` customization point to make the type be a receiver.
+ * To add support for @ref concore::set_error() to a type `T`, with an error type `E`, one can
+ * define:
+ * @code{.cpp}
+ *      void tag_invoke(set_error_t, T, E);
+ * @endcode
  *
- * For a type to be receiver, it needs to have the following customization points:
- *  - `tag_invoke(set_value_t, receiver, ...)`
- *  - `tag_invoke(set_done_t, receiver)`
- *  - `tag_invoke(set_error_t, receiver, err)`
+ * A type models is a receiver if it has the following three customization point objects defined:
+ *  - @ref concore::set_value()
+ *  - @ref concore::set_done()
+ *  - @ref concore::set_error()
  *
- * @see     set_error()
+ * @see concore::set_error(), set_value_t, set_done_t
  */
 struct set_error_t {};
 
@@ -122,30 +178,28 @@ struct set_error_t {};
  * @param   e   The executor object we are using for our execution
  * @param   f   The functor to be invoked
  *
+ * @details
+ *
  * This will tell the executor object to invoke the given functor, according to the rules defined in
  * the executor.
  *
  * The `Executor` type should model concept `executor_of<Ftor>`.
+ *
+ * @see executor_of
  */
 template <typename Executor, typename Ftor>
 void execute(Executor&& e, Ftor&& f);
 
 /**
- * @brief   Type to use for customization point for execute
+ * @brief   Type to use for customization point for @ref concore::execute()
  *
- * This can be used for types that do not directly model the executor concepts. One can define a
- * `tag_invoke` customization point to make the type be an executor.
- *
- * For any given type `Ex`, and a functor type `Fn`, defining
- *      void tag_invoke(execute_t, Ex, Fn) {...}
- *
- * will make the `executor_of<Ex, Fn>` be true. that is, one can later call:
+ * To add support for @ref concore::execute() to a type `T`, for given functor type `F`, one can
+ * define:
  * @code{.cpp}
- *      execute(ex, f);
+ *      void tag_invoke(execute_t, T, F);
  * @endcode
- * , where `ex` is an object of type `Ex`, and `f` is an object of type `Fn`.
  *
- * @see     execute()
+ * @see concore::execute()
  */
 struct execute_t {};
 
@@ -155,24 +209,33 @@ struct execute_t {};
  * @param   snd The sender object, that triggers the work
  * @param   rcv The receiver object that receives the results of the work
  *
- * The type of the `rcv` parameter must model the `receiver` concept.
+ * @details
+ *
+ * The type of the `rcv` parameter must model the @ref concore::v1::receiver "receiver" concept.
+ * Usually, the `snd` parameter will model the @ref concore::v1::sender "sender" and
+ * `sender_to<Receiver>` concepts.
+ *
+ * The resulting type should model the @ref concore::v1::operation_state "operation_state" concept.
  *
  * Usage example:
  * @code{.cpp}
- *      auto op = connect(snd, rcv);
+ *      auto op = concore::connect(snd, rcv);
  *      // later
- *      start(op);
+ *      concore::start(op);
  * @endcode
+ *
+ * @see receiver, sender, sender_to, operation_state
  */
-template <typename Sender, typename Receiver>
-auto connect(Sender&& s, Receiver&& r);
+template <typename Sender, receiver Receiver>
+auto connect(Sender&& snd, Receiver&& rcv);
 
 /**
- * @brief   Customization-point-object tag for connect
+ * @brief   Customization point object tag for @ref concore::connect()
  *
- * To add support for connect to a type S, with the receiver R, one can define:
- *      template <typename R>
+ * To add support for @ref concore::connect() to a type `S`, with the receiver `R`, one can define:
+ * @code{.cpp}
  *      void tag_invoke(connect_t, S, R);
+ * @endcode
  *
  * @see     connect()
  */
@@ -183,20 +246,26 @@ struct connect_t {};
  *
  * @param   o       The operation that should be started
  *
+ * @details
+ *
  * This is called whenever one needs to start an asynchronous operation.
  *
- * The `Oper` type should model concept `operation_state`.
+ * The `Oper` type must model concept @ref concore::v1::operation_state "operation_state".
+ *
+ * @see operation_state
  */
-template <typename Oper>
+template <operation_state Oper>
 void start(Oper&& o);
 
 /**
- * @brief   Type to use for customization point for starting async operations
+ * @brief   Customization point object tag for @ref concore::start()
  *
- * This can be used for types that do not directly model the operation_state concept. One can define
- * a `tag_invoke` customization point to make the type be an operation_state.
+ * To add support for @ref concore::start() to a type `T`, one can define:
+ * @code{.cpp}
+ *      void tag_invoke(start_t, T);
+ * @endcode
  *
- * @see     start()
+ * @see     concore::start()
  */
 struct start_t {};
 
@@ -206,10 +275,12 @@ struct start_t {};
  * @param   snd The sender object, that triggers the work
  * @param   rcv The receiver object that receives the results of the work
  *
+ * @details
+ *
  * The `sender_to<Sender, Receiver>` concept must hold.
  *
- * If there is no `submit` customization point defined for the given `Sender` object (taking a
- * `Receiver` object), then this will fall back to calling `connect()`.
+ * If there is no @ref submit() customization point defined for the given `Sender` object (taking a
+ * `Receiver` object), then this will fall back to calling @ref concore::connect().
  *
  * Usage example:
  * @code{.cpp}
@@ -218,19 +289,18 @@ struct start_t {};
  *
  * @see     connect()
  */
-template <typename Sender, typename Receiver>
-void submit(Sender&& s, Receiver&& r);
+template <sender Sender, receiver Receiver>
+void submit(Sender&& snd, Receiver&& rcv);
 
 /**
- * @brief   Customization-point-object tag for submit
+ * @brief   Customization point object tag for @ref concore::submit()
  *
- * To add support for submit to a type S, with the receiver R, one can define:
+ * To add support for @ref concore::submit() to a type `S`, with the receiver `R`, one can define:
  * @code{.cpp}
- *      template <typename R>
  *      void tag_invoke(submit_t, S, R);
  * @endcode
  *
- * @see     submit()
+ * @see     concore::submit()
  */
 struct submit_t {};
 
@@ -239,22 +309,32 @@ struct submit_t {};
  *
  * @param   sched   The scheduler object
  *
+ * @details
+ *
+ * The return type of the operation must model the @ref concore::v1::sender "sender" concept.
+ *
+ * The availability of this operation for a given type makes the type model the @ref
+ * concore::v1::scheduler "scheduler" concept.
+ *
  * Usage example:
  * @code{.cpp}
  *      sender auto snd = schedule(sched);
  * @endcode
+ *
+ * @see scheduler, sender
  */
 template <typename Scheduler>
-auto schedule(Scheduler&& s);
+auto schedule(Scheduler&& sched);
 
 /**
- * @brief   Customization-point-object tag for schedule
+ * @brief   Customization point object tag for @ref concore::schedule()
  *
- * To add support for schedule to a type S, one can define:
+ * To add support for @ref concore::schedule() to a type `T`, one can define:
  * @code{.cpp}
- *      template <typename S>
- *      auto tag_invoke(schedule_t, S);
+ *      auto tag_invoke(schedule_t, T);
  * @endcode
+ *
+ * @see concore::schedule()
  */
 struct schedule_t {};
 
@@ -265,36 +345,51 @@ struct schedule_t {};
  * @param   f   The functor to be invoked
  * @param   n   The number of times we have to invoke the functor
  *
+ * @details
+ *
  * This will tell the executor object to invoke the given functor, according to the rules defined in
  * the executor.
+ *
+ * @see concore::execute()
  */
 template <typename Executor, typename Ftor, typename Num>
 void bulk_execute(Executor&& e, Ftor&& f, Num n);
 
 /**
- * @brief   Customization-point-object tag for bulk_execute
+ * @brief   Customization point object tag for @ref concore::bulk_execute()
  *
- * To add support for bulk_execute to a type T, one can define:
+ * To add support for @ref concore::bulk_execute() to a type `T`, for given functor type `F` and a
+ * numeric type `N`, one can define:
  * @code{.cpp}
- *      template <typename F, typename N>
  *      void tag_invoke(bulk_execute_t, T, F, N);
  * @endcode
+ *
+ * @see concore::bulk_execute()
  */
 struct bulk_execute_t {};
 
 /**
  * @brief   A type representing the archetype of an invocable object
  *
- * This essentially represents a 'void()' functor.
+ * This essentially represents a `void()` functor.
  */
 struct invocable_archetype {
+    //! Type of operation compatible with `void()`.
     void operator()() & noexcept {}
 };
 
 /**
+ * @interface   executor
  * @brief   Concept that defines an executor
  *
+ * @code{.cpp}
+ *      template <typename E>
+ *      concept executor = ...
+ * @endcode
+ *
  * @tparam  E   The type that we want to model the concept
+ *
+ * @details
  *
  * An executor object is an object that can "execute" work. Given a functor compatible with @ref
  * invocable_archetype, the executor will be able to execute that function, in some specified
@@ -304,106 +399,134 @@ struct invocable_archetype {
  *  - it's copy-constructible
  *  - the copy constructor is nothrow
  *  - it's equality-comparable
- *  - one can call 'execute(obj, invocable_archetype{})', where 'obj' is an object of the type
+ *  - one can call `execute(obj, invocable_archetype{})`, where `obj` is an object of the type
  *
- * To be able to call `execute` on an executor, the executor type must have one the following:
- *  - an inner method 'execute' that takes a functor
- *  - an associated 'execute' free function that takes the executor and a functor
+ * To be able to call @ref execute() on an executor, the executor type must have one the following:
+ *  - an inner method `execute` that takes a functor
+ *  - an associated `execute` free function that takes the executor and a functor
  *  - an customization point `tag_invoke(execute_t, Ex, Fn)`
  *
- * @see     executor_of, execute_t, execute
+ * @see     executor_of, execute_t, execute()
  */
-template <typename E>
-concept executor;
+struct executor {};
 
 /**
+ * @interface   executor_of
  * @brief Defines an executor that can execute a given functor type
+ *
+ * @code{.cpp}
+ *      template <typename E, typename F>
+ *      concept executor_of = ...
+ * @endcode
  *
  * @tparam  E   The type that we want to model the concept
  * @tparam  F   The type functor that can be called by the executor
  *
- * This is similar to @ref executor, but instead of being capable of executing 'void()' functors,
- * this can execute functors of the given type 'F'
+ * @details
+ *
+ * This is similar to the @ref executor concept, but instead of being capable of executing `void()`
+ * functors, this can execute functors of the given type `F`
  *
  * @see     executor
  */
-template <typename E, typename F>
-concept executor_of;
+struct executor_of {};
 
 /**
+ * @interface   receiver <>
  * @brief Concept that defines a bare-bone receiver
  *
+ * @code{.cpp}
+ *      template <typename T, typename E = std::exception_ptr>
+ *      concept receiver = ...
+ * @endcode
+ *
  * @tparam T The type being checked to see if it's a bare-bone receiver
- * @tparam E The type of errors that the receiver accepts; default std::exception_ptr
+ * @tparam E The type of errors that the receiver accepts; default ``std::exception_ptr``
+ *
+ * @details
  *
  * A receiver represents the continuation of an asynchronous operation. An asynchronous operation
  * may complete with a (possibly empty) set of values, an error, or it may be canceled. A receiver
  * has three principal operations corresponding to the three ways an asynchronous operation may
- * complete: `set_value`, `set_error`, and `set_done`. These are collectively known as a receiver’s
- * _completion-signal operations_.
+ * complete: @ref concore::set_value(), @ref concore::set_error(), and @ref concore::set_done().
+ * These are collectively known as a receiver’s _completion-signal operations_.
  *
  * The following constraints must hold with respect to receiver's completion-signal operations:
- *  - None of a receiver’s completion-signal operations shall be invoked before `concore::start` has
- * been called on the operation state object that was returned by `concore::connect` to connect that
- * receiver to a sender.
- *  - Once `concore::start` has been called on the operation state object, exactly one of the
+ *  - None of a receiver’s completion-signal operations shall be invoked before @ref
+ * concore::start() has been called on the operation state object that was returned by @ref
+ * concore::connect() to connect that receiver to a sender.
+ *  - Once @ref concore::start() has been called on the operation state object, exactly one of the
  * receiver’s completion-signal operations shall complete non-exceptionally before the receiver is
  * destroyed.
- *  - If `concore::set_value` exits with an exception, it is still valid to call
- * `concore::set_error` or `concore::set_done` on the receiver.
+ *  - If @ref concore::set_value() exits with an exception, it is still valid to call
+ * @ref concore::set_error() or @ref concore::set_done() on the receiver.
  *
  * A bare-bone receiver is a receiver that only checks for the following CPOs:
- *  - set_done()
- *  - set_error(E)
+ *  - @ref set_done()
+ *  - @ref set_error()
  *
- * The set_value() CPO is ignored in a bare-bone receiver, as a receiver may have many ways to be
- * notified about the success of a sender.
+ * The @ref set_value() CPO is ignored in a bare-bone receiver, as a receiver may have many ways to
+ * be notified about the success of a sender.
  *
  * In addition to these, the type should be move constructible and copy constructible.
  *
  * @see receiver_of, set_done(), set_error()
  */
-template <typename T, typename E = std::exception_ptr>
-concept receiver;
+struct receiver {};
 
 /**
+ * @interface   receiver_of <>
  * @brief Concept that defines a receiver of a particular kind
  *
+ * @code{.cpp}
+ *      template <typename T, typename E = std::exception_ptr, typename... Vs>
+ *      concept receiver_of = ...
+ * @endcode
+ *
  * @tparam T     The type being checked to see if it's a bare-bone receiver
+ * @tparam E     The type of errors that the receiver accepts; default ``std::exception_ptr``
  * @tparam Vs... The types of the values accepted by the receiver
- * @tparam E     The type of errors that the receiver accepts; default std::exception_ptr
+ *
+ * @details
  *
  * A receiver represents the continuation of an asynchronous operation. An asynchronous operation
  * may complete with a (possibly empty) set of values, an error, or it may be canceled. A receiver
  * has three principal operations corresponding to the three ways an asynchronous operation may
- * complete: `set_value`, `set_error`, and `set_done`. These are collectively known as a receiver’s
- * _completion-signal operations_.
+ * complete: @ref concore::set_value(), @ref concore::set_error(), and @ref concore::set_done().
+ * These are collectively known as a receiver’s _completion-signal operations_.
  *
  * The following constraints must hold with respect to receiver's completion-signal operations:
- *  - None of a receiver’s completion-signal operations shall be invoked before `concore::start`
- * has been called on the operation state object that was returned by `concore::connect` to
- * connect that receiver to a sender.
- *  - Once `concore::start` has been called on the operation state object, exactly one of the
+ *  - None of a receiver’s completion-signal operations shall be invoked before @ref
+ * concore::start() has been called on the operation state object that was returned by @ref
+ * concore::connect() to connect that receiver to a sender.
+ *  - Once @ref concore::start() has been called on the operation state object, exactly one of the
  * receiver’s completion-signal operations shall complete non-exceptionally before the receiver is
  * destroyed.
- *  - If `concore::set_value` exits with an exception, it is still valid to call
- * `concore::set_error` or `concore::set_done` on the receiver.
+ *  - If @ref concore::set_value() exits with an exception, it is still valid to call
+ * @ref concore::set_error() or @ref concore::set_done() on the receiver.
  *
- * This concept checks that all three CPOs are defined (as opposed to `receiver` who only checks
- * `set_done` and `set_error`).
+ * This concept checks that all three CPOs are defined (as opposed to @ref receiver who only checks
+ * @ref set_done() and @ref set_error()).
  *
- * This is an extension of the `receiver` concept, but also requiring the set_value() CPO to be
- * present, for a given set of value types.
+ * This is an extension of the @ref receiver concept, but also requiring the @ref set_value() CPO to
+ * be present, for a given set of value types.
  *
  * @see receiver, set_value(), set_done(), set_error()
  */
-template <typename T, typename E = std::exception_ptr, typename... Vs>
-concept receiver_of;
+struct receiver_of {};
 
 /**
+ * @interface   sender <>
  * @brief   Concept that defines a sender
  *
+ * @code{.cpp}
+ *      template <typename S>
+ *      concept sender = ...
+ * @endcode
+ *
  * @tparam  S   The type that is being checked to see if it's a sender
+ *
+ * @details
  *
  * A sender represents an asynchronous operation not yet scheduled for execution. A sender’s
  * responsibility is to fulfill the receiver contract to a connected receiver by delivering a
@@ -411,29 +534,39 @@ concept receiver_of;
  *
  * A sender, once the asynchronous operation is started must successfully call exactly one of these
  * on the associated receiver:
- *  - `set_value()` in the case of success
- *  - `set_done()` if the operation was canceled
- *  - `set_error()` if an exception occurred during the operation, or while calling `set_value()`
+ *  - @ref set_value() in the case of success
+ *  - @ref set_done() if the operation was canceled
+ *  - @ref set_error() if an exception occurred during the operation, or while calling @ref
+ *    set_value()
  *
- * The sender starts working when submit(S, R) or start(connect(S, R)) is called passing the sender
- * object in. The sender should not execute any other work after calling one of the three completion
- * signals operations. The sender should not finish its work without calling one of these/
+ * The sender starts working when ``submit(S, R)`` or ``start(connect(S, R))`` is called passing the
+ * sender and a receiver object in. The sender should not execute any other work after calling one
+ * of the three completion signals operations. The sender should not finish its work without calling
+ * one of these.
  *
- * A sender typically has a connect() method to connect to a receiver, but this is not mandatory. A
- * CPO can be provided instead for the connect() method.
+ * A sender should expose a @ref connect() customization-point object to connect it to a receiver.
+ * Also, typically there is @ref submit() CPO for a sender, but this can be inferred from @ref
+ * connect().
  *
  * A sender typically exposes the type of the values it sets, and the type of errors it can
  * generate, but this is not mandatory.
  *
  * @see receiver, receiver_of, typed_sender, sender_to
  */
-template <typename S>
-concept sender;
+struct sender {};
 
 /**
+ * @interface   typed_sender <>
  * @brief   Concept that defines a typed sender
  *
+ * @code{.cpp}
+ *      template <typename S>
+ *      concept typed_sender = ...
+ * @endcode
+ *
  * @tparam  S   The type that is being checked to see if it's a typed sender
+ *
+ * @details
  *
  * This is just like the @ref sender concept, but it requires the type information; that is the
  * types that expose the types of values it sets to the receiver and the type of errors it can
@@ -441,59 +574,80 @@ concept sender;
  *
  * @see sender, sender_to
  */
-template <typename S>
-concept typed_sender;
+struct typed_sender {};
 
 /**
+ * @interface   sender_to <>
  * @brief   Concept that brings together a sender and a receiver
+ *
+ * @code{.cpp}
+ *      template <typename S, typename R>
+ *      concept sender_to = ...
+ * @endcode
  *
  * @tparam  S   The type of sender that is assessed
  * @tparam  R   The type of receiver that the sender must conform to
  *
- * This concept extends the `sender` concept, and ensures that it can connect to the given receiver
- * type. It does that by checking if `concore::connect(S, R)` is valid.
+ * @details
+ *
+ * This concept extends the @ref sender concept, and ensures that it can connect to the given
+ * receiver type. It does that by checking if @ref concore::connect() is valid for the given types.
  *
  * @see     sender, receiver
  */
-template <typename S, typename R>
-concept sender_to;
+struct sender_to {};
 
 /**
+ * @interface   operation_state <>
  * @brief   Concept that defines an operation state
+ *
+ * @code{.cpp}
+ *      template <typename OpState>
+ *      concept operation_state = ...
+ * @endcode
  *
  * @tparam  OpState The type that is being checked to see if it's a operation_state
  *
- * An object whose type satisfies `operation_state` represents the state of an asynchronous
- * operation. It is the result of calling `concore::connect` with a sender and a receiver.
+ * @details
  *
- * A compatible type must implement the start() CPO. In addition, any object of this type must be
- * destructible. Only object types model operation states.
+ * An object whose type satisfies @ref operation_state represents the state of an asynchronous
+ * operation. It is the result of calling @ref concore::connect() with a sender and a receiver.
+ *
+ * A compatible type must implement the @ref concore::start() CPO. In addition, any object of this
+ * type must be destructible. Only object types model operation states.
  *
  * @see sender, receiver, connect()
  */
-template <typename OpState>
-concept operation_state;
+struct operation_state {};
 
 /**
+ * @interface   scheduler <>
  * @brief   Concept that defines a scheduler
+ *
+ * @code{.cpp}
+ *      template <typename S>
+ *      concept scheduler = ...
+ * @endcode
  *
  * @tparam  S   The type that is being checked to see if it's a scheduler
  *
- * A scheduler type allows a schedule() operation that creates a sender out of the scheduler. A
+ * @details
+ *
+ * A scheduler type allows a @ref schedule() operation that creates a sender out of the scheduler. A
  * typical scheduler contains an execution context that will pass to the sender on its creation.
  *
  * The type that match this concept must be move and copy constructible and must also define the
- * schedule() CPO.
+ * @ref schedule() CPO.
  *
  * @see sender
  */
-template <typename S>
-concept scheduler;
+struct scheduler {};
 
 #endif
 
-// Exception types:
+//! Exception type representing a receiver invocation error
 struct receiver_invocation_error : std::runtime_error, std::nested_exception {
+    //! Default constructor
     receiver_invocation_error() noexcept
         : runtime_error("receiver_invocation_error")
         , nested_exception() {}
