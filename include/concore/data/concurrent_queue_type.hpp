@@ -1,3 +1,9 @@
+/**
+ * @file    concurrent_queue_type.hpp
+ * @brief   Definition of queue_type
+ *
+ * @see     queue_type
+ */
 #pragma once
 
 namespace concore {
@@ -9,7 +15,7 @@ inline namespace v1 {
  * Please note that this express only the desired type. It doesn't mean that implementation will be
  * strictly obey the policy. The implementation can be more conservative and fall-back to less
  * optimal implementation. For example, the implementation can always use the
- * @ref multi_prod_multi_cons type, as it includes all the constraints for all the other types.
+ * multi_prod_multi_cons type, as it includes all the constraints for all the other types.
  */
 enum class queue_type {
     single_prod_single_cons, //!< Single-producer, single-consumer concurrent queue.

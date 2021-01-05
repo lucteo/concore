@@ -2,7 +2,7 @@
  * @file    task.hpp
  * @brief   Defines the @ref concore::v1::task "task" class
  *
- * @see     @ref concore::v1::task "task", @ref concore::v1::task_function "task_function"
+ * @see     @ref concore::v1::task "task"
  */
 #pragma once
 

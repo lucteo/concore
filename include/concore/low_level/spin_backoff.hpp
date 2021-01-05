@@ -1,3 +1,9 @@
+/**
+ * @file    spin_backoff.hpp
+ * @brief   Definition of @ref concore::v1::spin_backoff "spin_backoff"
+ *
+ * @see     @ref concore::v1::spin_backoff "spin_backoff"
+ */
 #pragma once
 
 #include "../detail/platform.hpp"
@@ -12,14 +18,14 @@
  * other condition to happen. The pause should be sufficiently small so that the current thread will
  * not give up its work quanta.
  *
- * This pause should be smaller than the pause caused by @ref CONCORE_LOW_LEVEL_YIELD_PAUSE().
+ * This pause should be smaller than the pause caused by @ref CONCORE_LOW_LEVEL_YIELD_PAUSE.
  *
  * This is used in *spin* implementations that are waiting for certain conditions to happen, and it
  * is expected that these condition will become true in a very short amount of time.
  *
  * The implementation of this uses platform-specific instructions.
  *
- * @see CONCORE_LOW_LEVEL_YIELD_PAUSE(), concore::v1::spin_backoff
+ * @see CONCORE_LOW_LEVEL_YIELD_PAUSE, concore::v1::spin_backoff
  */
 #define CONCORE_LOW_LEVEL_SHORT_PAUSE() /*nothing*/
 
@@ -32,7 +38,7 @@
  * the CPU quanta to be used by other threads; hopefully, by running other threads, that condition
  * can become true.
  *
- * @see CONCORE_LOW_LEVEL_SHORT_PAUSE(), concore::v1::spin_backoff
+ * @see CONCORE_LOW_LEVEL_SHORT_PAUSE, concore::v1::spin_backoff
  */
 #define CONCORE_LOW_LEVEL_YIELD_PAUSE() /*nothing*/
 #endif
@@ -110,6 +116,8 @@ class spin_backoff {
 public:
     /**
      * @brief      Pauses a short while.
+     *
+     * @details
      *
      * Calling this multiple times will pause more and more. In the beginning the pauses are short,
      * without yielding the CPU quanta of the current thread. But, after a threshold this attempts

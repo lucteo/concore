@@ -1,3 +1,7 @@
+/**
+ * @file    except_fun_type.hpp
+ * @brief   Defines the except_fun_t typename
+ */
 #pragma once
 
 #include <functional>

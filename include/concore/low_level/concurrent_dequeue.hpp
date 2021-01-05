@@ -1,3 +1,9 @@
+/**
+ * @file    concurrent_dequeue.hpp
+ * @brief   Definition of @ref concore::v1::concurrent_dequeue "concurrent_dequeue"
+ *
+ * @see     @ref concore::v1::concurrent_dequeue "concurrent_dequeue"
+ */
 #pragma once
 
 #include "spin_backoff.hpp"
@@ -171,6 +177,8 @@ inline namespace v1 {
  *
  * @tparam     T     The type of elements to store
  *
+ * @details
+ *
  * This will try to preallocate a vector with enough elements to cover the most common cases.
  * Operations on the concurrent queue when we have few elements are fast: we only make atomic
  * operations, no memory allocation. We only use spin mutexes in this case.
@@ -198,12 +206,13 @@ inline namespace v1 {
 template <typename T>
 class concurrent_dequeue {
 public:
+    //! The value type stored in the concurrent dequeue
     using value_type = T;
 
     /**
      * @brief      Constructs a new instance of the queue, with the given preallocated size.
      *
-     * @param[in]  expected_size  How many elements to preallocate in our fast queue.
+     * @param      expected_size  How many elements to preallocate in our fast queue.
      *
      * If we ever add more elements in our queue than the given limit, our queue starts to become
      * slower.

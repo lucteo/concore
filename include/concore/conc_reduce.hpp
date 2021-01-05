@@ -1,3 +1,9 @@
+/**
+ * @file    conc_reduce.hpp
+ * @brief   Definition of conc_reduce()
+ *
+ * @see     conc_reduce()
+ */
 #pragma once
 
 #include "concore/detail/partition_work.hpp"
@@ -118,32 +124,40 @@ inline Value conc_reduce_fun(It first, It last, Value identity, const BinaryOp& 
 inline namespace v1 {
 
 /**
- * @brief      A concurrent `for` algorithm.
+ * @brief      A concurrent reduce algorithm.
  *
  * @param      first          Iterator pointing to the first element in a collection
  * @param      last           Iterator pointing to the last element in a collection (1 past the end)
- * @param      f              Functor to apply to each element of the collection
+ * @param      identity       The identity value; the starting point of the reduce
+ * @param      op             Binary functor that is applied to the elements
+ * @param      reduction      Binary functor that reduces the values
  * @param      grp            Group in which to execute the tasks
  * @param      hints          Hints that may be passed to the
  *
+ * @param      work           The work to be applied to be executed for the elements (when not using
+ *                            `f`)
+ *
  * @tparam     It             The type of the iterator to use
- * @tparam     UnaryFunction  The type of function to be applied for each element
+ * @tparam     Value          The type of the value used for computation
+ * @tparam     BinaryOp       The type of function used by the operation that applies to elements
+ * @tparam     ReductionOp    The type of function used by the reduction operation
  *
- * If there are no dependencies between the iterations of a for loop, then those iterations can be
- * run in parallel. This function attempts to parallelize these iterations. On a machine that has
- * a very large number of cores, this can execute each iteration on a different core.
+ * @tparam     WorkType       The type of a work object to be used (when not using `op` and
+ *                            `reduction`)
  *
- * This ensure that the given functor is called exactly once for each element from the given
- * sequence. But the call may happen on different threads.
+ * @details
  *
- * The function does not return until all the iterations are executed. (It may execute other
- * non-related tasks while waiting for the conc_for tasks to complete).
+ * This implements a reduce operation (similar to `std::accumulate`) but does it by exposing
+ * concurrent computations. In order for this to be well defined, the given operation and reduction
+ * functors must be able to properly run in parallel on different parts of the input collection.
+ *
+ * The operation is called exactly once for each element. The reduction is called each time we need
+ * to combine the results of two computations.
  *
  * This generates internal tasks by spawning and waiting for those tasks to complete. If the user
  * spawns other tasks during the execution of an iteration, those tasks would also be waited on.
- * This can be a method of generating more work in the concurrent `for` loop.
  *
- * One can cancel the execution of the tasks by passing a task_group in, and canceling that
+ * One can cancel the execution of the tasks by passing a task_group object in, and canceling that
  * task_group.
  *
  * One can also provide hints to the implementation to fine-tune the algorithms to better fit the
@@ -152,7 +166,7 @@ inline namespace v1 {
  *
  * @warning    If the iterations are not completely independent, this results in undefined behavior.
  *
- * @see     partition_hints, partition_method
+ * @see     partition_hints, partition_method, conc_for(), task_group
  */
 template <typename It, typename Value, typename BinaryOp, typename ReductionOp>
 inline Value conc_reduce(It first, It last, Value identity, const BinaryOp& op,

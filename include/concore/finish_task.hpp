@@ -1,3 +1,11 @@
+/**
+ * @file    finish_task.hpp
+ * @brief   Definitions of @ref concore::v1::finish_event "finish_event", @ref
+ *          concore::v1::finish_task "finish_task" and @ref concore::v1::finish_wait "finish_wait"
+ *
+ * @see     @ref concore::v1::finish_event "finish_event", @ref concore::v1::finish_task
+ *          "finish_task" and @ref concore::v1::finish_wait "finish_wait"
+ */
 #pragma once
 
 #include "concore/task.hpp"
@@ -60,6 +68,8 @@ struct finish_event {
     /**
      * @brief      Called by other tasks to indicate their completion.
      *
+     * @details
+     *
      * When the right number of tasks have called this, then the event is trigger; that is,
      * executing a task or unblocking some wait call.
      */
@@ -104,6 +114,7 @@ private:
  * in any way the execution of the task.
  *
  * Example usage:
+ * @code {.cpp}
  *      concore::finish_task done_task([]{
  *          printf("done.");
  *          system_cleanup();
@@ -123,19 +134,24 @@ private:
  *          event.notify_done();
  *      });
  *      // When they complete, the first task is triggered
+ * @endcode
  *
  * @see finish_event, finish_wait
  */
 struct finish_task {
+    //! Constructor with a task and executor
     finish_task(task&& t, any_executor e, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(std::move(t), std::move(e), count)) {}
+    //! Constructor with a task
     explicit finish_task(task&& t, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
                   std::move(t), spawn_continuation_executor{}, count)) {}
+    //! Constructor with a functor and executor
     template <typename F>
     finish_task(F f, any_executor e, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
                   task{std::forward<F>(f)}, std::move(e), count)) {}
+    //! Constructor with a functor
     template <typename F>
     explicit finish_task(F f, int count = 1)
         : event_(std::make_shared<detail::finish_event_impl>(
@@ -167,6 +183,7 @@ private:
  *
  *
  * Example usage:
+ * @code
  *      concore::finish_wait done(3);
  *      auto event = done_task.event();
  *      // Spawn 3 tasks
@@ -185,10 +202,12 @@ private:
  *
  *      // Wait for all 3 tasks to complete
  *      done.wait();
+ * @endcode
  *
  * @see finish_event, finish_task
  */
 struct finish_wait {
+    //! Constructor
     explicit finish_wait(int count = 1)
         : wait_grp_(task_group::create(task_group::current_task_group()))
         , event_(std::make_shared<detail::finish_event_impl>(
@@ -199,6 +218,8 @@ struct finish_wait {
 
     /**
      * @brief      Wait for all the tasks to complete.
+     *
+     * @details
      *
      * This will wait for the right number of calls to the @ref finish_event::notify_done() function
      * on the exposed event. Until that, this will attempt to get some work from the system and

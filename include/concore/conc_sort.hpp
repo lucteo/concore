@@ -1,3 +1,9 @@
+/**
+ * @file    conc_sort.hpp
+ * @brief   Definition of conc_sort()
+ *
+ * @see     conc_sort()
+ */
 #pragma once
 
 #include "concore/partition_hints.hpp"
@@ -105,20 +111,37 @@ inline void conc_sort(It begin, It end, const Comp& comp, task_group grp) {
 }
 } // namespace detail
 
+/**
+ * @brief Concurrently sort a collection of elements
+ *
+ * @param begin Iterator pointing to the first element in the collection
+ * @param end   Iterator pointing to one past the last element in the collection
+ * @param comp  The comparison functor
+ * @param grp   Group in which to execute the tasks
+ *
+ * @tparam  It   The type of the iterator over the collection of elements
+ * @tparam  Comp The type of the comparison functor
+ *
+ * @details
+ *
+ * Sorts the given collection of elements concurrently. The comparison function must be able to be
+ * called in parallel without causing any data races.
+ */
 template <typename It, typename Comp>
 inline void conc_sort(It begin, It end, const Comp& comp, task_group grp) {
     detail::conc_sort(begin, end, comp, grp);
 }
-
+//! @overload
 template <typename It, typename Comp>
 inline void conc_sort(It begin, It end, const Comp& comp) {
     detail::conc_sort(begin, end, comp, {});
 }
-
+//! @overload
 template <typename It>
 inline void conc_sort(It begin, It end) {
     detail::conc_sort(begin, end, std::less<typename std::iterator_traits<It>::value_type>(), {});
 }
+//! @overload
 template <typename It>
 inline void conc_sort(It begin, It end, task_group grp) {
     detail::conc_sort(begin, end, std::less<typename std::iterator_traits<It>::value_type>(), grp);

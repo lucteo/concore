@@ -20,6 +20,10 @@ Tasks
 ^^^^^^^^^^
 .. doxygenfile:: init.hpp
 
+`except_fun_type.hpp`
+^^^^^^^^^^^^^^^^^^^^^
+.. doxygenfile:: except_fun_type.hpp
+
 
 
 Executors
@@ -36,7 +40,7 @@ Executors
 
 
 `delegating_executor.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: delegating_executor.hpp
 
 
@@ -82,7 +86,7 @@ Other task-based features
 .. doxygenfile:: pipeline.hpp
 
 `finish_task.hpp`
-^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^
 .. doxygenfile:: finish_task.hpp
 
 
@@ -149,7 +153,7 @@ Data
 
 
 `data/concurrent_queue_type.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: concurrent_queue_type.hpp
 
 
@@ -158,22 +162,22 @@ Low level
 ---------
 
 `low_level/spin_backoff.hpp`
-^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: spin_backoff.hpp
 
 
 `low_level/spin_mutex.hpp`
-^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: spin_mutex.hpp
 
 `low_level/shared_spin_mutex.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: shared_spin_mutex.hpp
 
 `low_level/semaphore.hpp`
-^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: semaphore.hpp
 
 `low_level/concurrent_dequeue.hpp`
-^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .. doxygenfile:: concurrent_dequeue.hpp

@@ -1,3 +1,9 @@
+/**
+ * @file    conc_for.hpp
+ * @brief   Definition of conc_for()
+ *
+ * @see     conc_for()
+ */
 #pragma once
 
 #include "concore/detail/partition_work.hpp"
@@ -131,7 +137,9 @@ inline namespace v1 {
  * @tparam     It             The type of the iterator to use
  * @tparam     UnaryFunction  The type of function to be applied for each element
  *
- * @tparam     WorkType       The type of a work object to be used
+ * @tparam     WorkType       The type of a work object to be used (when not using `f`)
+ *
+ * @details
  *
  * If there are no dependencies between the iterations of a for loop, then those iterations can be
  * run in parallel. This function attempts to parallelize these iterations. On a machine that has
@@ -147,24 +155,26 @@ inline namespace v1 {
  * spawns other tasks during the execution of an iteration, those tasks would also be waited on.
  * This can be a method of generating more work in the concurrent `for` loop.
  *
- * One can cancel the execution of the tasks by passing a task_group in, and canceling that
- * task_group.
+ * One can cancel the execution of the tasks by passing a @ref concore::v1::task_group "task_group"
+ * in, and canceling that task_group.
  *
  * One can also provide hints to the implementation to fine-tune the algorithms to better fit the
  * data it operates on. Please note however that the implementation may completely ignore all the
  * hints it was provided.
  *
  * There are two forms of this function: one that uses a functor, and one that takes a
- * work as parameter. The version with the 'work' given as argument may be faster in certain cases
+ * work as parameter. The version with the `work` given as argument may be faster in certain cases
  * in which, between iterators, we can store temporary data.
  *
  * The work structure given to the function must have the following structure:
+ * @code
  *      struct GenericWorkType {
  *          using iterator = my_iterator_type;
  *          void exec(my_iterator_type first, my_iterator_type last) { ... }
  *      };
+ * @endcode
  *
- * This work will be called for various chunks from the input. The 'iterator' type defined in the
+ * This work will be called for various chunks from the input. The `iterator` type defined in the
  * given work must support basic random-iterator operations, but without dereference. That is:
  * difference, incrementing, and addition with an integer. The work objects must be copyable.
  *
@@ -173,7 +183,7 @@ inline namespace v1 {
  *
  * @warning    If the iterations are not completely independent, this results in undefined behavior.
  *
- * @see     partition_hints, partition_method
+ * @see     partition_hints, partition_method, task_group
  */
 template <typename It, typename UnaryFunction>
 inline void conc_for(
