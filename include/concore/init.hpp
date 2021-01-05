@@ -1,3 +1,12 @@
+/**
+ * @file    init.hpp
+ * @brief   Initialization helpers
+ *
+ * Defines abstractions for helping in initializing the library with the desired settings.
+ *
+ * @see init(), is_initialized(), shutdown(), @ref concore::v1::init_data "init_data",
+ *      @ref concore::v1::already_initialized "already_initialized"
+ */
 #pragma once
 
 #include <functional>
@@ -28,13 +37,16 @@ struct init_data {
  *
  * @param      config  The configuration to be passed to the library; optional.
  *
+ * @details
+ *
  * This will initialize the library, with the given parameters. If the library is already
- * initialized this will throw an @ref already_initialized exception.
+ * initialized this will throw an @ref concore::v1::already_initialized "already_initialized"
+ * exception.
  *
  * If this is not explicitly called the library will be initialized with default settings the first
  * time that a global task needs to be executed.
  *
- * @see        shutdown(), is_initialized(), already_initialized
+ * @see        shutdown(), is_initialized(), already_initialized, init_data
  */
 void init(const init_data& config = {});
 
@@ -47,6 +59,7 @@ void init(const init_data& config = {});
  * @see init(), is_initialized()
  */
 struct already_initialized : std::runtime_error {
+    //! Default constructor
     already_initialized()
         : runtime_error("already initialized") {}
 };

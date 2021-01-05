@@ -1,3 +1,9 @@
+/**
+ * @file    task.hpp
+ * @brief   Defines the @ref concore::v1::task "task" class
+ *
+ * @see     @ref concore::v1::task "task", @ref concore::v1::task_function "task_function"
+ */
 #pragma once
 
 #include "task_group.hpp"
@@ -13,11 +19,11 @@ class exec_context;
 inline namespace v1 {
 
 /**
- * A function type that is compatible with a task.
+ * @brief   A function type that is compatible with a task.
  *
  * This function takes no arguments and returns nothing. It represents generic *work*.
  *
- * A concore @ref task is essentially a wrapper over a `task_function`.
+ * A concore @ref concore::v1::task "task" is essentially a wrapper over a `task_function`.
  *
  * @see task
  */
@@ -86,6 +92,8 @@ public:
      *
      * @tparam     T     The type of the functor. Must be compatible with @ref task_function.
      *
+     * @details
+     *
      * When the task will be executed, the given functor will be called. This typically happens on
      * a different thread than this constructor is called.
      *
@@ -103,6 +111,8 @@ public:
      * @param      grp   The task group to place the task in the group.
      *
      * @tparam     T     The type of the functor. Must be compatible with @ref task_function.
+     *
+     * @details
      *
      * When the task will be executed, the given functor will be called. This typically happens on
      * a different thread than this constructor is called.
@@ -132,6 +142,8 @@ public:
      * @tparam     T     The type of the functor. Must be compatible with @ref task_function.
      *
      * @return     The result of the assignment
+     *
+     * @details
      *
      * This can be used to change the task function inside the task.
      */
@@ -196,6 +208,8 @@ public:
      * @brief      Gets the task group.
      *
      * @return     The group associated with this task.
+     *
+     * @details
      *
      * This allows the users to consult the task group associated with the task and change it.
      */

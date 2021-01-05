@@ -1,3 +1,9 @@
+/**
+ * @file    task_group.hpp
+ * @brief   Defines the @ref concore::v1::task_group "task_group" class
+ *
+ * @see     @ref concore::v1::task_group "task_group"
+ */
 #pragma once
 
 #include "except_fun_type.hpp"
@@ -82,6 +88,8 @@ public:
     /**
      * @brief      Default constructor
      *
+     * @details
+     *
      * Creates an empty, invalid task_group. No operations can be called on it. This is used to mark
      * the absence of a real task_group.
      *
@@ -94,6 +102,8 @@ public:
     /**
      * @brief      Copy constructor
      *
+     * @details
+     *
      * Creates a shared-copy of this object. The new object and the old one will share the same
      * implementation data.
      */
@@ -104,6 +114,8 @@ public:
      * @brief      Assignment operator.
      *
      * @return     The result of the assignment
+     *
+     * @details
      *
      * Creates a shared-copy of this object. The new object and the old one will share the same
      * implementation data.
@@ -119,6 +131,8 @@ public:
      *
      * @return     The task group created.
      *
+     * @details
+     *
      * As opposed to a default constructor, this creates a valid task_group object. Operations
      * (canceling, waiting) can be performed on objects created by this function.
      *
@@ -131,6 +145,8 @@ public:
 
     /**
      * @brief      Checks if this is a valid task group object
+     *
+     * @details
      *
      * Returns `true` if this object was created by @ref create() or if it's a copy of an object
      * created by calling @ref create().
@@ -150,6 +166,8 @@ public:
      *
      * @param      except_fun  The function to be called on exceptions
      *
+     * @details
+     *
      * On execution, tasks can throw exceptions. If tasks have an associated task_group, one can use
      * this function to register an exception handler that will be called for exceptions.
      *
@@ -160,6 +178,8 @@ public:
 
     /**
      * @brief      Cancels the execution tasks in the group.
+     *
+     * @details
      *
      * All tasks from this task group scheduled for execution that are not yet started are canceled
      * -- they won't be executed anymore. If there are tasks of this group that are in execution,
@@ -177,6 +197,8 @@ public:
     /**
      * @brief      Clears the cancel flag; new tasks can be executed again.
      *
+     * @details
+     *
      * This reverts the effect of calling @ref cancel(). Tasks belonging to this group can be
      * executed once more after clear_clance() is called.
      *
@@ -192,6 +214,8 @@ public:
      *
      * @return     True if the task group is canceled, False otherwise.
      *
+     * @details
+     *
      * This will return `true` after @ref cancel() is called, and `false` if @ref clear_cancel() is
      * called. If this return `true` it means that tasks belonging to this group will not be
      * executed.
@@ -204,6 +228,8 @@ public:
      * @brief      Checks whether there are active tasks in this group.
      *
      * @return     True if active, False otherwise.
+     *
+     * @details
      *
      * Creating one task into the task group will make the task group active, regardless of whether
      * the task is executed or not. The group will become non-active whenever all the tasks created
@@ -225,6 +251,8 @@ public:
      *
      * @return     The task group associated with the current running task
      *
+     * @details
+     *
      * If there is no task running, this will return an empty (i.e., default-constructed) object. If
      * there is a running task on this thread, it will return the task_group object for the
      * currently running task.
@@ -242,6 +270,8 @@ public:
      *
      * @return     True if current task cancelled, False otherwise.
      *
+     * @details
+     *
      * This should be called from within tasks to check if the task_group associated with the
      * current running task was cancelled.
      *
@@ -257,6 +287,8 @@ public:
      * @param      grp   The new group to be set for the current worker.
      *
      * @return     The previous set task group (if any).
+     *
+     * @details
      *
      * This is used by implementation of certain algorithms to speed up the use of task groups. Not
      * intended to be heavily used. To be used with care.

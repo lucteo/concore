@@ -1,3 +1,10 @@
+/**
+ * @file    spawn.hpp
+ * @brief   Utilities for spawning and joining tasks from the current scope
+ *
+ * @see     spawn(), spawn_and_wait(), wait(), @ref concore::v1::spawn_executor "spawn_executor",
+ *          @ref concore::v1::spawn_continuation_executor "spawn_continuation_executor"
+ */
 #pragma once
 
 #include "task.hpp"
@@ -14,6 +21,8 @@ inline namespace v1 {
  *
  * @param      t             The task to be spawned
  * @param      wake_workers  True if we should wake other workers for this task
+ *
+ * @details
  *
  * This is intended to be called from within a task. In this case, the task will be added to the
  * list of tasks for the current worker thread. The tasks will be added in the front of the list, so
@@ -43,12 +52,14 @@ inline void spawn(task&& t, bool wake_workers = true) {
  *
  * @tparam     F             The type of the functor
  *
+ * @details
+ *
  * This is similar to the @ref spawn(task&&, bool) function, but it takes directly a functor instead
  * of a task.
  *
  * If the current task has a group associated, the new task will inherit that group.
  *
- * @see spawn(task&&, bool)
+ * @see spawn(task&& t, bool wake_workers)
  */
 template <typename F>
 inline void spawn(F&& ftor, bool wake_workers = true) {
@@ -64,6 +75,8 @@ inline void spawn(F&& ftor, bool wake_workers = true) {
  * @param      wake_workers  True if we should wake other workers for this task
  *
  * @tparam     F             The type of the functor
+ *
+ * @details
  *
  * This is similar to the @ref spawn(task&&, bool) function, but it takes directly a functor and a
  * task group instead of a task.
@@ -83,6 +96,8 @@ inline void spawn(F&& ftor, task_group grp, bool wake_workers = true) {
  *
  * @param      ftors         A list of functors to be executed
  * @param      wake_workers  True if we should wake other workers for the last task
+ *
+ * @details
  *
  * This is similar to the other two @ref spawn() functions, but it takes a series of functions to be
  * executed. Tasks will be created for all these functions and spawn accordingly.
@@ -113,6 +128,8 @@ inline void spawn(std::initializer_list<task_function>&& ftors, bool wake_worker
  * @param      grp           The group in which the functors are to be executed
  * @param      wake_workers  True if we should wake other workers for the last task
  *
+ * @details
+ *
  * This is similar to the other two @ref spawn() functions, but it takes a series of functions to be
  * executed. Tasks will be created for all these functions and spawn accordingly.
  *
@@ -138,6 +155,8 @@ inline void spawn(
  * @param      ftor  The functor of the tasks to be spawned
  *
  * @tparam     F     The type of the functor.
+ *
+ * @details
  *
  * This function is similar to the @ref spawn() functions, but, after spawning, also waits for the
  * spawned task to complete. This wait is an active-wait, as it tries to execute other tasks. In
@@ -165,6 +184,8 @@ inline void spawn_and_wait(F&& ftor) {
  *
  * @param      ftors         A list of functors to be executed
  * @param      wake_workers  True if we should wake other workers for the last task
+ *
+ * @details
  *
  * This is used when a task needs multiple things done in parallel.
  *
@@ -194,6 +215,8 @@ inline void spawn_and_wait(std::initializer_list<task_function>&& ftors, bool wa
  * @brief      Wait on all the tasks in the given group to finish executing.
  *
  * @param      grp   The task group to wait on
+ *
+ * @details
  *
  * The wait here is an active-wait. This will execute tasks from the task system in the hope that
  * the tasks in the group are executed faster.
@@ -225,6 +248,8 @@ struct spawn_executor {
      *
      * @param f The functor object to be executed
      *
+     * @details
+     *
      * This will spawn a task that will call the given functor.
      */
     template <typename F>
@@ -234,7 +259,9 @@ struct spawn_executor {
     //! @overload
     void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t)); }
 
+    //! Equality operator; always true
     friend inline bool operator==(spawn_executor, spawn_executor) { return true; }
+    //! Inequality operator; always false
     friend inline bool operator!=(spawn_executor, spawn_executor) { return false; }
 };
 
@@ -250,6 +277,8 @@ struct spawn_continuation_executor {
      *
      * @param f The functor object to be executed
      *
+     * @details
+     *
      * This will spawn a task that will call the given functor.
      */
     template <typename F>
@@ -259,9 +288,11 @@ struct spawn_continuation_executor {
     //! @overload
     void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t), false); }
 
+    //! Equality operator; always true
     friend inline bool operator==(spawn_continuation_executor, spawn_continuation_executor) {
         return true;
     }
+    //! Inequality operator; always false
     friend inline bool operator!=(spawn_continuation_executor, spawn_continuation_executor) {
         return false;
     }

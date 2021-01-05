@@ -16,6 +16,10 @@ Tasks
 ^^^^^^^^^^^
 .. doxygenfile:: spawn.hpp
 
+`init.hpp`
+^^^^^^^^^^
+.. doxygenfile:: init.hpp
+
 
 
 Executors

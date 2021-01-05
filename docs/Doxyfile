@@ -2554,7 +2554,7 @@ OUTPUT_DIRECTORY       = ./doxygen_out/
 GENERATE_XML           = YES
 GENERATE_LATEX         = NO
 
-EXCLUDE_PATTERNS       = */detail/*
+EXCLUDE_PATTERNS       = */detail/* */_cpo/* */_concepts/*
 EXCLUDE_SYMBOLS        = "concore::detail" "impl"
 PREDEFINED             = DOXYGEN_BUILD
 

@@ -1,3 +1,9 @@
+/**
+ * @file    n_serializer.hpp
+ * @brief   Defines the @ref concore::v1::n_serializer "n_serializer" class
+ *
+ * @see     @ref concore::v1::n_serializer "n_serializer"
+ */
 #pragma once
 
 #include "task.hpp"
@@ -50,6 +56,8 @@ public:
      * @param      base_executor  Executor to be used to enqueue new tasks
      * @param      cont_executor  Executor that enqueues follow-up tasks
      *
+     * @details
+     *
      * If `base_executor` is not given, @ref global_executor will be used.
      * If `cont_executor` is not given, it will use `base_executor` if given, otherwise it will use
      * @ref spawn_continuation_executor for enqueueing continuations.
@@ -68,6 +76,8 @@ public:
      * @brief      Executes the given functor in the context of the N serializer.
      *
      * @param      f     The task functor to be enqueued in the serializer
+     *
+     * @details
      *
      * If there are no more than *N* tasks in the serializer, this task will be enqueued in the
      * `base_executor` given to the constructor (default is @ref global_executor). If there are
@@ -88,6 +98,8 @@ public:
      *
      * @param      except_fun  The function to be called whenever an exception occurs.
      *
+     * @details
+     *
      * The exception handler set here will be called whenever an exception is thrown while
      * enqueueing a follow-up task. It will not be called whenever the task itself throws an
      * exception; that will be handled by the exception handler set in the group of the task.
@@ -98,7 +110,9 @@ public:
      */
     void set_exception_handler(except_fun_t except_fun);
 
+    //! Equality operator
     friend inline bool operator==(n_serializer l, n_serializer r) { return l.impl_ == r.impl_; }
+    //! Inequality operator
     friend inline bool operator!=(n_serializer l, n_serializer r) { return !(l == r); }
 
 private:

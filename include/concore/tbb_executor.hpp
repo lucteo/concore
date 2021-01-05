@@ -1,3 +1,7 @@
+/**
+ * @file    tbb_executor.hpp
+ * @brief   Defines the @ref concore::v1::tbb_executor "tbb_executor" class
+ */
 #pragma once
 
 #if CONCORE_USE_TBB || DOXYGEN_BUILD
@@ -28,14 +32,16 @@ struct tbb_executor {
 
     //! The priority of the task to be used
     enum priority {
-        prio_high = tbb::priority_high,     //! High-priority tasks
-        prio_normal = tbb::priority_normal, //! Tasks with normal priority
-        prio_low = tbb::priority_low,       //! Tasks with low priority
+        prio_high = tbb::priority_high,     //!< High-priority tasks
+        prio_normal = tbb::priority_normal, //!< Tasks with normal priority
+        prio_low = tbb::priority_low,       //!< Tasks with low priority
     };
 
+    //! Constructor
     explicit tbb_executor(priority prio = prio_normal)
         : prio_(prio) {}
 
+    //! Method called to execute work in this executor
     template <typename F>
     void execute(F&& f) const {
         CONCORE_PROFILING_SCOPE_N("enqueue");
@@ -57,10 +63,13 @@ struct tbb_executor {
         tbb::task::enqueue(tbb_task, static_cast<tbb::priority_t>(prio_));
     }
 
+    //! Equality operator
     friend inline bool operator==(tbb_executor l, tbb_executor r) { return l.prio_ == r.prio_; }
+    //! Inequality operator
     friend inline bool operator!=(tbb_executor l, tbb_executor r) { return !(l == r); }
 
 private:
+    //! The priority to be used when creating tasks
     priority prio_;
 };
 
