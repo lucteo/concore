@@ -31,7 +31,7 @@ author = 'Lucian Radu Teodorescu'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['breathe', 'sphinxcontrib.plantuml']
+extensions = ['breathe', 'exhale', 'sphinxcontrib.plantuml']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -62,8 +62,23 @@ plantuml_output_format = 'svg_obj'
 breathe_projects = {"concore": "doxygen_out/xml"}
 breathe_default_project = "concore"
 
-build_doxygen = os.environ.get('READTHEDOCS', None) == 'True'
-# build_doxygen = True
+# Setup the exhale extension
+exhale_args = {
+    # These arguments are required
+    "containmentFolder":     "./api",
+    "rootFileName":          "library_root.rst",
+    "rootFileTitle":         "API",
+    "doxygenStripFromPath":  "..",
+    # Suggested optional arguments
+    "createTreeView":        True,
+    # TIP: if using the sphinx-bootstrap-theme, you need
+    # "treeViewIsBootstrap": True,
+    "exhaleExecutesDoxygen": True,
+    "exhaleUseDoxyfile": True,
+}
 
-if build_doxygen:
-    subprocess.call('doxygen', shell=True)
+# Tell sphinx what the primary language being documented is.
+primary_domain = 'cpp'
+
+# Tell sphinx what the pygments highlight language should be.
+highlight_language = 'cpp'

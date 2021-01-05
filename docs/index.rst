@@ -33,4 +33,4 @@ Table of content
    quickstart
    concepts
    cxx23_executors
-   api
+   api/library_root.rst

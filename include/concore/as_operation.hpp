@@ -21,7 +21,7 @@ inline namespace v1 {
 /**
  * @brief   Wrapper that transforms an executor and a receiver into an operation
  *
- * @tparam  E The type of the executor
+ * @tparam  E The type of the executor; should model @ref executor
  * @tparam  R The type of the receiver
  *
  * @details
@@ -30,7 +30,7 @@ inline namespace v1 {
  *
  * This types models the @ref operation_state concept
  *
- * @see operation_state, as_invocable, as_sender
+ * @see operation_state, executor, receiver, as_invocable, as_sender
  */
 template <typename E, typename R>
 struct as_operation {

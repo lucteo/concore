@@ -31,15 +31,15 @@ inline namespace v1 {
  * @details
  *
  * Concepts defined:
- *      - @ref concore::executor
- *      - @ref concore::executor_of
- *      - @ref concore::receiver
- *      - @ref concore::receiver_of
- *      - @ref concore::sender
- *      - @ref concore::typed_sender
- *      - @ref concore::sender_to
- *      - @ref concore::operation_state
- *      - @ref concore::scheduler
+ *      - @ref concore::v1::executor
+ *      - @ref concore::v1::executor_of
+ *      - @ref concore::v1::receiver
+ *      - @ref concore::v1::receiver_of
+ *      - @ref concore::v1::sender
+ *      - @ref concore::v1::typed_sender
+ *      - @ref concore::v1::sender_to
+ *      - @ref concore::v1::operation_state
+ *      - @ref concore::v1::scheduler
  *
  * Customization point object functors:
  *      - @ref concore::set_value()
@@ -379,13 +379,7 @@ struct invocable_archetype {
 };
 
 /**
- * @interface   executor
  * @brief   Concept that defines an executor
- *
- * @code{.cpp}
- *      template <typename E>
- *      concept executor = ...
- * @endcode
  *
  * @tparam  E   The type that we want to model the concept
  *
@@ -408,16 +402,11 @@ struct invocable_archetype {
  *
  * @see     executor_of, execute_t, execute()
  */
+template <typename E>
 struct executor {};
 
 /**
- * @interface   executor_of
  * @brief Defines an executor that can execute a given functor type
- *
- * @code{.cpp}
- *      template <typename E, typename F>
- *      concept executor_of = ...
- * @endcode
  *
  * @tparam  E   The type that we want to model the concept
  * @tparam  F   The type functor that can be called by the executor
@@ -429,16 +418,11 @@ struct executor {};
  *
  * @see     executor
  */
+template <typename E, typename F>
 struct executor_of {};
 
 /**
- * @interface   receiver <>
  * @brief Concept that defines a bare-bone receiver
- *
- * @code{.cpp}
- *      template <typename T, typename E = std::exception_ptr>
- *      concept receiver = ...
- * @endcode
  *
  * @tparam T The type being checked to see if it's a bare-bone receiver
  * @tparam E The type of errors that the receiver accepts; default ``std::exception_ptr``
@@ -472,16 +456,11 @@ struct executor_of {};
  *
  * @see receiver_of, set_done(), set_error()
  */
+template <typename T, typename E = std::exception_ptr>
 struct receiver {};
 
 /**
- * @interface   receiver_of <>
  * @brief Concept that defines a receiver of a particular kind
- *
- * @code{.cpp}
- *      template <typename T, typename E = std::exception_ptr, typename... Vs>
- *      concept receiver_of = ...
- * @endcode
  *
  * @tparam T     The type being checked to see if it's a bare-bone receiver
  * @tparam E     The type of errors that the receiver accepts; default ``std::exception_ptr``
@@ -513,16 +492,11 @@ struct receiver {};
  *
  * @see receiver, set_value(), set_done(), set_error()
  */
+template <typename T, typename E = std::exception_ptr, typename... Vs>
 struct receiver_of {};
 
 /**
- * @interface   sender <>
  * @brief   Concept that defines a sender
- *
- * @code{.cpp}
- *      template <typename S>
- *      concept sender = ...
- * @endcode
  *
  * @tparam  S   The type that is being checked to see if it's a sender
  *
@@ -553,16 +527,11 @@ struct receiver_of {};
  *
  * @see receiver, receiver_of, typed_sender, sender_to
  */
+template <typename S>
 struct sender {};
 
 /**
- * @interface   typed_sender <>
  * @brief   Concept that defines a typed sender
- *
- * @code{.cpp}
- *      template <typename S>
- *      concept typed_sender = ...
- * @endcode
  *
  * @tparam  S   The type that is being checked to see if it's a typed sender
  *
@@ -574,16 +543,11 @@ struct sender {};
  *
  * @see sender, sender_to
  */
+template <typename S>
 struct typed_sender {};
 
 /**
- * @interface   sender_to <>
  * @brief   Concept that brings together a sender and a receiver
- *
- * @code{.cpp}
- *      template <typename S, typename R>
- *      concept sender_to = ...
- * @endcode
  *
  * @tparam  S   The type of sender that is assessed
  * @tparam  R   The type of receiver that the sender must conform to
@@ -595,16 +559,11 @@ struct typed_sender {};
  *
  * @see     sender, receiver
  */
+template <typename S, typename R>
 struct sender_to {};
 
 /**
- * @interface   operation_state <>
  * @brief   Concept that defines an operation state
- *
- * @code{.cpp}
- *      template <typename OpState>
- *      concept operation_state = ...
- * @endcode
  *
  * @tparam  OpState The type that is being checked to see if it's a operation_state
  *
@@ -618,16 +577,11 @@ struct sender_to {};
  *
  * @see sender, receiver, connect()
  */
+template <typename OpState>
 struct operation_state {};
 
 /**
- * @interface   scheduler <>
  * @brief   Concept that defines a scheduler
- *
- * @code{.cpp}
- *      template <typename S>
- *      concept scheduler = ...
- * @endcode
  *
  * @tparam  S   The type that is being checked to see if it's a scheduler
  *
@@ -641,6 +595,7 @@ struct operation_state {};
  *
  * @see sender
  */
+template <typename S>
 struct scheduler {};
 
 #endif
