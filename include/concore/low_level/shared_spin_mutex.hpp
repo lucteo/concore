@@ -1,3 +1,9 @@
+/**
+ * @file    shared_spin_mutex.hpp
+ * @brief   Definition of @ref concore::v1::shared_spin_mutex "shared_spin_mutex"
+ *
+ * @see     @ref concore::v1::shared_spin_mutex "shared_spin_mutex"
+ */
 #pragma once
 
 #include "spin_backoff.hpp"
@@ -49,11 +55,15 @@ public:
     shared_spin_mutex(const shared_spin_mutex&) = delete;
     //! Copy assignment is DISABLED
     shared_spin_mutex& operator=(const shared_spin_mutex&) = delete;
+    //! Move constructor is DIABLED
     shared_spin_mutex(shared_spin_mutex&&) = delete;
+    //! Move assignment is DIABLED
     shared_spin_mutex& operator=(shared_spin_mutex&&) = delete;
 
     /**
      * @brief      Acquires exclusive ownership of the mutex
+     *
+     * @details
      *
      * This will put the mutex in the *exclusive ownership* case. If other threads have exclusive or
      * shared ownership, this will wait until those threads are done
@@ -71,6 +81,8 @@ public:
      *
      * @return     True if the mutex exclusive ownership was acquired; false if the mutex is busy
      *
+     * @details
+     *
      * This is similar to @ref lock() but does not wait for the mutex to be free again. If the mutex
      * is acquired by a different thread, or if the mutex has shared ownership this will return
      * false.
@@ -83,6 +95,8 @@ public:
     /**
      * @brief      Releases the exclusive ownership on the mutex
      *
+     * @details
+     *
      * This needs to be called for every @ref lock() and for every @ref try_lock() that returns
      * true. It should not be called without a matching @ref lock() or @ref try_lock().
      *
@@ -92,6 +106,8 @@ public:
 
     /**
      * @brief      Acquires shared ownership of the mutex
+     *
+     * @details
      *
      * This will put the mutex in the *shared ownership* case. If other threads have exclusive
      * ownership, this will wait until those threads are done.
@@ -109,6 +125,8 @@ public:
      *
      * @return     True if the mutex shared ownership was acquired; false if the mutex is busy
      *
+     * @details
+     *
      * This is similar to @ref lock_shared() but does not wait for the mutex to be free again. If
      * the mutex is exclusively acquired by a different thread this will return false.
      *
@@ -119,6 +137,8 @@ public:
     bool try_lock_shared();
     /**
      * @brief      Releases the sjared ownership on the mutex
+     *
+     * @details
      *
      * This needs to be called for every @ref lock_shared() and for every @ref try_lock_shared()
      * that returns true. It should not be called without a matching @ref lock_shared() or

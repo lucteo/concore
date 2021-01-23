@@ -1,3 +1,9 @@
+/**
+ * @file    concurrent_queue.hpp
+ * @brief   Definition of @ref concore::v1::concurrent_queue "concurrent_queue"
+ *
+ * @see     @ref concore::v1::concurrent_queue "concurrent_queue"
+ */
 #pragma once
 
 #include "concurrent_queue_type.hpp"
@@ -32,7 +38,7 @@ inline namespace v1 {
  * The queue has only 2 operations corresponding to pushing new elements into the queue and popping
  * elements out of the queue.
  *
- * @see queue_type, push(), pop()
+ * @see push(), try_pop()
  */
 template <typename T, queue_type conc_type = queue_type::multi_prod_multi_cons>
 class concurrent_queue {
@@ -42,14 +48,17 @@ public:
 
     //! Default constructor. Creates a valid empty queue.
     concurrent_queue() = default;
+    //! Destructor
     ~concurrent_queue() = default;
     //! Copy constructor is DISABLED
     concurrent_queue(const concurrent_queue&) = delete;
     //! Copy assignment is DISABLED
     const concurrent_queue& operator=(const concurrent_queue&) = delete;
 
+    //! Move constructor
     // NOLINTNEXTLINE(performance-noexcept-move-constructor)
     concurrent_queue(concurrent_queue&&) = default;
+    //! Move assignment
     // NOLINTNEXTLINE(performance-noexcept-move-constructor)
     concurrent_queue& operator=(concurrent_queue&&) = default;
 
@@ -58,7 +67,9 @@ public:
      *
      * @param      elem  The element to be added to the queue
      *
-     * This ensures that is thread-safe with respect to the chosen @ref queue_type concurrency
+     * @details
+     *
+     * This ensures that is thread-safe with respect to the chosen queue_type concurrency
      * policy.
      *
      * @see try_pop()
@@ -70,9 +81,6 @@ public:
         detail::push_back(queue_, node);
     }
 
-    //! Try to pop one element from the front of the queue. Returns false if the queue is empty.
-    //! This is considered the default popping operation.
-
     /**
      * @brief      Try to pop one element from the front of the queue
      *
@@ -80,11 +88,13 @@ public:
      *
      * @return     True if an element was popped; false otherwise.
      *
+     * @details
+     *
      * If the queue is empty, this will return false and not touch the given parameter.
      * If the queue is not empty, it will extract the element from the front of the queue and store
      * it in the given parameter.
      *
-     * This ensures that is thread-safe with respect to the chosen @ref queue_type concurrency
+     * This ensures that is thread-safe with respect to the chosen queue_type concurrency
      * policy.
      *
      * @see push()

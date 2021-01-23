@@ -1,3 +1,7 @@
+/**
+ * @file    inline_executor.hpp
+ * @brief   Defines the @ref concore::v1::inline_executor "inline_executor" class
+ */
 #pragma once
 
 #include "task.hpp"
@@ -7,7 +11,7 @@ inline namespace v1 {
 /**
  * @brief Executor type that executes the work inline
  *
- * @param f Functor to be executed
+ * @details
  *
  * Whenever `execute` is called with a functor, the functor is directly called.
  * The calling party will be blocked until the functor finishes execution.
@@ -15,12 +19,15 @@ inline namespace v1 {
  * Two objects of this type will always compare equal.
  */
 struct inline_executor {
+    //! Method called to execute work in this executor
     template <typename F>
     void execute(F&& f) const {
         std::forward<F>(f)();
     }
 
+    //! Equality operator; always true
     friend inline bool operator==(inline_executor, inline_executor) { return true; }
+    //! Inequality operator; always false
     friend inline bool operator!=(inline_executor, inline_executor) { return false; }
 };
 

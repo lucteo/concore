@@ -1,3 +1,9 @@
+/**
+ * @file    conc_scan.hpp
+ * @brief   Definition of conc_scan()
+ *
+ * @see     conc_scan()
+ */
 #pragma once
 
 #include "concore/partition_hints.hpp"
@@ -134,6 +140,10 @@ inline namespace v1 {
  * @tparam     Value     The type of the values we are operating on
  * @tparam     BinaryOp  The type of the binary operation (i.e., summation)
  *
+ * @return     The result value after applying the operation to the input collection
+ *
+ * @details
+ *
  * This implements the prefix sum algorithm. Assuming the given operation is summation, this will
  * write in the destination corresponding to each element, the sum of the previous elements,
  * including itself. Similar to std::inclusive_sum.
@@ -148,7 +158,7 @@ inline namespace v1 {
  *
  * The operation needs to be able to be called in parallel.
  *
- * @return     The result value after applying the operation to the input collection
+ * @see     conc_for(), conc_reduce(), task_group
  */
 template <typename It, typename It2, typename Value, typename BinaryOp>
 inline Value conc_scan(It first, It last, It2 d_first, Value identity, const BinaryOp& op,

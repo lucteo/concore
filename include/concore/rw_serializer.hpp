@@ -1,3 +1,9 @@
+/**
+ * @file    rw_serializer.hpp
+ * @brief   Defines the @ref concore::v1::rw_serializer "rw_serializer" class
+ *
+ * @see     @ref concore::v1::rw_serializer "rw_serializer"
+ */
 #pragma once
 
 #include "task.hpp"
@@ -19,9 +25,9 @@ inline namespace v1 {
  * The *READ* tasks can be run in parallel with other *READ* tasks, but not with *WRITE* tasks. The
  * *WRITE* tasks cannot be run in parallel neither with *READ* nor with *WRITE* tasks.
  *
- * This class provides two methods to access to the two executors: @ref read() and @ref write().
- * The @ref read() executor should be used to enqueue *READ* tasks while the @ref write() executor
- * should be used to enqueue *WRITE* tasks.
+ * This class provides two methods to access to the two executors: @ref reader() and @ref writer().
+ * The @ref reader() executor should be used to enqueue *READ* tasks while the @ref writer()
+ * executor should be used to enqueue *WRITE* tasks.
  *
  * This implementation slightly favors the *WRITEs*: if there are multiple pending *WRITEs* and
  * multiple pending *READs*, this will execute all the *WRITEs* before executing the *READs*. The
@@ -59,7 +65,7 @@ public:
         /**
          * @brief      Enqueue a functor as a write operation in the RW serializer
          *
-         * @param      f     The *READ* functor to be enqueued
+         * @details
          *
          * Depending on the state of the parent @ref rw_serializer object this will enqueue the task
          * immediately (if there are no *WRITE* tasks), or it will place it in a waiting list to be
@@ -74,10 +80,13 @@ public:
         //! @overload
         void execute(task t) const { do_enqueue(std::move(t)); }
 
+        //! Equality operator
         friend inline bool operator==(reader_type l, reader_type r) { return l.impl_ == r.impl_; }
+        //! Inequality operator
         friend inline bool operator!=(reader_type l, reader_type r) { return !(l == r); }
 
     private:
+        //! Implementation method for enqueueing a READ task
         void do_enqueue(task t) const;
     };
 
@@ -96,7 +105,7 @@ public:
         /**
          * @brief      Enqueue a functor as a write operation in the RW serializer
          *
-         * @param      f     The *WRITE* functor to be enqueued
+         * @details
          *
          * Depending on the state of the parent @ref rw_serializer object this will enqueue the task
          * immediately (if there are no other tasks executing), or it will place it in a waiting
@@ -114,10 +123,13 @@ public:
         //! @copydoc execute()
         void operator()(task t) const { do_enqueue(std::move(t)); }
 
+        //! Equality operator
         friend inline bool operator==(writer_type l, writer_type r) { return l.impl_ == r.impl_; }
+        //! Inequality operator
         friend inline bool operator!=(writer_type l, writer_type r) { return !(l == r); }
 
     private:
+        //! Implementation method for enqueueing WRITE tasks
         void do_enqueue(task t) const;
     };
 
@@ -126,6 +138,8 @@ public:
      *
      * @param      base_executor  Executor to be used to enqueue new tasks
      * @param      cont_executor  Executor that enqueues follow-up tasks
+     *
+     * @details
      *
      * If `base_executor` is not given, @ref global_executor will be used.
      * If `cont_executor` is not given, it will use `base_executor` if given, otherwise it will use
@@ -158,6 +172,8 @@ public:
      * @brief      Sets the exception handler for enqueueing tasks
      *
      * @param      except_fun  The function to be called whenever an exception occurs.
+     *
+     * @details
      *
      * The exception handler set here will be called whenever an exception is thrown while
      * enqueueing a follow-up task. It will not be called whenever the task itself throws an

@@ -1,3 +1,7 @@
+/**
+ * @file    any_executor.hpp
+ * @brief   Defines the @ref concore::v1::any_executor "any_executor" class
+ */
 #pragma once
 
 #include "task.hpp"
@@ -56,12 +60,12 @@ inline namespace v1 {
  * @brief A polymorphic executor wrapper
  *
  * This provides a type erasure on an executor type. It can hold any type of executor object in it
- * and wraps its execution.
+ * and wraps its execution. The type of the wrapped object must model the @ref executor concept.
  *
  * If the any executor is is not initialized with a valid executor, then calling @ref execute() on
  * it is undefined behavior.
  *
- * @ref executor, inline_executor, global_executor
+ * @see executor, inline_executor, global_executor
  */
 class any_executor {
 public:
@@ -83,21 +87,28 @@ public:
      *
      * @param e The executor to be wrapped by this object
      *
+     * @details
+     *
      * This will construct the object by wrapping the given executor. The given executor must be
-     * valid.
+     * valid and must model the @ref executor concept.
+     *
+     * @see executor
      */
     template <typename Executor>
     any_executor(Executor e)
         : wrapper_(new detail::executor_wrapper<Executor>(std::forward<Executor>(e))) {}
 
+    //! Copy assignment
     any_executor& operator=(const any_executor& other) noexcept {
         any_executor(other).swap(*this);
         return *this;
     }
+    //! Move assignment
     any_executor& operator=(any_executor&& other) noexcept {
         any_executor(std::move(other)).swap(*this);
         return *this;
     }
+    //! Copy assignment from nullptr_t
     any_executor& operator=(std::nullptr_t) noexcept {
         any_executor{}.swap(*this);
         return *this;
@@ -109,7 +120,12 @@ public:
      * @param e The executor to be wrapped in this object
      * @return Reference to this object
      *
-     * This will implement assignment from another executor. The given executor must be valid.
+     * @details
+     *
+     * This will implement assignment from another executor. The given executor must be valid and
+     * must model the @ref executor concept.
+     *
+     * @see executor
      */
     template <typename Executor>
     any_executor& operator=(Executor e) {
@@ -117,6 +133,7 @@ public:
         return *this;
     }
 
+    //! Destructor
     ~any_executor() { delete wrapper_; }
 
     //! Swaps the content of this object with the content of the given object
@@ -129,6 +146,8 @@ public:
      * @brief The main execution method of this executor
      *
      * @param f Functor to be executed in the wrapped executor
+     *
+     * @details
      *
      * This implements the `execute()` CPO for this executor object, making it conform to the
      * executor concept. It forwards the call to the underlying executor.
@@ -155,7 +174,7 @@ public:
     }
 
     //! Helper method to get the underlying executor, if its type is specified
-    template <CONCORE_CONCEPT_OR_TYPENAME(executor) Executor>
+    template <typename Executor>
     Executor* target() noexcept {
         return wrapper_ && wrapper_->target_type() == typeid(Executor)
                        // NOLINTNEXTLINE
@@ -163,13 +182,13 @@ public:
                        : nullptr;
     }
     //! @overload
-    template <CONCORE_CONCEPT_OR_TYPENAME(executor) Executor>
+    template <typename Executor>
     const Executor* target() const noexcept {
         // NOLINTNEXTLINE
         return wrapper_ ? reinterpret_cast<const Executor*>(wrapper_->target()) : nullptr;
     }
 
-    //! Comparison operator
+    //! Equality operator
     friend inline bool operator==(any_executor l, any_executor r) {
         if (!l && !r)
             return true;
@@ -182,7 +201,7 @@ public:
     friend inline bool operator==(any_executor l, std::nullptr_t) { return l.wrapper_ == nullptr; }
     //! @overload
     friend inline bool operator==(std::nullptr_t, any_executor r) { return r.wrapper_ == nullptr; }
-    //! @overload
+    //! Inequality operator
     friend inline bool operator!=(any_executor l, any_executor r) { return !(l == r); }
     //! @overload
     friend inline bool operator!=(any_executor l, std::nullptr_t r) { return !(l == r); }

@@ -1,3 +1,7 @@
+/**
+ * @file    dispatch_executor.hpp
+ * @brief   Defines the @ref concore::v1::dispatch_executor "dispatch_executor" class
+ */
 #pragma once
 
 #include "detail/platform.hpp"
@@ -43,14 +47,16 @@ struct dispatch_executor {
 
     //! The priority of the task to be used
     enum priority {
-        prio_high = DISPATCH_QUEUE_PRIORITY_HIGH,      //! High-priority tasks
-        prio_normal = DISPATCH_QUEUE_PRIORITY_DEFAULT, //! Tasks with normal priority
-        prio_low = DISPATCH_QUEUE_PRIORITY_LOW,        //! Tasks with low priority
+        prio_high = DISPATCH_QUEUE_PRIORITY_HIGH,      //!< High-priority tasks
+        prio_normal = DISPATCH_QUEUE_PRIORITY_DEFAULT, //!< Tasks with normal priority
+        prio_low = DISPATCH_QUEUE_PRIORITY_LOW,        //!< Tasks with low priority
     };
 
+    //! Constructor
     explicit dispatch_executor(priority prio = prio_normal)
         : prio_(prio) {}
 
+    //! Method called to execute work in this executor
     template <typename F>
     void execute(F&& f) const {
         CONCORE_PROFILING_SCOPE_N("enqueue");
@@ -72,12 +78,15 @@ struct dispatch_executor {
         dispatch_group_async_f(g.group_, queue, context, work);
     }
 
+    //! Equality operator
     friend inline bool operator==(dispatch_executor l, dispatch_executor r) {
         return l.prio_ == r.prio_;
     }
+    //! Inequality operator
     friend inline bool operator!=(dispatch_executor l, dispatch_executor r) { return !(l == r); }
 
 private:
+    //! The priority to be used when adding tasks
     priority prio_;
 };
 

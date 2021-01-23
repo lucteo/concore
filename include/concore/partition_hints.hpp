@@ -1,3 +1,9 @@
+/**
+ * @file    partition_hints.hpp
+ * @brief   Definition of @ref concore::v1::partition_hints "partition_hints"
+ *
+ * @see     @ref concore::v1::partition_hints "partition_hints"
+ */
 #pragma once
 
 namespace concore {
@@ -7,11 +13,13 @@ inline namespace v1 {
 /**
  * @brief      The method of dividing the work for concurrent algorithms on ranges
  *
- * Using this would provide a hint the conc_for or conc_reduce algorithms on how to partition the
- * input data.
+ * Using this would provide a hint the conc_for(), conc_reduce() or conc_scan() algorithms on how to
+ * partition the input data.
  *
  * The implementation of the algorithms may choose not to follow the specified method. Typically the
  * default method (auto_partition) works good enough, so most users don't need to change this.
+ *
+ * @see partition_hints, conc_for(), conc_reduce(), conc_scan()
  */
 enum class partition_method {
     /**
@@ -73,17 +81,17 @@ enum class partition_method {
 };
 
 /**
- * @brief      Hints to alter the behavior of a @ref conc_for or @ref conc_reduce algorithms
+ * @brief      Hints to alter the behavior of a @ref conc_for() or @ref conc_reduce() algorithms
  *
- * The hints in this structure can influence the behavior of the @ref conc_for and @ref conc_reduce
- * algorithms, but the algorithms can decide to ignore these hints.
+ * The hints in this structure can influence the behavior of the @ref conc_for() and @ref
+ * conc_reduce() algorithms, but the algorithms can decide to ignore these hints.
  *
  * In general, the algorithms performs well on a large variety of cases, when the functions being
  * executed per element are not extremely fast. Therefore, manually giving hints to it is not
  * usually needed. If the operations are really fast, the user might want to play with the
  * granularity to ensure that the work unit is sufficiently large.
  *
- * @see partition_method
+ * @see partition_method, conc_for(), conc_reduce()
  */
 struct partition_hints {
     //! The method of partitioning the input range
@@ -95,7 +103,7 @@ struct partition_hints {
     //! algorithm to not place less than the value here. This can be used when the iterations are
     //! really small, and the task management overhead can become significant.
     //!
-    //! Does not apply to the @ref partition_method::upfront_partition method
+    //! Does not apply to the upfront_partition method
     int granularity_{-1};
 
     //! The (maximum) number of tasks to create per worker

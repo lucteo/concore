@@ -1,3 +1,7 @@
+/**
+ * @file    global_executor.hpp
+ * @brief   Defines the @ref concore::v1::global_executor "global_executor" class
+ */
 #pragma once
 
 #include "detail/exec_context_if.hpp"
@@ -21,8 +25,6 @@ inline namespace v1 {
  * This is an executor that passes the tasks directly to concore's task system. Whenever there is a
  * core available, the task is executed.
  *
- * Is is the default executor.
- *
  * The executor takes as constructor parameter the priority of the task to be used when enqueueing
  * the task.
  *
@@ -33,31 +35,37 @@ inline namespace v1 {
 struct global_executor {
 
     //! The priority of the task to be used
-    using priority = detail::task_priority; //! The type of the priority
+    using priority = detail::task_priority;
     static constexpr auto prio_critical =
-            detail::task_priority::critical;                       //! Critical-priority tasks
-    static constexpr auto prio_high = detail::task_priority::high; //! High-priority tasks
+            detail::task_priority::critical;                       //!< Critical-priority tasks
+    static constexpr auto prio_high = detail::task_priority::high; //!< High-priority tasks
     static constexpr auto prio_normal =
-            detail::task_priority::normal;                       //! Tasks with normal priority
-    static constexpr auto prio_low = detail::task_priority::low; //! Tasks with low priority
+            detail::task_priority::normal;                       //!< Tasks with normal priority
+    static constexpr auto prio_low = detail::task_priority::low; //!< Tasks with low priority
     static constexpr auto prio_background =
-            detail::task_priority::background; //! Tasks with lowest possible priority
+            detail::task_priority::background; //!< Tasks with lowest possible priority
 
+    //! Constructor
     explicit global_executor(priority prio = prio_normal)
         : prio_(prio) {}
 
+    //! Method called to execute work in the global executor
     template <typename F>
     void execute(F&& f) const {
         do_enqueue(detail::get_exec_context(), task{std::forward<F>(f)}, prio_);
     }
+    //! \overload
     void execute(task t) const { do_enqueue(detail::get_exec_context(), std::move(t), prio_); }
 
+    //! Equality operator
     friend inline bool operator==(global_executor l, global_executor r) {
         return l.prio_ == r.prio_;
     }
+    //! Inequality operator
     friend inline bool operator!=(global_executor l, global_executor r) { return !(l == r); }
 
 private:
+    //! The priority for the tasks enqueued in this executor
     priority prio_;
 };
 

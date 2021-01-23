@@ -1,3 +1,9 @@
+/**
+ * @file    spin_mutex.hpp
+ * @brief   Definition of @ref concore::v1::spin_mutex "spin_mutex"
+ *
+ * @see     @ref concore::v1::spin_mutex "spin_mutex"
+ */
 #pragma once
 
 #include "spin_backoff.hpp"
@@ -31,6 +37,7 @@ public:
      * Constructs a spin mutex that is not acquired by any thread.
      */
     spin_mutex() = default;
+    //! Destructor
     ~spin_mutex() = default;
 
     //! Copy constructor is DISABLED
@@ -38,11 +45,15 @@ public:
     //! Copy assignment is DISABLED
     spin_mutex& operator=(const spin_mutex&) = delete;
 
+    //! Move constructor is DISABLED
     spin_mutex(spin_mutex&&) = delete;
+    //! Move assignment is DIABLED
     spin_mutex& operator=(spin_mutex&&) = delete;
 
     /**
      * @brief      Acquires ownership of the mutex
+     *
+     * @details
      *
      * Uses a @ref spin_backoff to spin while waiting for the ownership to be free. When exiting
      * this function the mutex will be owned by the current thread.
@@ -62,6 +73,8 @@ public:
      *
      * @return     True if the mutex ownership was acquired; false if the mutex is busy
      *
+     * @details
+     *
      * This is similar to @ref lock() but does not wait for the mutex to be free again. If the mutex
      * is acquired by a different thread, this will return false.
      *
@@ -73,6 +86,8 @@ public:
 
     /**
      * @brief      Releases the ownership on the mutex
+     *
+     * @details
      *
      * This needs to be called for every @ref lock() and for every @ref try_lock() that returns
      * true. It should not be called without a matching @ref lock() or @ref try_lock().

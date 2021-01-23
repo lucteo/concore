@@ -1,3 +1,11 @@
+/**
+ * @file    pipeline.hpp
+ * @brief   Utilities for creating execution pipelines
+ *
+ * @see     @ref concore::v1::pipeline "pipeline", @ref concore::v1::pipeline_builder
+ *          "pipeline_builder", @ref concore::v1::pipeline_end_t "pipeline_end_t", pipeline_end,
+ *          stage_ordering
+ */
 #pragma once
 
 #include "concore/task_group.hpp"
@@ -96,6 +104,8 @@ class pipeline_builder;
  *
  * @tparam     T  The type of items that flow through the pipeline.
  *
+ * @details
+ *
  * A pipeline is a sequence of stages in a the processing of a items (lines). All items share the
  * same stages. All the stages operate on the same type (line type).
  *
@@ -129,6 +139,7 @@ class pipeline_builder;
  * by not executing this stage; i.e., the processing in the stage is just skipped.
  *
  * Example of building a pipeline:
+ * @code
  *      auto my_pipeline = concore::pipeline_builder<int>()
  *          | concore::stage_ordering::concurrent
  *          | [&](int idx) {
@@ -141,6 +152,7 @@ class pipeline_builder;
  *          | concore::pipeline_end;
  *      for ( int i=0; i<100; i++)
  *          my_pipeline.push(i);
+ * @endcode
  *
  * @see        pipeline_builder, stage_ordering, serializer, n_serializer
  */
@@ -151,6 +163,8 @@ public:
      * @brief      Pushes a new item (line) through the pipeline
      *
      * @param      line_data  The data associated with the line
+     *
+     * @details
      *
      * This will start processing from the first stage and will iteratively pass through all the
      * stages of the pipeline. The same line data is passed to the functors registered with each
@@ -166,6 +180,7 @@ private:
 
     friend pipeline_builder<T>;
 
+    //! Private constructor
     pipeline(detail::pipeline_impl&& impl)
         : impl_(std::move(impl)) {}
 };
@@ -181,6 +196,8 @@ constexpr auto pipeline_end = pipeline_end_t{};
  *
  * @tparam     T     The type of the data corresponding to a line.
  *
+ * @details
+ *
  * This tries to extract the building of the pipeline stages from the @ref pipeline class.
  *
  * It just knows how to configure a pipeline and then to create an actual @ref pipeline object.
@@ -188,6 +205,7 @@ constexpr auto pipeline_end = pipeline_end_t{};
  * After we get a pipeline object, this builder cannot be used anymore.
  *
  * Example of building a pipeline:
+ * @code
  *      auto my_pipeline = concore::pipeline_builder<MyT>()
  *          | concore::stage_ordering::concurrent
  *          | [&](MyT data) {
@@ -198,7 +216,9 @@ constexpr auto pipeline_end = pipeline_end_t{};
  *              work2(data);
  *          }
  *          | concore::pipeline_end;
+ * @endcode
  *
+ * @see     pipeline
  */
 template <typename T>
 class pipeline_builder {
@@ -244,6 +264,8 @@ public:
      *
      * @tparam     F     The type of the work
      *
+     * @details
+     *
      * This takes a functor of type `void (T)` and an ordering and
      * constructs a stage in the pipeline with them.
      *
@@ -258,6 +280,8 @@ public:
     /**
      * @brief      Creates the actual pipeline object, ready to process items
      *
+     * @details
+     *
      * After calling this, we can no longer own any pipeline data, and we cannot add stages any
      * longer. The returned pipeline object is ready to process items with the stages defined by
      * this class.
@@ -268,6 +292,8 @@ public:
      * @brief      Creates the actual pipeline object, ready to process items
      *
      * @return     Resulting @ref pipeline object.
+     *
+     * @details
      *
      * After calling this, we can no longer own any pipeline data, and we cannot add stages any
      * longer. The returned pipeline object is ready to process items with the stages defined by
@@ -282,7 +308,9 @@ public:
      *
      * @return     The same pipeline_builder object
      *
-     * This allows easily constructing pipelines by using the '|' operator.
+     * @details
+     *
+     * This allows easily constructing pipelines by using the `|` operator.
      */
     pipeline_builder& operator|(stage_ordering ord) {
         next_ordering_ = ord;
@@ -298,6 +326,8 @@ public:
      *
      * @return     The same pipeline_builder object
      *
+     * @details
+     *
      * This adds a new stage to the pipeline, using the latest specified stage ordering. If no stage
      * ordering is specified, before adding this stage, the `in_order` is used.
      */
@@ -310,9 +340,9 @@ public:
     /**
      * @brief      Pipe operator to a tag that tells us that we are done building the pipeline
      *
-     * @param      <unnamed>  A tag value
-     *
      * @return     The @ref pipeline object built by this @ref pipeline_builder object.
+     *
+     * @details
      *
      * This will actually finalize the building process and return the corresponding @ref pipeline
      * object. After this is called, any other operations on the builder are illegal.

@@ -1,3 +1,9 @@
+/**
+ * @file    thread_pool.hpp
+ * @brief   Definition of @ref concore::v1::static_thread_pool "static_thread_pool"
+ *
+ * @see     @ref concore::v1::static_thread_pool "static_thread_pool"
+ */
 #pragma once
 
 #include <concore/detail/cxx_features.hpp>
@@ -223,6 +229,8 @@ inline namespace v1 {
  *      - outstanding_work.untracked
  *      - bulk_guarantee.parallel
  *      - mapping.thread
+ *
+ * @see executor, scheduler, sender
  */
 class static_thread_pool {
 public:
@@ -236,6 +244,8 @@ public:
      *
      * \param   num_threads     The number of threads to statically create in the thread pool
      *
+     * @details
+     *
      * This thread pool will create the given number of "internal" threads. This number of threads
      * cannot be changed later on. In addition to these threads, the user might manually add other
      * threads in the pool by calling the \ref attach() method.
@@ -244,15 +254,20 @@ public:
      */
     explicit static_thread_pool(std::size_t num_threads);
 
-    // Copy is disabled
+    //! Copy constructor is DISABLED
     static_thread_pool(const static_thread_pool&) = delete;
+    //! Copy assignment is DISABLED
     static_thread_pool& operator=(const static_thread_pool&) = delete;
 
+    //! Move constructor
     static_thread_pool(static_thread_pool&&) = default;
+    //! Move assignment
     static_thread_pool& operator=(static_thread_pool&&) = default;
 
     /**
      * \brief   Destructor for the static pool.
+     *
+     * @details
      *
      * Ensures that all the tasks already in the pool are drained out before destructing the pool.
      * New tasks will not be executed anymore in the pool.
@@ -263,6 +278,8 @@ public:
 
     /**
      * \brief   Attach the current thread to the thread pool.
+     *
+     * @details
      *
      * The thread that is calling this will temporary join this thread pool. The thread will behave
      * as if it was created during the constructor of this class. The thread will be released from
@@ -282,6 +299,8 @@ public:
     /**
      * \brief   Signal all work to complete
      *
+     * @details
+     *
      * This will signal the thread pool to stop working as soon as possible. This will return
      * immediately without waiting on the worker threads to complete.
      *
@@ -295,6 +314,8 @@ public:
 
     /**
      * \brief   Wait for all the threads attached to the thread pool to complete
+     *
+     * @details
      *
      * If not already stopped, it will signal the thread pool for completion. Calling just \ref
      * wait() is similar to calling \ref stop() and then \ref wait().
@@ -312,6 +333,8 @@ public:
     /**
      * \brief   Returns a scheduler that can be used to schedule work here.
      *
+     * @details
+     *
      * The returned scheduler object can be used to create sender objects that may be used to submit
      * receiver objects to this thread pool.
      *
@@ -325,6 +348,8 @@ public:
 
     /**
      * \brief   Returns an executor object that can add work to this thread pool.
+     *
+     * @details
      *
      * This returns an executor object that can be used to submit function objects to be executed by
      * this thread pool.

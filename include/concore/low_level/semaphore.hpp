@@ -1,3 +1,11 @@
+/**
+ * @file    semaphore.hpp
+ * @brief   Definition of @ref concore::v1::semaphore "semaphore" and
+ *          @ref concore::v1::binary_semaphore "binary_semaphore"
+ *
+ * @see     @ref concore::v1::semaphore "semaphore", @ref concore::v1::binary_semaphore
+ * "binary_semaphore"
+ */
 #pragma once
 
 #include "../profiling.hpp"
@@ -81,12 +89,15 @@ public:
     //! Copy assignment is DISABLED
     void operator=(const semaphore&) = delete;
 
-    // For the moment, we disable move
+    //! Move constructor is DIABLED
     semaphore(semaphore&&) = delete;
+    //! Move assignment is DIABLED
     void operator=(semaphore&&) = delete;
 
     /**
      * @brief      Decrement the internal count and wait on the count to be positive
+     *
+     * @details
      *
      * If the count of the semaphore is positive this will decrement the count and return
      * immediately. On the other hand, if the count is 0, it wait for it to become positive before
@@ -97,6 +108,8 @@ public:
     void wait();
     /**
      * @brief      Increment the internal count
+     *
+     * @details
      *
      * If there are at least one thread that is blocked inside a @ref wait() call, this will wake up
      * a waiting thread.
@@ -121,7 +134,7 @@ private:
  */
 class binary_semaphore {
 public:
-    // Constructor. Puts the semaphore in the SIGNALED state
+    //! Constructor. Puts the semaphore in the SIGNALED state
     binary_semaphore();
     //! Destructor
     ~binary_semaphore();
@@ -131,12 +144,15 @@ public:
     //! Copy assignment is DISABLED
     void operator=(const binary_semaphore&) = delete;
 
-    // For the moment, we disable move
+    //! Move constructor is DISABLED
     binary_semaphore(binary_semaphore&&) = delete;
+    //! Move assignment is DISABLED
     void operator=(binary_semaphore&&) = delete;
 
     /**
      * @brief      Wait for the semaphore to be signaled.
+     *
+     * @details
      *
      * This will put the binary semaphore in the WAITING state, and wait for a thread to signal it.
      * The call will block until a corresponding thread will signal it.
@@ -147,6 +163,8 @@ public:
 
     /**
      * @brief      Signal the binary semaphore
+     *
+     * @details
      *
      * Puts the semaphore in the SIGNALED state. If there is a thread that waits on the semaphore
      * it will wake it.

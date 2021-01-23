@@ -263,12 +263,6 @@ TAB_SIZE               = 4
 
 ALIASES                =
 
-# This tag can be used to specify a number of word-keyword mappings (TCL only).
-# A mapping has the form "name=value". For example adding "class=itcl::class"
-# will allow you to use the command class in the itcl::class meaning.
-
-TCL_SUBST              =
-
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
 # instance, some of the names that are used will be different. The list of all
@@ -2553,13 +2547,20 @@ DOT_CLEANUP            = YES
 PROJECT_NAME           = "concore"
 
 INPUT                  = ../include
-INPUT                  += ../src
+#INPUT                  += ../src
 RECURSIVE              = YES
 
 OUTPUT_DIRECTORY       = ./doxygen_out/
 GENERATE_XML           = YES
 GENERATE_LATEX         = NO
 
-EXCLUDE_PATTERNS       = */detail/*
-EXCLUDE_SYMBOLS        = concore::detail
+EXCLUDE_PATTERNS       = */detail/* */_cpo/* */_concepts/*
+EXCLUDE_PATTERNS       += */profiling.hpp */version.hpp */integral_iterator.hpp
+EXCLUDE_SYMBOLS        = "concore::detail" "impl"
 PREDEFINED             = DOXYGEN_BUILD
+
+FULL_PATH_NAMES        = NO
+
+# Add support for writing rst directly in doxygen
+ALIASES  = "rst=\verbatim embed:rst:leading-asterisk"
+ALIASES += "endrst=\endverbatim"

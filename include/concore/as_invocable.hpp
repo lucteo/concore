@@ -1,3 +1,9 @@
+/**
+ * @file    as_invocable.hpp
+ * @brief   Definition of @ref concore::v1::as_invocable "as_invocable"
+ *
+ * @see     @ref concore::v1::as_invocable "as_invocable"
+ */
 #pragma once
 
 #include <concore/_concepts/_concepts_receiver.hpp>
@@ -12,35 +18,57 @@ inline namespace v1 {
  *
  * @tparam  R The type of the receiver
  *
- * The receiver should model receivereceiver_of<>.
+ * @details
+ *
+ * The receiver should model `receiver_of<>`.
  *
  * This will store a reference to the receiver; the receiver must not get out of scope.
  *
- * When this functor is called set_value() will be called on the receiver. If an exception is
- * thrown, the set_error() function is called.
+ * When this functor is called @ref set_value() will be called on the receiver. If an exception is
+ * thrown, the @ref set_error() function is called.
  *
  * If the functor is never called, the destructor of this object will call set_done().
  *
  * @see as_receiver
  */
-CONCORE_TEMPLATE_COND(typename R, receiver_of<R>)
+template <typename R>
 struct as_invocable {
+    //! Constructor from receiver
     explicit as_invocable(R& r) noexcept
-        : receiver_(&r) {}
+        : receiver_(&r) {
+#if CONCORE_CXX_HAS_CONCEPTS
+        static_assert(receiver_of<R>, "Type needs to match receiver_of<> concept");
+#endif
+    }
+    //! Move constructor
     explicit as_invocable(as_invocable&& other) noexcept
         : receiver_(std::move(other.receiver_)) {
         other.receiver_ = nullptr;
     }
+    //! Move assignment
     as_invocable& operator=(as_invocable&& other) noexcept {
         receiver_ = other.receiver_;
         other.receiver_ = nullptr;
     }
+    //! Copy constructor is DISABLED
     as_invocable(const as_invocable&) = delete;
+    //! Copy assignment is DISABLED
     as_invocable& operator=(const as_invocable&) = delete;
+    //! Destructor
     ~as_invocable() {
         if (receiver_)
             concore::set_done(std::move(*receiver_));
     }
+
+    /**
+     * @brief Call operator
+     * @details
+     *
+     * This forwards the call to the receiver by calling @ref set_value(). If an exception is thrown
+     * during this operation, then @ref set_error() is called passing the exception.
+     *
+     * @see     set_value(), set_error()
+     */
     void operator()() noexcept {
         try {
             concore::set_value(std::move(*receiver_));
@@ -52,6 +80,7 @@ struct as_invocable {
     }
 
 private:
+    //! The receiver object to forward the call to
     R* receiver_;
 };
 
