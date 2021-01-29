@@ -41,6 +41,31 @@ TEST_CASE("simple pipeline", "[pipeline]") {
         REQUIRE(items[i] == 4);
 }
 
+TEST_CASE("simple pipeline, without the builder", "[pipeline]") {
+    constexpr int num_items = 50;
+    std::array<int, num_items> items{};
+    items.fill(0);
+
+    // Construct the pipeline
+    // clang-format off
+    concore::pipeline<int*> my_pipeline{num_items};
+    my_pipeline.add_stage(concore::stage_ordering::concurrent, [](int* data) { REQUIRE((*data)++ == 0); });
+    my_pipeline.add_stage(concore::stage_ordering::concurrent, [](int* data) { REQUIRE((*data)++ == 1); });
+    my_pipeline.add_stage(concore::stage_ordering::concurrent, [](int* data) { REQUIRE((*data)++ == 2); });
+    my_pipeline.add_stage(concore::stage_ordering::concurrent, [](int* data) { REQUIRE((*data)++ == 3); });
+
+    // Push items through the pipeline
+    for (int i = 0; i < num_items; i++)
+        my_pipeline.push(&items[i]);
+
+    // Wait for all the tasks to complete
+    REQUIRE(bounded_wait());
+
+    // Check that all the items went through all the all the stages
+    for (int i = 0; i < num_items; i++)
+        REQUIRE(items[i] == 4);
+}
+
 TEST_CASE("pipeline's max concurrency is enforced", "[pipeline]") {
     constexpr int num_items = 50;
     std::array<int, num_items> items{};
@@ -326,3 +351,28 @@ TEST_CASE("pipeline uses the given executor", "[pipeline]") {
     REQUIRE(cnt2.load() == num_items);
     REQUIRE(num_executed.load() == 2 * num_items);
 }
+
+TEST_CASE("pipeline stages can modify the line data", "[pipeline]") {
+    constexpr int num_items = 50;
+    std::array<int, num_items> items{};
+    items.fill(0);
+
+    // Construct the pipeline
+    // clang-format off
+    auto my_pipeline = concore::pipeline_builder<int>(num_items)
+        | concore::stage_ordering::concurrent
+        | [](int& data) { REQUIRE(data++ == 0); }
+        | [](int& data) { REQUIRE(data++ == 1); }
+        | [](int& data) { REQUIRE(data++ == 2); }
+        | [](int& data) { REQUIRE(data++ == 3); }
+        | concore::pipeline_end;
+    // clang-format on
+
+    // Push items through the pipeline
+    for (int i = 0; i < num_items; i++)
+        my_pipeline.push(0);
+
+    // Wait for all the tasks to complete
+    REQUIRE(bounded_wait());
+}
+

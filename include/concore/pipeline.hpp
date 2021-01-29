@@ -160,6 +160,61 @@ template <typename T>
 class pipeline {
 public:
     /**
+     * @brief      Constructs a pipeline object
+     *
+     * @param      max_concurrency  The concurrency limit for the pipeline
+     */
+    explicit pipeline(int max_concurrency = 0xffff)
+        : impl_(max_concurrency) {}
+    /**
+     * @brief      Constructs a pipeline object
+     *
+     * @param      max_concurrency  The concurrency limit for the pipeline
+     * @param      grp              The group in which tasks need to be executed
+     */
+    pipeline(int max_concurrency, task_group grp)
+        : impl_(max_concurrency, std::move(grp)) {}
+    /**
+     * @brief      Constructs a pipeline object
+     *
+     * @param      max_concurrency  The concurrency limit for the pipeline
+     * @param      grp              The group in which tasks need to be executed
+     * @param      exe              The executor to be used by the pipeline
+     */
+    pipeline(int max_concurrency, task_group grp, any_executor exe)
+        : impl_(max_concurrency, std::move(grp), std::move(exe)) {}
+    /**
+     * @brief      Constructs a pipeline object
+     *
+     * @param      max_concurrency  The concurrency limit for the pipeline
+     * @param      exe              The executor to be used by the pipeline
+     */
+    pipeline(int max_concurrency, any_executor exe)
+        : impl_(max_concurrency, std::move(exe)) {}
+
+    /**
+     * @brief      Adds a stage to the pipeline
+     *
+     * @param      ord   The ordering for the stage
+     * @param      work  The work to be done in this stage
+     *
+     * @tparam     F     The type of the work
+     *
+     * @details
+     *
+     * This takes a functor of type `void (T)` and an ordering and
+     * constructs a stage in the pipeline with them.
+     * 
+     * This must be called before any of the @ref push() calls are made
+     *
+     * @see        stage_ordering, pipeline_bulder
+     */
+    template <typename F>
+    void add_stage(stage_ordering ord, F&& work) {
+        impl_.do_add_stage(ord, detail::create_stage_fun<T>(std::forward<F>(work)));
+    }
+
+    /**
      * @brief      Pushes a new item (line) through the pipeline
      *
      * @param      line_data  The data associated with the line
