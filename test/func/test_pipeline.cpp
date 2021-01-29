@@ -375,4 +375,3 @@ TEST_CASE("pipeline stages can modify the line data", "[pipeline]") {
     // Wait for all the tasks to complete
     REQUIRE(bounded_wait());
 }
-
