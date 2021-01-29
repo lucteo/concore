@@ -204,7 +204,7 @@ public:
      *
      * This takes a functor of type `void (T)` and an ordering and
      * constructs a stage in the pipeline with them.
-     * 
+     *
      * This must be called before any of the @ref push() calls are made
      *
      * @see        stage_ordering, pipeline_bulder
