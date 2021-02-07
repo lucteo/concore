@@ -1,6 +1,7 @@
 #include "concore/serializer.hpp"
 #include "concore/global_executor.hpp"
 #include "concore/spawn.hpp"
+#include "concore/task_cancelled.hpp"
 #include "concore/data/concurrent_queue.hpp"
 #include "concore/detail/utils.hpp"
 #include "concore/detail/enqueue_next.hpp"
@@ -41,23 +42,54 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
 
         // If there were no other tasks, enqueue a task in the base executor
         if (count_++ == 0)
-            enqueue_next(base_executor_);
+            detail::enqueue_next(base_executor_, make_wrapper_task(), except_fun_);
     }
 
     //! Called by the base executor to execute one task.
     void execute_one() {
-        detail::pop_and_execute(waiting_tasks_);
-
-        // If there are still tasks in the queue, continue to enqueue the next task
-        if (count_-- > 1)
-            enqueue_next(cont_executor_);
+        task t = detail::pop_task(waiting_tasks_);
+        replace_continuation(t);
+        detail::execute_task(t);
     }
 
-    //! Enqueue the next task to be executed in the given executor.
-    void enqueue_next(any_executor& executor) {
-        // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
+    //! Called when the continuation of the wrapper task is executed to move to the next task
+    void on_cont(std::exception_ptr) {
+        // task exceptions are not reported through except_fun_
+        if (count_-- > 1)
+            detail::enqueue_next(cont_executor_, make_wrapper_task(), except_fun_);
+    }
+    //! Create a wrapper task that will execute one inner task. Its continuation will trigger the
+    //! execution of follow-up tasks
+    task make_wrapper_task() {
         auto f = [p_this = shared_from_this()]() { p_this->execute_one(); };
-        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
+        auto cont = [p_this = shared_from_this()](std::exception_ptr ex) {
+            if (ex) {
+                try {
+                    std::rethrow_exception(ex);
+                } catch (const task_cancelled&) {
+                    // The task did not execute, so ensure that we move to the next one
+                    p_this->on_cont(std::move(ex));
+                }
+            }
+        };
+        return task{std::move(f), {}, cont};
+    }
+
+    //! Replace the continuation of the given task with a continuation that makes our serializer
+    //! work.
+    void replace_continuation(task& t) {
+        auto inner_cont = t.get_continuation();
+        task_continuation_function cont;
+        if (inner_cont) {
+            cont = [inner_cont, p_this = shared_from_this()](std::exception_ptr ex) {
+                inner_cont(ex);
+                p_this->on_cont(std::move(ex));
+            };
+        } else {
+            cont = [p_this = shared_from_this()](
+                           std::exception_ptr ex) { p_this->on_cont(std::move(ex)); };
+        }
+        t.set_continuation(std::move(cont));
     }
 };
 

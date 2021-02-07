@@ -1,5 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/pipeline.hpp>
+#include <concore/serializer.hpp>
 #include <concore/spawn.hpp>
 #include <concore/delegating_executor.hpp>
 
@@ -169,7 +170,7 @@ TEST_CASE("pipeline can have ordered stages", "[pipeline]") {
             }
             | concore::stage_ordering::in_order
             | [&](int idx) {
-                REQUIRE(idx == cur_idx++); // The core of the test: items are executed in order
+                RC_ASSERT(idx == cur_idx++); // The core of the test: items are executed in order
             }
             | concore::pipeline_end;
         // clang-format on
@@ -180,10 +181,10 @@ TEST_CASE("pipeline can have ordered stages", "[pipeline]") {
 
         // Wait for all the tasks to complete
         std::this_thread::sleep_for(1ms);
-        REQUIRE(bounded_wait());
+        RC_ASSERT(bounded_wait());
 
         // Check that we've executed the right number of items
-        REQUIRE(cur_idx == num_items);
+        RC_ASSERT(cur_idx == num_items);
     }));
 }
 
@@ -365,6 +366,57 @@ TEST_CASE("pipeline stages can modify the line data", "[pipeline]") {
         | [](int& data) { REQUIRE(data++ == 1); }
         | [](int& data) { REQUIRE(data++ == 2); }
         | [](int& data) { REQUIRE(data++ == 3); }
+        | concore::pipeline_end;
+    // clang-format on
+
+    // Push items through the pipeline
+    for (int i = 0; i < num_items; i++)
+        my_pipeline.push(0);
+
+    // Wait for all the tasks to complete
+    REQUIRE(bounded_wait());
+}
+
+TEST_CASE("pipeline stages can be decomposed into other tasks", "[pipeline]") {
+    constexpr int num_items = 350;
+    std::array<int, num_items> items{};
+    items.fill(0);
+
+    auto stage_fun = [](int& data) {
+        // Get the current continuation
+        auto* cur_task = concore::task::current_task();
+        REQUIRE(cur_task != nullptr);
+        auto cur_cont = cur_task->get_continuation();
+
+        // Add 10 tasks into a serializer, all of them incrementing the data
+        // The last task ensures it has the proper continuation
+        auto ser = std::make_shared<concore::serializer>();
+        auto f = [&data] { data++; };
+        for (int i = 0; i < 9; i++)
+            concore::execute(*ser, concore::task{f});
+        concore::execute(*ser, concore::task{f, {}, std::move(cur_cont)});
+
+        // Clear the continuation from the current task
+        cur_task->set_continuation({});
+
+        // The stage is done; no direct increment
+    };
+    auto stage_check_fun = [](const int& data) {
+        // Ensure that we've executed all the tasks for each stage
+        REQUIRE(data == 30);
+    };
+
+    // Construct the pipeline, with a stage of each type
+    // clang-format off
+    auto my_pipeline = concore::pipeline_builder<int>(num_items)
+        | concore::stage_ordering::concurrent
+        | stage_fun
+        | concore::stage_ordering::out_of_order
+        | stage_fun
+        | concore::stage_ordering::in_order
+        | stage_fun
+        | concore::stage_ordering::concurrent
+        | stage_check_fun
         | concore::pipeline_end;
     // clang-format on
 

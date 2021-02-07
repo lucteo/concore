@@ -48,3 +48,18 @@ inline bool enqueue_and_wait(
         e.execute(concore::task{f, grp});
     return bounded_wait(grp);
 }
+
+//! Spawns another task, and moves the continuation from the current task to the spawned one.
+inline concore::task create_sub_task(concore::task_function f, concore::task_group g = {},
+        concore::task_continuation_function c = {}) {
+    // Get the continuation of the current task
+    auto* cur_task = concore::task::current_task();
+    assert(cur_task != nullptr);
+    auto cur_cont = cur_task->get_continuation();
+
+    // Set the new continuation
+    cur_task->set_continuation(std::move(c));
+
+    // Create a new task with the parent task continuation
+    return concore::task{std::move(f), std::move(g), std::move(cur_cont)};
+}

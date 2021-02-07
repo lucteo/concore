@@ -44,6 +44,8 @@ inline namespace v1 {
  * **Guarantees**:
  *  - no more than 1 task is executed at once.
  *  - the tasks are executed in the order in which they are enqueued.
+ *  - the continuations of tasks are also serialized; the continuation of a task is always executed
+ *    before the next task
  *
  * @see        any_executor, global_executor, spawn_continuation_executor, n_serializer,
  * rw_serializer
