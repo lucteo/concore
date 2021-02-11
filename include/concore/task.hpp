@@ -9,12 +9,16 @@
 #include "task_group.hpp"
 
 #include <functional>
+#include <cassert>
 
 namespace concore {
 
 namespace detail {
-class exec_context;
-}
+
+//! Called to actually execute a task
+void execute_task(task& t) noexcept;
+
+} // namespace detail
 
 inline namespace v1 {
 
@@ -28,6 +32,28 @@ inline namespace v1 {
  * @see task
  */
 using task_function = std::function<void()>;
+
+/**
+ * @brief   The type of function called at the end of the task.
+ *
+ * @param   _ The exception seen in the task, or empty object
+ *
+ * @details
+ *
+ * This allows the task-manipulation structures (pipelines, serializers, etc.) to be notified at the
+ * completion of the task, and perform continuation actions on them.
+ *
+ * If a continuation function will be set to a task, then that function will be called no matter how
+ * the task execution is ending (successfully, with error, cancellation).
+ *
+ * If the task is finished successfully, this will be called with an empty exception ptr. If the
+ * task finishes with an exception, then that exception will be passed here. If the task has been
+ * cancelled and never started executing, then this will be called with a `task_cancelled`
+ * exception.
+ *
+ * @see task, task_cancelled
+ */
+using task_continuation_function = std::function<void(std::exception_ptr)>;
 
 /**
  * @brief      A task. Core abstraction for representing an independent unit of work.
@@ -86,31 +112,15 @@ public:
     task() = default;
 
     /**
-     * @brief      Constructs a new task given a functor
-     *
-     * @param      ftor  The functor to be called when executing task.
-     *
-     * @tparam     T     The type of the functor. Must be compatible with @ref task_function.
-     *
-     * @details
-     *
-     * When the task will be executed, the given functor will be called. This typically happens on
-     * a different thread than this constructor is called.
-     *
-     * To be assumed that the functor will be called at a later time. All the resources needed by
-     * the functor must be valid at that time.
-     */
-    template <typename T>
-    explicit task(T ftor)
-        : fun_(std::move(ftor)) {}
-
-    /**
      * @brief      Constructs a new task given a functor and a task group
      *
-     * @param      ftor  The functor to be called when executing task.
-     * @param      grp   The task group to place the task in the group.
+     * @param      ftor The functor to be called when executing task.
+     * @param      grp  The task group to place the task in the group.
+     * @param      cont The functor to be called when the task is finished
      *
-     * @tparam     T     The type of the functor. Must be compatible with @ref task_function.
+     * @tparam     F    The type of the functor. Must be compatible with `task_function`.
+     * @tparam     CF   The type of the continuation functor. Must be compatible with
+     *                  `task_continuation_function`.
      *
      * @details
      *
@@ -120,20 +130,41 @@ public:
      * To be assumed that the functor will be called at a later time. All the resources needed by
      * the functor must be valid at that time.
      *
-     * Through the given group one can cancel the execution of the task, and check (indirectly) when
-     * the task is complete.
+     * If a `task_group` is given, then through that group one can cancel the execution of the task,
+     * and check (indirectly) when the task is complete. After a call to this constructor, the group
+     * becomes "active". Calling
+     * @ref task_group::is_active() will return true.
      *
-     * After a call to this constructor, the group becomes "active". Calling @ref
-     * task_group::is_active() will return true.
+     * If a continuation function is given, then that function will be called regardless on how the
+     * task is executed (assuming that the task is queued for execution). It is called after a
+     * successful execution, it is called if the task throws an exception, and it is called if the
+     * task is cancelled.
      *
      * @see get_task_group()
      */
-    template <typename T>
-    task(T ftor, task_group grp)
+    template <typename F, typename CF>
+    task(F ftor, task_group grp, CF cont)
         : fun_(std::move(ftor))
+        , cont_fun_(std::move(cont))
         , task_group_(grp) {
+        assert(fun_);
         detail::task_group_access::on_task_created(grp);
     }
+    //! @overload
+    template <typename F>
+    explicit task(F ftor)
+        : fun_(std::move(ftor)) {
+        assert(fun_);
+    }
+    //! @overload
+    template <typename F>
+    task(F ftor, task_group grp)
+        : fun_(std::move(ftor))
+        , task_group_(grp) {
+        assert(fun_);
+        detail::task_group_access::on_task_created(grp);
+    }
+
     /**
      * @brief      Assignment operator from a functor
      *
@@ -179,16 +210,9 @@ public:
      */
     void swap(task& other) {
         fun_.swap(other.fun_);
+        cont_fun_.swap(other.cont_fun_);
         std::swap(task_group_, other.task_group_);
     }
-
-    /**
-     * @brief      Bool conversion operator.
-     *
-     * Indicates if a valid functor is set into the tasks, i.e., if there is anything to be
-     * executed.
-     */
-    explicit operator bool() const noexcept { return static_cast<bool>(fun_); }
 
     /**
      * @brief      Function call operator; performs the action stored in the task.
@@ -202,7 +226,49 @@ public:
      * This is typically called after some time has passed since task creation. The user must ensure
      * that the functor stored in the task is safe to be executed at that point.
      */
-    void operator()() { fun_(); }
+    void operator()();
+
+    /**
+     * @brief Called whenever the task has been cancelled.
+     *
+     * @details
+     *
+     * Even if a task is cancelled, certain structures (i.e., pipeline or serializers) might still
+     * need to perform actions so that other tasks are not blocked. Through this function the task
+     * is notified that is has been cancelled, that the main task function should not be executed
+     * but the continuation function (if set) should be executed.
+     *
+     * @see     operator()()
+     */
+    void cancelled();
+
+    /**
+     * @brief Gets the continuation function stored in this task (may be empty)
+     * @details
+     *
+     * This can be used to inspect the continuation of a task, with the goal of changing it.
+     * If a task has a continuation set, then that continuation need to be executed, regardless of
+     * whether the status is successfully executed or not. This means, that, if the continuation is
+     * exchanged, the old continuation needs to be stored somewhere.
+     *
+     * @see     set_continuation()
+     */
+    task_continuation_function get_continuation() const noexcept { return cont_fun_; }
+
+    /**
+     * @brief Sets the continuation function for this task
+     *
+     * @param cont The continuation function to be associated with the task
+     *
+     * @details
+     *
+     * This can be called to add continuation actions to a task that is executing. Please note that
+     * the old continuation function (if set), must be executed. This means that
+     * `get_continuation()` need to be called whenever this is called.
+     *
+     * @see     get_continuation()
+     */
+    void set_continuation(task_continuation_function cont) { cont_fun_ = std::move(cont); }
 
     /**
      * @brief      Gets the task group.
@@ -211,9 +277,20 @@ public:
      *
      * @details
      *
-     * This allows the users to consult the task group associated with the task and change it.
+     * This allows the users to consult the task group associated with the task.
      */
     const task_group& get_task_group() const { return task_group_; }
+
+    /**
+     * @brief Returns the current executing task (if any)
+     * @details
+     *
+     * If we are within the execution of a task, this will return the current task object being
+     * executed. Otherwise this will return nullptr.
+     *
+     * @see     exchange_continuation()
+     */
+    static task* current_task();
 
 private:
     /**
@@ -226,6 +303,17 @@ private:
      * moving tasks, after the task is enqueued this is constant.
      */
     task_function fun_;
+
+    /**
+     * @brief Function to be called after finishing the execution of the main function.
+     *
+     * This can be used by structures like pipelines or serializers to execute continuations after
+     * the task job is completed.
+     *
+     * This is guaranteed to be called for any enqueued task, regardless whether the task was
+     * executed or not, regardless whether the task has finished successfully or with an exception.
+     */
+    task_continuation_function cont_fun_;
 
     /**
      * The group that this tasks belongs to.

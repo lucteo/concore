@@ -10,27 +10,9 @@
 namespace concore {
 namespace detail {
 
-//! Executed the given tasks. Take care of the task_group interactions
-inline void execute_task(task& t) noexcept {
-    const auto& grp = t.get_task_group();
-
-    // If the task is canceled, don't do anything
-    if (grp && grp.is_cancelled())
-        return;
-
-    try {
-        detail::task_group_access::on_starting_task(grp);
-        t();
-        detail::task_group_access::on_task_done(grp);
-    } catch (...) {
-        detail::task_group_access::on_task_exception(grp, std::current_exception());
-    }
-}
-
-//! Pops one task from the given task queue and executes it.
-//! Use task_group for controlling the execution of the task
+//! Pops one task from the given task queue and returns it.
 template <typename Q>
-inline void pop_and_execute(Q& q) {
+inline task pop_task(Q& q) {
     task to_execute;
     // In the vast majority of cases there is a task ready to be executed; but there can be some
     // race conditions that will prevent the first pop from extracting a task from the queue. In
@@ -39,7 +21,14 @@ inline void pop_and_execute(Q& q) {
     while (!q.try_pop(to_execute))
         spinner.pause();
 
-    execute_task(to_execute);
+    return to_execute;
+}
+
+//! Pops one task from the given task queue and executes it.
+template <typename Q>
+inline void pop_and_execute(Q& q) {
+    auto t = pop_task(q);
+    execute_task(t);
 }
 } // namespace detail
 } // namespace concore

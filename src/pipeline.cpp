@@ -68,42 +68,45 @@ struct pipeline_data : std::enable_shared_from_this<pipeline_data> {
         , processing_items_(max_concurrency) {}
 
     //! Start processing a line; from the first stage, and go up to the last one
-    void start(line_ptr&& line);
-    //! Run the current needed task for a line; i.e., for the current stage
-    void run(line_ptr&& line);
+    void start(line_ptr line);
+    //! Enqueue a task to run the current needed task for a line
+    void enqueue_line_work(line_ptr line);
 
     //! Called to execute the work item for the given stage onto the given line
-    void execute_stage_task(stage_data& stage, line_ptr&& line);
-    //! Called whenever the task is complete to trigger the next stage (and maybe next line)
-    void on_task_done(stage_data& stage, line_ptr&& line);
+    void execute_stage_task(int stage_idx, line_ptr line);
+    //! Called when the task is done (successfully or with exception)
+    void on_task_cont(int stage_idx, line_ptr line, std::exception_ptr ex);
+    //! Create a task to execute the current stage of the given line
+    task make_task(line_ptr line);
 };
 
-void pipeline_data::start(line_ptr&& line) {
+void pipeline_data::start(line_ptr line) {
     assert(line->stage_idx_ == 0);
     if (processing_items_.push_and_try_acquire(std::move(line))) {
-        run(processing_items_.extract_one());
+        enqueue_line_work(processing_items_.extract_one());
     }
 }
 
-void pipeline_data::run(line_ptr&& line) {
+void pipeline_data::enqueue_line_work(line_ptr line) {
     assert(line->stage_idx_ < int(stages_.size()));
     auto& stage = stages_[line->stage_idx_];
     if (stage.ord_ == stage_ordering::concurrent) {
-        auto fun = [this, line = std::move(line)]() mutable {
-            execute_stage_task(stages_[line->stage_idx_], std::move(line));
-        };
-        executor_.execute(task{std::move(fun), group_});
+        // Enqueue the task in the given executor to be executed, without further constraints
+        executor_.execute(make_task(std::move(line)));
     } else if (stage.ord_ == stage_ordering::out_of_order) {
-        auto fun = [this, line = std::move(line)]() mutable {
-            execute_stage_task(stages_[line->stage_idx_], std::move(line));
-        };
-        stage.ser_.execute(task{std::move(fun), group_});
+        // Ensure that this task is serialized with the other tasks on this stage (serial execution)
+        stage.ser_.execute(make_task(std::move(line)));
     } else if (stage.ord_ == stage_ordering::in_order) {
+        // Create a task that will ensure an orderly execution of lines
         auto push_task_fun = [this, line = std::move(line)]() mutable {
             auto& stage = stages_[line->stage_idx_];
             if (line->order_idx_ == stage.expected_order_idx_) {
+                // We are now at the expected line; create a task and execute it here
                 stage.expected_order_idx_++;
-                execute_stage_task(stages_[line->stage_idx_], std::move(line));
+                task t = make_task(std::move(line));
+                // To ensure that the continuation is always executed on the serializer, we need to
+                // push this as a new task in the serializer
+                stage.ser_.execute(std::move(t));
             } else {
                 // We cannot run this line yet; we have to wait for other lines first
                 stage.add_pending(std::move(line));
@@ -113,37 +116,50 @@ void pipeline_data::run(line_ptr&& line) {
     }
 }
 
-void pipeline_data::execute_stage_task(stage_data& stage, line_ptr&& line) {
-    try {
-        if (!line->stopped_)
-            stage.fun_(line.get());
-        on_task_done(stage, std::move(line));
-    } catch (...) {
-        line->stopped_ = 1;
-        on_task_done(stage, std::move(line));
-        throw;
+void pipeline_data::execute_stage_task(int stage_idx, line_ptr line) {
+    assert(stage_idx < int(stages_.size()));
+    if (!line->stopped_) {
+        stages_[stage_idx].fun_(line.get());
     }
 }
 
-void pipeline_data::on_task_done(stage_data& stage, line_ptr&& line) {
-    // If we are in an `in_orde` stage, check if we can start the next line
+void pipeline_data::on_task_cont(int stage_idx, line_ptr line, std::exception_ptr ex) {
+    // If we have an exception, mark the line as stopped
+    if (ex)
+        line->stopped_ = 1;
+
+    // assert(line->stage_idx_ == stage_idx);
+    stage_data& stage = stages_[stage_idx];
+
+    // If we are in an `in_order` stage, check if we can start the next line
     if (stage.ord_ == stage_ordering::in_order) {
         if (!stage.pending_lines_.empty() &&
                 stage.pending_lines_.front().second == stage.expected_order_idx_) {
             line_ptr next_line = std::move(stage.pending_lines_.front().first);
             stage.pending_lines_.erase(stage.pending_lines_.begin());
-            run(std::move(next_line));
+            enqueue_line_work(std::move(next_line));
         }
     }
 
-    // Move to the next stage
+    // Move this line to the next stage
     if (++line->stage_idx_ < int(stages_.size())) {
-        run(std::move(line)); // run the next stage
+        enqueue_line_work(std::move(line)); // run the next stage
     } else {
         // If we are at maximum capacity, try to start a new line (from first stage)
-        if (processing_items_.release_and_acquire())
-            run(processing_items_.extract_one());
+        if (processing_items_.release_and_acquire()) {
+            enqueue_line_work(processing_items_.extract_one());
+        }
     }
+}
+task pipeline_data::make_task(line_ptr line) {
+    int stage_idx = line->stage_idx_;
+    auto fun = [this, stage_idx, line]() mutable {
+        execute_stage_task(stage_idx, std::move(line));
+    };
+    auto cont = [this, stage_idx, line = std::move(line)](std::exception_ptr ex) mutable {
+        on_task_cont(stage_idx, std::move(line), ex);
+    };
+    return task{std::move(fun), group_, std::move(cont)};
 }
 
 pipeline_impl::~pipeline_impl() = default;
