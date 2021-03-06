@@ -324,6 +324,25 @@ private:
      */
     task_group task_group_;
 };
+
+/**
+ * @brief   Exchange the continuation of the currently running task.
+ *
+ * @param   new_cont The new continuation to be set to the current task; default: no continuation
+ *
+ * @return  The continuation that was attached to the current task.
+ * @details
+ *
+ * This can be used to break the current task into a set of new tasks, by transferring the
+ * continuation of the current task to another task.
+ *
+ * If there is no active running task, this will return the input argument.
+ *
+ * @warning     Please ensure that the continuation is always called, especially in the presence of
+ *              errors. Failure to do so, might stop some concurrent abstractions to work.
+ */
+task_continuation_function exchange_cur_continuation(task_continuation_function&& new_cont = {});
+
 } // namespace v1
 
 } // namespace concore
