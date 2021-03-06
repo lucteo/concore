@@ -57,7 +57,7 @@ task_continuation_function exchange_cur_continuation(task_continuation_function&
         cur_task->set_continuation(std::move(new_cont));
         return old_cont;
     }
-    return new_cont;
+    return std::move(new_cont);
 }
 
 } // namespace v1
