@@ -50,6 +50,16 @@ void task::cancelled() {
 
 task* task::current_task() { return detail::g_current_task; }
 
+task_continuation_function exchange_cur_continuation(task_continuation_function&& new_cont) {
+    auto* cur_task = task::current_task();
+    if (cur_task) {
+        auto old_cont = cur_task->get_continuation();
+        cur_task->set_continuation(std::move(new_cont));
+        return old_cont;
+    }
+    return std::move(new_cont);
+}
+
 } // namespace v1
 
 } // namespace concore
