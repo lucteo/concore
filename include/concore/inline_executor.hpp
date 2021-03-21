@@ -23,10 +23,10 @@ struct inline_executor {
     template <typename F>
     void execute(F&& f) const {
         task t{std::forward<F>(f)};
-        detail::execute_task(t);
+        t();
     }
     //! \overload
-    void execute(task t) const { detail::execute_task(t); }
+    void execute(task t) const { t(); }
 
     //! Equality operator; always true
     friend inline bool operator==(inline_executor, inline_executor) { return true; }

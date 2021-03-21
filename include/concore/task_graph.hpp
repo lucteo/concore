@@ -127,7 +127,7 @@ public:
         CONCORE_PROFILING_SCOPE_N("chained_task.()");
         assert(impl_->pred_count_.load() == 0);
         // Execute the current task
-        detail::execute_task(impl_->task_fun_);
+        impl_->task_fun_();
 
         // Try to execute the next tasks
         for (auto& n : impl_->next_tasks_) {

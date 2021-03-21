@@ -13,13 +13,6 @@
 
 namespace concore {
 
-namespace detail {
-
-//! Called to actually execute a task
-void execute_task(task& t) noexcept;
-
-} // namespace detail
-
 inline namespace v1 {
 
 /**
@@ -227,20 +220,6 @@ public:
      * that the functor stored in the task is safe to be executed at that point.
      */
     void operator()();
-
-    /**
-     * @brief Called whenever the task has been cancelled.
-     *
-     * @details
-     *
-     * Even if a task is cancelled, certain structures (i.e., pipeline or serializers) might still
-     * need to perform actions so that other tasks are not blocked. Through this function the task
-     * is notified that is has been cancelled, that the main task function should not be executed
-     * but the continuation function (if set) should be executed.
-     *
-     * @see     operator()()
-     */
-    void cancelled();
 
     /**
      * @brief Gets the continuation function stored in this task (may be empty)

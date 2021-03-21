@@ -45,7 +45,7 @@ struct n_serializer::impl : std::enable_shared_from_this<impl> {
     void execute_one() {
         // Execute one task
         auto to_execute = processing_items_.extract_one();
-        detail::execute_task(to_execute);
+        to_execute();
 
         // Can we start a new task?
         if (processing_items_.release_and_acquire())

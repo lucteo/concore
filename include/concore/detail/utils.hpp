@@ -28,7 +28,7 @@ inline task pop_task(Q& q) {
 template <typename Q>
 inline void pop_and_execute(Q& q) {
     auto t = pop_task(q);
-    execute_task(t);
+    t();
 }
 } // namespace detail
 } // namespace concore

@@ -49,7 +49,7 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     void execute_one() {
         task t = detail::pop_task(waiting_tasks_);
         replace_continuation(t);
-        detail::execute_task(t);
+        t();
     }
 
     //! Called when the continuation of the wrapper task is executed to move to the next task
