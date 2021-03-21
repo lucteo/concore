@@ -48,6 +48,8 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
     //! Adds a new READ task to this serializer
     void enqueue_read(task&& t) {
+        // Add the task to the READ queue, with the right continuation
+        set_continuation_read(t);
         read_tasks_.push(std::forward<task>(t));
 
         // Increase the number of READ tasks.
@@ -64,10 +66,12 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
         // Start executing the task only if we don't have any WRITE task (this is an active READ)
         if (old.fields.num_writes == 0)
-            enqueue_next_read(base_executor_);
+            start_next_task(base_executor_, detail::pop_task(read_tasks_));
     }
     //! Adds a new WRITE task to this serializer
     void enqueue_write(task&& t) {
+        // Add the task to the WRITE queue, with the right continuation
+        set_continuation_write(t);
         write_tasks_.push(std::forward<task>(t));
 
         // Increase the number of WRITE tasks
@@ -80,13 +84,11 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
         // Start the task if we weren't doing anything
         if (old.fields.num_writes == 0 && old.fields.num_active_reads == 0)
-            enqueue_next_write(base_executor_);
+            start_next_task(base_executor_, detail::pop_task(write_tasks_));
     }
 
-    //! Called by the base executor to execute READ task.
-    void execute_read() {
-        detail::pop_and_execute(read_tasks_);
-
+    //! Called when a READ task is done to move to the next task
+    void on_cont_read(std::exception_ptr) {
         // Decrement num_active_reads
         count_bits old{}, desired{};
         old.int_value = combined_count_.load();
@@ -99,12 +101,10 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
         // Note: READ tasks will never trigger other READ tasks; in the absence of WRITEs, the
         // enqueueing of READs is done by `enqueue_read()`.
         if (old.fields.num_active_reads == 1 && old.fields.num_writes > 0)
-            enqueue_next_write(cont_executor_);
+            start_next_task(cont_executor_, detail::pop_task(write_tasks_));
     }
-    //! Called by the base executor to execute WRITE task.
-    void execute_write() {
-        detail::pop_and_execute(write_tasks_);
-
+    //! Called when a WRITE task is done to move to the next task
+    void on_cont_write(std::exception_ptr) {
         // Decrement num_writes
         // If num_writes == 0, transform pending READs into active READs
         count_bits old{}, desired{};
@@ -120,23 +120,56 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
 
         // If we have more WRITEs, enqueue them
         if (desired.fields.num_writes > 0)
-            enqueue_next_write(cont_executor_);
+            start_next_task(cont_executor_, detail::pop_task(write_tasks_));
         // If we transformed pending READs into actual READs, enqueue them
         else if (old.fields.num_active_reads == 0 && old.fields.num_queued_reads > 0) {
             for (unsigned i = 0; i < old.fields.num_queued_reads; i++)
-                enqueue_next_read(cont_executor_);
+                start_next_task(cont_executor_, detail::pop_task(read_tasks_));
         }
     }
 
-    //! Enqueue the next READ task to be executed in the given executor.
-    void enqueue_next_read(any_executor& executor) {
-        auto f = [p_this = shared_from_this()]() { p_this->execute_read(); };
-        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
+    //! Set the continuation of the READ task, so that the serializer works.
+    //! If the task already has a continuation, that would be called first.
+    void set_continuation_read(task& t) {
+        auto inner_cont = t.get_continuation();
+        task_continuation_function cont;
+        if (inner_cont) {
+            cont = [inner_cont, p_this = shared_from_this()](std::exception_ptr ex) {
+                inner_cont(ex);
+                p_this->on_cont_read(std::move(ex));
+            };
+        } else {
+            cont = [p_this = shared_from_this()](
+                           std::exception_ptr ex) { p_this->on_cont_read(std::move(ex)); };
+        }
+        t.set_continuation(std::move(cont));
     }
-    //! Enqueue the next WRITE task to be executed in the given executor.
-    void enqueue_next_write(any_executor& executor) {
-        auto f = [p_this = shared_from_this()]() { p_this->execute_write(); };
-        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
+    //! Set the continuation of the WRITE task, so that the serializer works.
+    //! If the task already has a continuation, that would be called first.
+    void set_continuation_write(task& t) {
+        auto inner_cont = t.get_continuation();
+        task_continuation_function cont;
+        if (inner_cont) {
+            cont = [inner_cont, p_this = shared_from_this()](std::exception_ptr ex) {
+                inner_cont(ex);
+                p_this->on_cont_write(std::move(ex));
+            };
+        } else {
+            cont = [p_this = shared_from_this()](
+                           std::exception_ptr ex) { p_this->on_cont_write(std::move(ex)); };
+        }
+        t.set_continuation(std::move(cont));
+    }
+
+    //! Start executing the next READ/WRITE task in our serializer
+    void start_next_task(const any_executor& exec, task&& t) {
+        try {
+            exec.execute(std::move(t));
+        } catch (...) {
+            // Somehow the executor can throw, but after executing the task -- weird, right?
+            auto ex = std::current_exception();
+            except_fun_(ex);
+        }
     }
 };
 
