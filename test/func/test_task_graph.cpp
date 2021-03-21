@@ -470,7 +470,7 @@ TEST_CASE("chained_task works with subtasking", "[task_graph]") {
     // Crete the tasks; try a single chain of dependencies
     constexpr int num_tasks = 10;
     std::array<concore::chained_task, num_tasks> tasks;
-    for ( int i=0; i<num_tasks ; i++ ) {
+    for (int i = 0; i < num_tasks; i++) {
         tasks[i] = concore::chained_task([&, i] {
             // Increment the counter in the outer task
             // Ensure that all previous tasks were executed
@@ -478,15 +478,15 @@ TEST_CASE("chained_task works with subtasking", "[task_graph]") {
             concore::spawn(create_sub_task([&, i]() {
                 // Check that the counter is unchanged in the inner tasks
                 // (that is the task graph hasn't advanced yet)
-                REQUIRE(counter.load() == i+1);
+                REQUIRE(counter.load() == i + 1);
                 // At the end, enqueue the finish task
-                if ( i == num_tasks-1 )
+                if (i == num_tasks - 1)
                     concore::spawn(std::move(finish_task));
             }));
         });
         // Add dependency to the previous task
         if (i > 0)
-            concore::add_dependency(tasks[i-1], tasks[i]);
+            concore::add_dependency(tasks[i - 1], tasks[i]);
     }
 
     // Start executing the graph
