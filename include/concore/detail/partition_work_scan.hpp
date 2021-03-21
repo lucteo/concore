@@ -3,6 +3,7 @@
 #include "concore/task_group.hpp"
 #include "concore/global_executor.hpp"
 #include "concore/task_graph.hpp"
+#include "concore/spawn.hpp"
 
 #include <vector>
 

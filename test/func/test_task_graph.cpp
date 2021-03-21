@@ -1,6 +1,8 @@
 #include <catch2/catch.hpp>
 #include <concore/task_graph.hpp>
 #include <concore/global_executor.hpp>
+#include <concore/profiling.hpp>
+#include <concore/spawn.hpp>
 
 #include "test_common/task_countdown.hpp"
 #include "test_common/task_utils.hpp"
@@ -458,6 +460,42 @@ struct throwing_executor {
     friend inline bool operator==(throwing_executor, throwing_executor) { return true; }
     friend inline bool operator!=(throwing_executor, throwing_executor) { return false; }
 };
+
+TEST_CASE("chained_task works with subtasking", "[task_graph]") {
+    auto grp_wait = concore::task_group::create();
+    auto finish_task = concore::task([]() {}, grp_wait);
+
+    std::atomic<int> counter = 0;
+
+    // Crete the tasks; try a single chain of dependencies
+    constexpr int num_tasks = 10;
+    std::array<concore::chained_task, num_tasks> tasks;
+    for ( int i=0; i<num_tasks ; i++ ) {
+        tasks[i] = concore::chained_task([&, i] {
+            // Increment the counter in the outer task
+            // Ensure that all previous tasks were executed
+            REQUIRE(counter++ == i);
+            concore::spawn(create_sub_task([&, i]() {
+                // Check that the counter is unchanged in the inner tasks
+                // (that is the task graph hasn't advanced yet)
+                REQUIRE(counter.load() == i+1);
+                // At the end, enqueue the finish task
+                if ( i == num_tasks-1 )
+                    concore::spawn(std::move(finish_task));
+            }));
+        });
+        // Add dependency to the previous task
+        if (i > 0)
+            concore::add_dependency(tasks[i-1], tasks[i]);
+    }
+
+    // Start executing the graph
+    tasks[0]();
+    // Wait for the tasks to complete, by waiting on the finish task
+    REQUIRE(bounded_wait(grp_wait));
+    // Ensure that all the tasks are executed
+    REQUIRE(counter.load() == num_tasks);
+}
 
 TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_graph]") {
     auto grp_wait = concore::task_group::create();

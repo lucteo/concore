@@ -9,10 +9,6 @@
 #include "task.hpp"
 #include "any_executor.hpp"
 #include "except_fun_type.hpp"
-#include "spawn.hpp"
-#include "profiling.hpp"
-#include "detail/utils.hpp"
-#include "detail/enqueue_next.hpp"
 
 #include <memory>
 #include <atomic>
@@ -26,23 +22,7 @@ class chained_task;
 }
 
 namespace detail {
-
-//! The data for a chained_task
-struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl> {
-    task task_fun_;
-    std::atomic<int32_t> pred_count_{0};
-    std::vector<chained_task> next_tasks_;
-    any_executor executor_;
-    except_fun_t except_fun_;
-
-    chained_task_impl(task t, any_executor executor)
-        : task_fun_(std::move(t))
-        , executor_(executor) {
-        if (!executor)
-            executor_ = concore::spawn_executor{};
-    }
-};
-
+struct chained_task_impl;
 } // namespace detail
 
 inline namespace v1 {
@@ -105,12 +85,11 @@ public:
      *
      * @see add_dependency(), add_dependencies(), task
      */
-    explicit chained_task(task t, any_executor executor = {})
-        : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
+    explicit chained_task(task t, any_executor executor = {});
     //! @overload
     template <typename F>
     explicit chained_task(F f, any_executor executor = {})
-        : impl_(std::make_shared<detail::chained_task_impl>(task{std::forward<F>(f)}, executor)) {}
+        : chained_task(task{std::forward<F>(f)}, executor) {}
 
     /**
      * @brief      The call operator.
@@ -123,21 +102,7 @@ public:
      *
      * This will use the executor given at construction to start successor tasks.
      */
-    void operator()() {
-        CONCORE_PROFILING_SCOPE_N("chained_task.()");
-        assert(impl_->pred_count_.load() == 0);
-        // Execute the current task
-        impl_->task_fun_();
-
-        // Try to execute the next tasks
-        for (auto& n : impl_->next_tasks_) {
-            if (n.impl_->pred_count_-- == 1) {
-                chained_task next(std::move(n)); // don't keep the ref here anymore
-                detail::enqueue_next(impl_->executor_, task(next), impl_->except_fun_);
-            }
-        }
-        impl_->next_tasks_.clear();
-    }
+    void operator()();
 
     /**
      * @brief      Sets the exception handler for enqueueing tasks
@@ -152,32 +117,27 @@ public:
      *
      * @see task_group::set_exception_handler
      */
-    void set_exception_handler(except_fun_t except_fun) {
-        impl_->except_fun_ = std::move(except_fun);
-    }
+    void set_exception_handler(except_fun_t except_fun);
 
     /**
      * @brief      Bool conversion operator.
      *
      * Indicates if this is a valid chained task.
      */
-    explicit operator bool() const noexcept { return static_cast<bool>(impl_); }
+    explicit operator bool() const noexcept;
 
     /**
      * @brief      Clear all the dependencies that go from this task
      *
      * This is useful for constructing and destroying task graphs manually.
      */
-    void clear_next() {
-        for (auto& n : impl_->next_tasks_)
-            n.impl_->pred_count_--;
-        impl_->next_tasks_.clear();
-    }
+    void clear_next();
 
 private:
     //! Implementation data for a chained task
     std::shared_ptr<detail::chained_task_impl> impl_;
 
+    friend struct detail::chained_task_impl;
     friend void add_dependency(chained_task, chained_task);
     friend void add_dependencies(chained_task, std::initializer_list<chained_task>);
     friend void add_dependencies(std::initializer_list<chained_task>, chained_task);
@@ -196,10 +156,7 @@ private:
  *
  * @see chained_task, add_dependencies()
  */
-inline void add_dependency(chained_task prev, chained_task next) {
-    next.impl_->pred_count_++;
-    prev.impl_->next_tasks_.push_back(next);
-}
+void add_dependency(chained_task prev, chained_task next);
 
 /**
  * @brief      Add a dependency from a task to a list of tasks
@@ -216,11 +173,7 @@ inline void add_dependency(chained_task prev, chained_task next) {
  *
  * @see chained_task, add_dependency()
  */
-inline void add_dependencies(chained_task prev, std::initializer_list<chained_task> nexts) {
-    for (const auto& n : nexts)
-        n.impl_->pred_count_++;
-    prev.impl_->next_tasks_.insert(prev.impl_->next_tasks_.end(), nexts.begin(), nexts.end());
-}
+void add_dependencies(chained_task prev, std::initializer_list<chained_task> nexts);
 /**
  * @brief      Add a dependency from list of tasks to a tasks
  *
@@ -236,11 +189,7 @@ inline void add_dependencies(chained_task prev, std::initializer_list<chained_ta
  *
  * @see chained_task, add_dependency()
  */
-inline void add_dependencies(std::initializer_list<chained_task> prevs, chained_task next) {
-    next.impl_->pred_count_ += static_cast<int32_t>(prevs.size());
-    for (const auto& p : prevs)
-        p.impl_->next_tasks_.push_back(next);
-}
+void add_dependencies(std::initializer_list<chained_task> prevs, chained_task next);
 
 } // namespace v1
 } // namespace concore

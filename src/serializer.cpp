@@ -4,6 +4,7 @@
 #include "concore/task_cancelled.hpp"
 #include "concore/data/concurrent_queue.hpp"
 #include "concore/detail/utils.hpp"
+#include "concore/detail/enqueue_next.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -71,13 +72,7 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     //! Start executing the next task in our serializer
     void start_next_task(const any_executor& exec) {
         auto t = detail::pop_task(waiting_tasks_);
-        try {
-            exec.execute(std::move(t));
-        } catch (...) {
-            // Somehow the executor can throw, but after executing the task -- weird, right?
-            auto ex = std::current_exception();
-            except_fun_(ex);
-        }
+        detail::enqueue_next(exec, std::move(t), except_fun_);
     }
 };
 
