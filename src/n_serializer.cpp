@@ -3,7 +3,6 @@
 #include "concore/spawn.hpp"
 #include "concore/detail/consumer_bounded_queue.hpp"
 #include "concore/detail/utils.hpp"
-#include "concore/detail/enqueue_next.hpp"
 
 #include <atomic>
 #include <cassert>
@@ -33,30 +32,44 @@ struct n_serializer::impl : std::enable_shared_from_this<impl> {
     }
 
     void enqueue(task&& t) {
+        // Add the task to the queue, with the right continuation
+        set_continuation(t);
         if (processing_items_.push_and_try_acquire(std::move(t)))
-            enqueue_next(base_executor_);
+            start_next_task(base_executor_);
     }
 
-    //! Execute one task, and enqueues for execution the next task.
-    //! This is called by the base executor
-    //!
-    //! Note: we only execute one task, even if we have multiple tasks. We do this to ensure that
-    //! the tasks are relatively small sized.
-    void execute_one() {
-        // Execute one task
-        auto to_execute = processing_items_.extract_one();
-        to_execute();
-
-        // Can we start a new task?
+    //! Called when the continuation of the wrapper task is executed to move to the next task
+    void on_cont(std::exception_ptr) {
         if (processing_items_.release_and_acquire())
-            enqueue_next(cont_executor_);
+            start_next_task(cont_executor_);
     }
 
-    //! Enqueue the next task to be executed in the given executor.
-    void enqueue_next(any_executor& executor) {
-        // We always wrap our tasks into `execute_one`. This way, we can handle continuations.
-        auto f = [p_this = shared_from_this()]() { p_this->execute_one(); };
-        detail::enqueue_next(executor, task{std::move(f)}, except_fun_);
+    //! Set the continuation of the task, so that the serializer works.
+    //! If the task already has a continuation, that would be called first.
+    void set_continuation(task& t) {
+        auto inner_cont = t.get_continuation();
+        task_continuation_function cont;
+        if (inner_cont) {
+            cont = [inner_cont, p_this = shared_from_this()](std::exception_ptr ex) {
+                inner_cont(ex);
+                p_this->on_cont(std::move(ex));
+            };
+        } else {
+            cont = [p_this = shared_from_this()](
+                           std::exception_ptr ex) { p_this->on_cont(std::move(ex)); };
+        }
+        t.set_continuation(std::move(cont));
+    }
+    //! Start executing the next task in our serializer
+    void start_next_task(const any_executor& exec) {
+        auto t = processing_items_.extract_one();
+        try {
+            exec.execute(std::move(t));
+        } catch (...) {
+            // Somehow the executor can throw, but after executing the task -- weird, right?
+            auto ex = std::current_exception();
+            except_fun_(ex);
+        }
     }
 };
 

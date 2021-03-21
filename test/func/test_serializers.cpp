@@ -432,9 +432,9 @@ TEST_CASE("Serializers can work with sub-tasking and maintain order of execution
     SECTION("serializer with subtasking is ordered") {
         check_subtasking_serialized(concore::serializer());
     }
-    //     SECTION("n_serializer(1) with subtasking is ordered") {
-    //         check_subtasking_serialized(concore::n_serializer(1));
-    //     }
+    SECTION("n_serializer(1) with subtasking is ordered") {
+        check_subtasking_serialized(concore::n_serializer(1));
+    }
     //     SECTION("rw_serializer.writer with subtasking is ordered") {
     //         check_subtasking_serialized(concore::rw_serializer().writer());
     //     }

@@ -4,7 +4,6 @@
 #include "concore/task_cancelled.hpp"
 #include "concore/data/concurrent_queue.hpp"
 #include "concore/detail/utils.hpp"
-#include "concore/detail/enqueue_next.hpp"
 
 #include <atomic>
 #include <cassert>
