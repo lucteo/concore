@@ -31,7 +31,7 @@ struct finish_event_impl {
         : task_(std::move(t))
         , executor_(std::move(e))
         , ref_count_(cnt) {
-        assert(cnt > 0);
+        assert(cnt >= 0);
     }
     ~finish_event_impl() = default;
 
