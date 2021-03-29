@@ -316,10 +316,11 @@ void exec_context::wakeup_workers() {
     // If we are here, it means that all workers are woken up.
 }
 
+// cppcheck-suppress constParameter
 void exec_context::execute_task(task& t) const {
     CONCORE_PROFILING_FUNCTION();
 
-    detail::execute_task(t);
+    t();
     on_task_removed();
 }
 

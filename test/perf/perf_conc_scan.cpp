@@ -1,5 +1,6 @@
 
 #include <concore/conc_scan.hpp>
+#include <concore/profiling.hpp>
 #if CONCORE_USE_TBB
 #include <tbb/parallel_scan.h>
 #include <tbb/blocked_range.h>

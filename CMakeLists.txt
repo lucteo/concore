@@ -91,6 +91,7 @@ set(concore_sourceFiles
     "src/pipeline.cpp"
     "src/rw_serializer.cpp"
     "src/serializer.cpp"
+    "src/task_graph.cpp"
     "src/task_group.cpp"
     "src/std/thread_pool.cpp"
 )

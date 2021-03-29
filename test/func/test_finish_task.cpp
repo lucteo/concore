@@ -16,6 +16,28 @@ TEST_CASE("finish_task basic usage", "[finish_task]") {
     std::atomic<bool> work2_done{false};
     std::atomic<bool> work3_done{false};
 
+    concore::finish_task done_task([&] { is_done = true; });
+    // Spawn 3 tasks
+    concore::spawn(concore::task{[&] { work1_done = true; }, {}, done_task.get_continuation()});
+    concore::spawn(concore::task{[&] { work2_done = true; }, {}, done_task.get_continuation()});
+    concore::spawn(concore::task{[&] { work3_done = true; }, {}, done_task.get_continuation()});
+
+    // Poor-man wait for all to be complete
+    while (!is_done.load())
+        std::this_thread::sleep_for(1ms);
+
+    CHECK(work1_done.load());
+    CHECK(work2_done.load());
+    CHECK(work3_done.load());
+    CHECK(is_done.load());
+}
+
+TEST_CASE("finish_task basic usage (old)", "[finish_task]") {
+    std::atomic<bool> is_done{false};
+    std::atomic<bool> work1_done{false};
+    std::atomic<bool> work2_done{false};
+    std::atomic<bool> work3_done{false};
+
     concore::finish_task done_task([&] { is_done = true; }, 3);
     // Spawn 3 tasks
     auto event = done_task.event();
@@ -43,6 +65,24 @@ TEST_CASE("finish_task basic usage", "[finish_task]") {
 }
 
 TEST_CASE("finish_wait basic usage", "[finish_task]") {
+    std::atomic<bool> work1_done{false};
+    std::atomic<bool> work2_done{false};
+    std::atomic<bool> work3_done{false};
+
+    concore::finish_wait done;
+    // Spawn 3 tasks
+    concore::spawn(concore::task{[&] { work1_done = true; }, {}, done.get_continuation()});
+    concore::spawn(concore::task{[&] { work2_done = true; }, {}, done.get_continuation()});
+    concore::spawn(concore::task{[&] { work3_done = true; }, {}, done.get_continuation()});
+
+    done.wait();
+
+    CHECK(work1_done.load());
+    CHECK(work2_done.load());
+    CHECK(work3_done.load());
+}
+
+TEST_CASE("finish_wait basic usage (old)", "[finish_task]") {
     std::atomic<bool> work1_done{false};
     std::atomic<bool> work2_done{false};
     std::atomic<bool> work3_done{false};
@@ -126,7 +166,7 @@ TEST_CASE("finish_wait with an arbitrary count", "[finish_task]") {
         concore::task_group wait_grp = concore::task_group::create();
 
         // Create a finish_task
-        concore::finish_wait done;
+        concore::finish_wait done{1};
         auto event = done.event();
 
         // Spawn some tasks that will notify the finish task
@@ -180,24 +220,23 @@ TEST_CASE("multiple wait() calls on finish_wait do not wait", "[finish_task]") {
     std::atomic<bool> work2_done{false};
     std::atomic<bool> work3_done{false};
 
-    concore::finish_wait done(3);
+    concore::finish_wait done;
     // Spawn 3 tasks
-    auto event = done.event();
-    concore::spawn([&, event] {
+    auto f1 = [&] {
         std::this_thread::sleep_for(1ms);
         work1_done = true;
-        event.notify_done();
-    });
-    concore::spawn([&, event] {
+    };
+    auto f2 = [&] {
         std::this_thread::sleep_for(2ms);
         work2_done = true;
-        event.notify_done();
-    });
-    concore::spawn([&, event] {
+    };
+    auto f3 = [&] {
         std::this_thread::sleep_for(3ms);
         work3_done = true;
-        event.notify_done();
-    });
+    };
+    concore::spawn(concore::task{std::move(f1), {}, done.get_continuation()});
+    concore::spawn(concore::task{std::move(f2), {}, done.get_continuation()});
+    concore::spawn(concore::task{std::move(f3), {}, done.get_continuation()});
 
     done.wait();
     done.wait(); // should not wait on something else
@@ -218,11 +257,11 @@ TEST_CASE("finish_task using supplied executor", "[finish_task]") {
         t();
     };
     concore::delegating_executor e{std::move(fun)};
-    concore::finish_task done_task([&] { is_done = true; }, e, 1);
+    concore::finish_task done_task([&] { is_done = true; }, e);
 
     CHECK(counter.load() == 0);
     CHECK(!is_done.load());
-    done_task.event().notify_done();
+    done_task.get_continuation()({});
     CHECK(counter.load() == 1);
     CHECK(is_done.load());
 

@@ -37,47 +37,24 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
 
     //! Adds a new task to this serializer
     void enqueue(task&& t) {
-        // Add the task to the queue
+        // Add the task to the queue, with the right continuation
+        set_continuation(t);
         waiting_tasks_.push(std::forward<task>(t));
 
         // If there were no other tasks, enqueue a task in the base executor
         if (count_++ == 0)
-            detail::enqueue_next(base_executor_, make_wrapper_task(), except_fun_);
-    }
-
-    //! Called by the base executor to execute one task.
-    void execute_one() {
-        task t = detail::pop_task(waiting_tasks_);
-        replace_continuation(t);
-        detail::execute_task(t);
+            start_next_task(base_executor_);
     }
 
     //! Called when the continuation of the wrapper task is executed to move to the next task
     void on_cont(std::exception_ptr) {
         // task exceptions are not reported through except_fun_
         if (count_-- > 1)
-            detail::enqueue_next(cont_executor_, make_wrapper_task(), except_fun_);
+            start_next_task(cont_executor_);
     }
-    //! Create a wrapper task that will execute one inner task. Its continuation will trigger the
-    //! execution of follow-up tasks
-    task make_wrapper_task() {
-        auto f = [p_this = shared_from_this()]() { p_this->execute_one(); };
-        auto cont = [p_this = shared_from_this()](std::exception_ptr ex) {
-            if (ex) {
-                try {
-                    std::rethrow_exception(ex);
-                } catch (const task_cancelled&) {
-                    // The task did not execute, so ensure that we move to the next one
-                    p_this->on_cont(std::move(ex));
-                }
-            }
-        };
-        return task{std::move(f), {}, cont};
-    }
-
-    //! Replace the continuation of the given task with a continuation that makes our serializer
-    //! work.
-    void replace_continuation(task& t) {
+    //! Set the continuation of the task, so that the serializer works.
+    //! If the task already has a continuation, that would be called first.
+    void set_continuation(task& t) {
         auto inner_cont = t.get_continuation();
         task_continuation_function cont;
         if (inner_cont) {
@@ -90,6 +67,12 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
                            std::exception_ptr ex) { p_this->on_cont(std::move(ex)); };
         }
         t.set_continuation(std::move(cont));
+    }
+
+    //! Start executing the next task in our serializer
+    void start_next_task(const any_executor& exec) {
+        auto t = detail::pop_task(waiting_tasks_);
+        detail::enqueue_next(exec, std::move(t), except_fun_);
     }
 };
 

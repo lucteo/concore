@@ -8,44 +8,34 @@ namespace detail {
 //! This will be set and reset at each task execution.
 thread_local task* g_current_task{nullptr};
 
-void execute_task(task& t) noexcept {
-    g_current_task = &t;
-    const auto& grp = t.get_task_group();
-
-    // If the task is canceled, don't do anything
-    if (grp && grp.is_cancelled()) {
-        t.cancelled();
-        return;
-    }
-
-    try {
-        task_group_access::on_starting_task(grp);
-        t();
-        task_group_access::on_task_done(grp);
-    } catch (...) {
-        task_group_access::on_task_exception(grp, std::current_exception());
-    }
-    g_current_task = nullptr;
-}
-
 } // namespace detail
 
 inline namespace v1 {
 
 void task::operator()() {
+    // Mark this as the currently executing task
+    detail::g_current_task = this;
+
+    // If the task is canceled, just execute the continuation
+    if (task_group_ && task_group_.is_cancelled()) {
+        if (cont_fun_)
+            cont_fun_(std::make_exception_ptr(task_cancelled{}));
+        return;
+    }
+
     try {
+        detail::task_group_access::on_starting_task(task_group_);
         fun_();
+        detail::task_group_access::on_task_done(task_group_);
         if (cont_fun_)
             cont_fun_(std::exception_ptr{});
     } catch (...) {
+        detail::task_group_access::on_task_exception(task_group_, std::current_exception());
         if (cont_fun_)
             cont_fun_(std::current_exception());
-        throw;
     }
-}
-void task::cancelled() {
-    if (cont_fun_)
-        cont_fun_(std::make_exception_ptr(task_cancelled{}));
+    // No task is currently executing now
+    detail::g_current_task = nullptr;
 }
 
 task* task::current_task() { return detail::g_current_task; }

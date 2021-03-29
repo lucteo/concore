@@ -1,11 +1,13 @@
 
 #include <concore/conc_sort.hpp>
+#include <concore/profiling.hpp>
 #if CONCORE_USE_TBB
 #include <tbb/parallel_sort.h>
 #endif
 
 #include <benchmark/benchmark.h>
 #include <algorithm>
+#include <chrono>
 
 //! Produces a integer in range [-100, 100]
 int rand_small_int() { return rand() % (200) - 100; }
