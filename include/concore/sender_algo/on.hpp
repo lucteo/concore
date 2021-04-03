@@ -1,8 +1,8 @@
 /**
- * @file    just.hpp
- * @brief   Definition of @ref concore::v1::just "just"
+ * @file    on.hpp
+ * @brief   Definition of @ref concore::v1::on "on"
  *
- * @see     @ref concore::v1::just "just"
+ * @see     @ref concore::v1::on "on"
  */
 #pragma once
 
