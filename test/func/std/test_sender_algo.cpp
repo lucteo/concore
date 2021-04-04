@@ -2,8 +2,16 @@
 #include <concore/sender_algo/just.hpp>
 
 struct expect_receiver_base {
-    void set_done() noexcept {}
-    void set_error(std::exception_ptr e) { std::rethrow_exception(e); }
+    void set_done() noexcept { FAIL("Done called"); }
+    void set_error(std::exception_ptr eptr) noexcept {
+        try {
+            if (eptr)
+                std::rethrow_exception(eptr);
+            FAIL("Empty exception thrown");
+        } catch (const std::exception& e) {
+            FAIL("Exception thrown: " << e.what());
+        }
+    }
 };
 
 template <typename T>

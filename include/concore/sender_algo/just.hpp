@@ -9,13 +9,14 @@
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
+#include <concore/_concepts/_concepts_receiver.hpp>
 
 #include <tuple>
 #include <exception>
 
 #if CONCORE_CXX_HAS_CONCEPTS
 #define CONCORE_IMPL_EXPECT_RECEIVER(R)                                                            \
-    static_assert(receiver_of<R>, "Type needs to match receiver_of concept")
+    static_assert(receiver<R>, "Type needs to match receiver_of concept")
 #else
 #define CONCORE_IMPL_EXPECT_RECEIVER(R) (void)(0)
 #endif

@@ -26,7 +26,7 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 #if CONCORE_CXX_HAS_CONCEPTS
 template <typename T>
 concept moveable_value = std::is_move_constructible<remove_cvref_t<T>>::value&&
-        std::is_constructible_from<remove_cvref_t<T>, T>::value;
+        std::is_constructible_v<remove_cvref_t<T>, T>;
 #endif
 
 } // namespace detail
