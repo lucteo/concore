@@ -36,6 +36,6 @@ TEST_CASE("Simple test for just", "[sender_algo]") {
     concore::just(2).connect(make_expect_receiver(2)).start();
     concore::just(3).connect(make_expect_receiver(3)).start();
 
-    concore::just("this").connect(make_expect_receiver(std::string("this"))).start();
-    concore::just("that").connect(make_expect_receiver(std::string("that"))).start();
+    concore::just(std::string("this")).connect(make_expect_receiver(std::string("this"))).start();
+    concore::just(std::string("that")).connect(make_expect_receiver(std::string("that"))).start();
 }
