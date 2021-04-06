@@ -81,6 +81,10 @@ CONCORE_DEF_REQUIRES(has_connect,                                               
 inline namespace v1 {
 using detail::cpo_connect::connect;
 using detail::cpo_connect::connect_t;
+
+template <typename Sender, typename Receiver>
+using connect_result_t = decltype(connect(CONCORE_DECLVAL(Sender), CONCORE_DECLVAL(Receiver)));
+
 } // namespace v1
 
 } // namespace concore

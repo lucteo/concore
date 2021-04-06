@@ -10,16 +10,10 @@
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/_concepts/_concepts_receiver.hpp>
+#include <concore/detail/sender_helpers.hpp>
 
 #include <tuple>
 #include <exception>
-
-#if CONCORE_CXX_HAS_CONCEPTS
-#define CONCORE_IMPL_EXPECT_RECEIVER(R)                                                            \
-    static_assert(receiver<R>, "Type needs to match receiver_of concept")
-#else
-#define CONCORE_IMPL_EXPECT_RECEIVER(R) (void)(0)
-#endif
 
 namespace concore {
 
@@ -43,30 +37,21 @@ struct just_oper {
 };
 
 template <CONCORE_CONCEPT_OR_TYPENAME(CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value))... Ts>
-struct just_sender {
-    //! The value types that defines the values that this sender sends to receivers
-    template <template <typename...> class Tuple, template <typename...> class Variant>
-    using value_types = Variant<Tuple<>>;
-    //! The type of error that this sender sends to receiver
-    template <template <typename...> class Variant>
-    using error_types = Variant<std::exception_ptr>;
-    //! Indicates that this sender never sends a done signal
-    static constexpr bool sends_done = false;
-
+struct just_sender : sender_types_base<> {
     just_sender(std::tuple<Ts...> vals)
         : values_(std::move(vals)) {}
 
     //! The connect CPO that returns an operation state object
     template <typename R>
     just_oper<R, Ts...> connect(R&& r) && {
-        CONCORE_IMPL_EXPECT_RECEIVER(R);
+        static_assert(receiver<R>, "Type needs to match receiver_of concept");
         return just_oper<R, Ts...>{(R &&) r, std::move(values_)};
     }
 
     //! @overload
     template <typename R>
     just_oper<R, Ts...> connect(R&& r) const& {
-        CONCORE_IMPL_EXPECT_RECEIVER(R);
+        static_assert(receiver<R>, "Type needs to match receiver_of concept");
         return just_oper<R, Ts...>{(R &&) r, values_};
     }
 
