@@ -58,7 +58,7 @@ inline const struct submit_t final {
     void operator()(S&& s, R&& r) const {
         // Fallback to connect
         auto op = concore::connect((S &&) s, (R &&) r);
-        concore::start(op);
+        concore::start(std::move(op));
     }
 } submit{};
 

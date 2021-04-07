@@ -84,10 +84,7 @@ TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_a
             executed = true;
         });
         static_assert(concore::receiver<decltype(recv)>, "invalid receiver");
-        // concore::submit(s2, recv);
-        auto op = concore::connect(s2, recv);
-        concore::start(op);
-        // TODO: check why submit doesn't work
+        concore::submit(s2, recv);
 
         // Wait for the task to be executed
         std::this_thread::sleep_for(std::chrono::milliseconds(3));

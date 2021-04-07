@@ -73,7 +73,7 @@ template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender,
 struct on_sender : sender_types_base<SchedSender::sends_done> {
     on_sender(Sender sender, SchedSender schedSender)
         : sender_((Sender &&) sender)
-        , schedSender_((SchedSender&&) schedSender) {}
+        , schedSender_((SchedSender &&) schedSender) {}
 
     //! The connect CPO that returns an operation state object
     template <typename R>
