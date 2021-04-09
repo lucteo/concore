@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/sender_algo/just.hpp>
 #include <concore/sender_algo/on.hpp>
+#include <concore/sender_algo/just_on.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/task_utils.hpp>
@@ -96,5 +97,36 @@ TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_a
 TEST_CASE("on returns a sender", "[sender_algo]") {
     using t = decltype(concore::on(concore::just(1), concore::static_thread_pool{1}.scheduler()));
     static_assert(concore::sender<t>, "concore::on must return a sender");
+    REQUIRE(concore::sender<t>);
+}
+
+TEST_CASE("just_on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
+    bool executed = false;
+    {
+        concore::static_thread_pool pool{1};
+        auto sched = pool.scheduler();
+
+        auto s = concore::just_on(sched, 1);
+        auto recv = make_fun_receiver<int>([&](int val) {
+            // Check the content of the value
+            REQUIRE(val == 1);
+            // Check that this runs in the scheduler thread
+            REQUIRE(sched.running_in_this_thread());
+            // Mark this as executed
+            executed = true;
+        });
+        static_assert(concore::receiver<decltype(recv)>, "invalid receiver");
+        concore::submit(s, recv);
+
+        // Wait for the task to be executed
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        REQUIRE(bounded_wait());
+    }
+    REQUIRE(executed);
+}
+
+TEST_CASE("just_on returns a sender", "[sender_algo]") {
+    using t = decltype(concore::just_on(concore::static_thread_pool{1}.scheduler(), 1));
+    static_assert(concore::sender<t>, "concore::just_on must return a sender");
     REQUIRE(concore::sender<t>);
 }

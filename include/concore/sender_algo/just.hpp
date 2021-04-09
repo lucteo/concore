@@ -66,7 +66,7 @@ inline namespace v1 {
 template <CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value)... Ts>
 detail::just_sender<Ts...> just(Ts&&... values) noexcept(
         std::is_nothrow_constructible_v<std::tuple<Ts...>, Ts...>) {
-    return detail::just_sender<Ts...>{values...};
+    return detail::just_sender<Ts...>{(Ts &&) values...};
 }
 
 } // namespace v1
