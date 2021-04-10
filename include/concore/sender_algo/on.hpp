@@ -70,7 +70,18 @@ struct on_sender_oper_state {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender,
         CONCORE_CONCEPT_OR_TYPENAME(sender) SchedSender>
-struct on_sender : sender_types_base<SchedSender::sends_done> {
+struct on_sender {
+    //! The value types that defines the values that this sender sends to receivers
+    template <template <typename...> class Tuple, template <typename...> class Variant>
+    using value_types = typename Sender::template value_types<Tuple, Variant>;
+
+    //! The type of error that this sender sends to receiver
+    template <template <typename...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+
+    //! Indicates whether this sender can send "done" signal
+    static constexpr bool sends_done = SchedSender::sends_done || Sender::sends_done;
+
     on_sender(Sender sender, SchedSender schedSender)
         : sender_((Sender &&) sender)
         , schedSender_((SchedSender &&) schedSender) {}

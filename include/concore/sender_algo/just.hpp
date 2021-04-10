@@ -37,7 +37,7 @@ struct just_oper {
 };
 
 template <CONCORE_CONCEPT_OR_TYPENAME(CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value))... Ts>
-struct just_sender : sender_types_base<> {
+struct just_sender : sender_types_base<false, Ts...> {
     just_sender(std::tuple<Ts...> vals)
         : values_(std::move(vals)) {}
 

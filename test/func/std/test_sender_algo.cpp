@@ -2,6 +2,7 @@
 #include <concore/sender_algo/just.hpp>
 #include <concore/sender_algo/on.hpp>
 #include <concore/sender_algo/just_on.hpp>
+#include <concore/detail/sender_helpers.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/task_utils.hpp>
@@ -68,6 +69,28 @@ TEST_CASE("just returns a sender", "[sender_algo]") {
     REQUIRE(concore::sender<t>);
 }
 
+TEST_CASE("just has proper return type", "[sender_algo]") {
+    using st_int = decltype(concore::just(1));
+    using st_double = decltype(concore::just(3.14));
+    using st_str = decltype(concore::just(std::string{}));
+
+    using st_int_double = decltype(concore::just(1, 3.14));
+    using st_int_double_str = decltype(concore::just(1, 3.14, std::string{}));
+
+    using concore::detail::sender_single_return_type;
+    static_assert(std::is_same_v<sender_single_return_type<st_int>, int>,
+            "Improper return type for `just`");
+    static_assert(std::is_same_v<sender_single_return_type<st_double>, double>,
+            "Improper return type for `just`");
+    static_assert(std::is_same_v<sender_single_return_type<st_str>, std::string>,
+            "Improper return type for `just`");
+    static_assert(std::is_same_v<sender_single_return_type<st_int_double>, std::tuple<int, double>>,
+            "Improper return type for `just`");
+    static_assert(std::is_same_v<sender_single_return_type<st_int_double_str>,
+                          std::tuple<int, double, std::string>>,
+            "Improper return type for `just`");
+}
+
 TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
     bool executed = false;
     {
@@ -98,6 +121,19 @@ TEST_CASE("on returns a sender", "[sender_algo]") {
     using t = decltype(concore::on(concore::just(1), concore::static_thread_pool{1}.scheduler()));
     static_assert(concore::sender<t>, "concore::on must return a sender");
     REQUIRE(concore::sender<t>);
+}
+
+TEST_CASE("on forwards the return type", "[sender_algo]") {
+    using st_int =
+            decltype(concore::on(concore::just(1), concore::static_thread_pool{1}.scheduler()));
+    using st_double =
+            decltype(concore::on(concore::just(3.14), concore::static_thread_pool{1}.scheduler()));
+
+    using concore::detail::sender_single_return_type;
+    static_assert(std::is_same_v<sender_single_return_type<st_int>, int>,
+            "Improper return type for `on`");
+    static_assert(std::is_same_v<sender_single_return_type<st_double>, double>,
+            "Improper return type for `on`");
 }
 
 TEST_CASE("just_on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
