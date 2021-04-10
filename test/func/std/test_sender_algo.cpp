@@ -2,6 +2,7 @@
 #include <concore/sender_algo/just.hpp>
 #include <concore/sender_algo/on.hpp>
 #include <concore/sender_algo/just_on.hpp>
+#include <concore/sender_algo/sync_wait.hpp>
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
@@ -165,4 +166,35 @@ TEST_CASE("just_on returns a sender", "[sender_algo]") {
     using t = decltype(concore::just_on(concore::static_thread_pool{1}.scheduler(), 1));
     static_assert(concore::sender<t>, "concore::just_on must return a sender");
     REQUIRE(concore::sender<t>);
+}
+
+TEST_CASE("sync_wait on simple just senders", "[sender_algo]") {
+    auto r1 = concore::sync_wait(concore::just(1));
+    auto r2 = concore::sync_wait(concore::just(2));
+    auto r3 = concore::sync_wait(concore::just(3));
+    auto rs1 = concore::sync_wait(concore::just(std::string{"this"}));
+
+    REQUIRE(r1 == 1);
+    REQUIRE(r2 == 2);
+    REQUIRE(r3 == 3);
+    REQUIRE(rs1 == "this");
+}
+
+TEST_CASE("sync_wait on simple just_on senders", "[sender_algo]") {
+    concore::static_thread_pool pool{1};
+    auto sched = pool.scheduler();
+
+    auto r1 = concore::sync_wait(concore::just_on(sched, 1));
+    REQUIRE(r1 == 1);
+
+    auto r2 = concore::sync_wait(concore::just_on(sched, 3.14));
+    REQUIRE(r2 == 3.14);
+}
+
+TEST_CASE("sync_wait_r works with conversions", "[sender_algo]") {
+    auto r1 = concore::sync_wait_r<double>(concore::just(1));
+    auto r2 = concore::sync_wait_r<double>(concore::just(3.14));
+
+    REQUIRE(r1 == 1.0);
+    REQUIRE(r2 == 3.14);
 }
