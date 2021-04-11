@@ -3,6 +3,7 @@
 #include <concore/sender_algo/on.hpp>
 #include <concore/sender_algo/just_on.hpp>
 #include <concore/sender_algo/sync_wait.hpp>
+#include <concore/sender_algo/transform.hpp>
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
@@ -32,17 +33,18 @@ struct expect_receiver : expect_receiver_base {
     void set_value(const T& val) { REQUIRE(val == val_); }
 };
 
-template <typename T>
+template <typename F>
 struct fun_receiver : expect_receiver_base {
-    using fun_t = std::function<void(T)>;
-    fun_t f_;
+    F f_;
 
-    template <typename F>
-    fun_receiver(F f)
-        : f_(std::forward<F>(f)) {}
+    explicit fun_receiver(F f)
+        : f_((F &&) f) {}
 
     //! Called whenever the sender completed the work with success
-    void set_value(const T& val) { f_(std::move(val)); }
+    template <typename... Ts>
+    void set_value(Ts... vals) {
+        f_((Ts &&) vals...);
+    }
 };
 
 template <typename T>
@@ -50,9 +52,9 @@ expect_receiver<T> make_expect_receiver(T val) {
     return expect_receiver<T>{std::move(val)};
 }
 
-template <typename T, typename F>
-fun_receiver<T> make_fun_receiver(F f) {
-    return fun_receiver<T>{std::forward<F>(f)};
+template <typename F>
+fun_receiver<F> make_fun_receiver(F f) {
+    return fun_receiver<F>{std::forward<F>(f)};
 }
 
 TEST_CASE("Simple test for just", "[sender_algo]") {
@@ -92,6 +94,17 @@ TEST_CASE("just has proper return type", "[sender_algo]") {
             "Improper return type for `just`");
 }
 
+TEST_CASE("just can handle multiple values", "[sender_algo]") {
+    bool executed{false};
+    auto f = [&](int x, double d) {
+        CHECK(x == 3);
+        CHECK(d == 0.14);
+        executed = true;
+    };
+    concore::just(3, 0.14).connect(make_fun_receiver(std::move(f))).start();
+    CHECK(executed);
+}
+
 TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
     bool executed = false;
     {
@@ -100,7 +113,7 @@ TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_a
 
         auto s1 = concore::just(1);
         auto s2 = concore::on(s1, sched);
-        auto recv = make_fun_receiver<int>([&](int val) {
+        auto recv = make_fun_receiver([&](int val) {
             // Check the content of the value
             REQUIRE(val == 1);
             // Check that this runs in the scheduler thread
@@ -144,7 +157,7 @@ TEST_CASE("just_on sender algo calls receiver on the specified scheduler", "[sen
         auto sched = pool.scheduler();
 
         auto s = concore::just_on(sched, 1);
-        auto recv = make_fun_receiver<int>([&](int val) {
+        auto recv = make_fun_receiver([&](int val) {
             // Check the content of the value
             REQUIRE(val == 1);
             // Check that this runs in the scheduler thread
@@ -197,4 +210,37 @@ TEST_CASE("sync_wait_r works with conversions", "[sender_algo]") {
 
     REQUIRE(r1 == 1.0);
     REQUIRE(r2 == 3.14);
+}
+
+TEST_CASE("transform on simple just senders", "[sender_algo]") {
+    auto f = [](int x) { return x * x; };
+    auto r1 = concore::sync_wait(concore::transform(concore::just(1), f));
+    auto r2 = concore::sync_wait(concore::transform(concore::just(2), f));
+    auto r3 = concore::sync_wait(concore::transform(concore::just(3), f));
+
+    REQUIRE(r1 == 1);
+    REQUIRE(r2 == 4);
+    REQUIRE(r3 == 9);
+}
+
+TEST_CASE("transform returns a sender", "[sender_algo]") {
+    auto f = [](int x) { return x * x; };
+    REQUIRE(f(2) == 4);
+    using t = decltype(concore::transform(concore::just(1), f));
+    static_assert(concore::sender<t>, "concore::transform must return a sender");
+    REQUIRE(concore::sender<t>);
+}
+
+TEST_CASE("transform can change the return type", "[sender_algo]") {
+    auto f = [](int x) { return double(x * x); };
+    auto r = concore::sync_wait(concore::transform(concore::just(2), f));
+    using t = decltype(r);
+    static_assert(std::is_same_v<t, double>, "transformed sender must return a double");
+    REQUIRE(r == 4.0);
+}
+
+TEST_CASE("transform can handle multiple values", "[sender_algo]") {
+    auto f = [](int x, double d) { return x + d; };
+    auto r = concore::sync_wait(concore::transform(concore::just(3, 0.14), f));
+    REQUIRE(r == 3.14);
 }
