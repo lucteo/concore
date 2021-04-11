@@ -86,6 +86,5 @@ template <typename Sender, typename F>
 using transform_return_type = typename sender_value_types<Sender,
         tuple_query_transform<F>::template tmptl, variant_query_one>::type::type;
 
-
 } // namespace detail
 } // namespace concore
