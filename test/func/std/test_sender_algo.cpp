@@ -105,6 +105,32 @@ TEST_CASE("just can handle multiple values", "[sender_algo]") {
     CHECK(executed);
 }
 
+TEST_CASE("query value types for just", "[sender_algo]") {
+    using t1 = decltype(concore::just(1));
+    using t2 = decltype(concore::just(3, 0.14));
+    using t3 = decltype(concore::just(3, 0.14, std::string{"pi"}));
+
+    using concore::detail::tuple_query_one;
+    using concore::detail::type_identity;
+    using vt1 = t1::value_types<tuple_query_one, type_identity>::type::type;
+    using vt2 = t2::value_types<tuple_query_one, type_identity>::type::type;
+    using vt3 = t3::value_types<tuple_query_one, type_identity>::type::type;
+
+    static_assert(std::is_same_v<vt1, int>, "Invalid value type for `on` sender");
+    static_assert(
+            std::is_same_v<vt2, std::tuple<int, double>>, "Invalid value type for `on` sender");
+    static_assert(std::is_same_v<vt3, std::tuple<int, double, std::string>>,
+            "Invalid value type for `on` sender");
+
+    using dvt1 = concore::detail::sender_single_return_type<t1>;
+    using dvt2 = concore::detail::sender_single_return_type<t2>;
+    using dvt3 = concore::detail::sender_single_return_type<t3>;
+
+    static_assert(std::is_same_v<vt1, dvt1>, "Invalid value type for `on` sender");
+    static_assert(std::is_same_v<vt2, dvt2>, "Invalid value type for `on` sender");
+    static_assert(std::is_same_v<vt3, dvt3>, "Invalid value type for `on` sender");
+}
+
 TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
     bool executed = false;
     {

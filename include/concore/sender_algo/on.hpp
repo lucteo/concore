@@ -18,7 +18,6 @@
 #include <concore/_concepts/_concept_sender_to.hpp>
 #include <concore/detail/sender_helpers.hpp>
 
-#include <tuple>
 #include <exception>
 #include <optional>
 #include <type_traits>

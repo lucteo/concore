@@ -19,23 +19,6 @@ namespace concore {
 
 namespace detail {
 
-//! Query structure to be applied at Tuple level, to get the transformed values out of a sender
-template <typename F>
-struct tuple_query_transform {
-    template <typename... Ts>
-    struct tmptl {
-#if CONCORE_CPP_VERSION < 17
-        using type = std::result_of<F && (Ts && ...)>::type;
-#else
-        using type = std::invoke_result_t<F, Ts...>;
-#endif
-    };
-};
-
-template <typename Sender, typename F>
-using transform_return_type = typename sender_value_types<Sender,
-        tuple_query_transform<F>::template tmptl, variant_query_one>::type::type;
-
 template <typename PrevSender, typename Receiver, typename F>
 struct transform_sender_oper_state {
     //! Receiver called by the scheduler sender to start the actual operation.

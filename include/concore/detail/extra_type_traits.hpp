@@ -10,6 +10,7 @@ namespace detail {
 #if CONCORE_CPP_VERSION >= 20
 
 using std::remove_cvref_t;
+using std::type_identity;
 
 #else
 
@@ -28,6 +29,11 @@ template <typename T>
 concept moveable_value = std::is_move_constructible<remove_cvref_t<T>>::value&&
         std::is_constructible_v<remove_cvref_t<T>, T>;
 #endif
+
+template <typename T>
+struct type_identity {
+    using type = T;
+};
 
 } // namespace detail
 } // namespace concore
