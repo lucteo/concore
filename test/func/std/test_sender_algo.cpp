@@ -307,7 +307,8 @@ TEST_CASE("let_value invokes scheduler on a different thread", "[sender_algo]") 
     auto sched = pool.scheduler();
 
     auto let_value_fun = [&](int& let_v) {
-        return concore::transform(concore::just_on(sched, 4), [&](int v) { return let_v + v; });
+        // we can't use reference on the next line anymore -- dangling reference
+        return concore::transform(concore::just_on(sched, 4), [=](int v) { return let_v + v; });
     };
 
     auto s = concore::let_value(concore::just(3), std::move(let_value_fun));
