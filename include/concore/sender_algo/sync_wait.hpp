@@ -85,7 +85,8 @@ inline namespace v1 {
 template <CONCORE_CONCEPT_OR_TYPENAME(typed_sender) Sender>
 auto sync_wait(Sender&& s) {
     static_assert(typed_sender<Sender>, "Given object is not a `typed_sender`");
-    using Res = typename detail::remove_cvref_t<detail::sender_single_return_type<Sender>>;
+    using Res = typename detail::remove_cvref_t<
+            detail::sender_single_return_type<typename detail::remove_cvref_t<Sender>>>;
     return detail::sync_wait_impl<Res, Sender>((Sender &&) s);
 }
 

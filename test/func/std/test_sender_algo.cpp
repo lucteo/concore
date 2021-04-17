@@ -4,6 +4,7 @@
 #include <concore/sender_algo/just_on.hpp>
 #include <concore/sender_algo/sync_wait.hpp>
 #include <concore/sender_algo/transform.hpp>
+#include <concore/sender_algo/let_value.hpp>
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
@@ -269,4 +270,46 @@ TEST_CASE("transform can handle multiple values", "[sender_algo]") {
     auto f = [](int x, double d) { return x + d; };
     auto r = concore::sync_wait(concore::transform(concore::just(3, 0.14), f));
     REQUIRE(r == 3.14);
+}
+
+TEST_CASE("let_value with simple just senders", "[sender_algo]") {
+    auto let_value_fun = [](int& let_v) {
+        return concore::transform(concore::just(4), [&](int v) { return let_v + v; });
+    };
+    auto s = concore::let_value(concore::just(3), std::move(let_value_fun));
+    REQUIRE(concore::sync_wait(s) == 7);
+}
+
+TEST_CASE("let_value returns a sender", "[sender_algo]") {
+    auto let_value_fun = [](int& let_v) {
+        return concore::transform(concore::just(4), [&](int v) { return let_v + v; });
+    };
+    CHECK(let_value_fun);
+    using t = decltype(concore::let_value(concore::just(3), std::move(let_value_fun)));
+    static_assert(concore::sender<t>, "concore::let_value must return a sender");
+    REQUIRE(concore::sender<t>);
+}
+
+TEST_CASE("let_value invoked on a different thread", "[sender_algo]") {
+    auto let_value_fun = [](int& let_v) {
+        return concore::transform(concore::just(4), [&](int v) { return let_v + v; });
+    };
+
+    concore::static_thread_pool pool{1};
+    auto sched = pool.scheduler();
+
+    auto s = concore::let_value(concore::just_on(sched, 3), std::move(let_value_fun));
+    REQUIRE(concore::sync_wait(s) == 7);
+}
+
+TEST_CASE("let_value invokes scheduler on a different thread", "[sender_algo]") {
+    concore::static_thread_pool pool{1};
+    auto sched = pool.scheduler();
+
+    auto let_value_fun = [&](int& let_v) {
+        return concore::transform(concore::just_on(sched, 4), [&](int v) { return let_v + v; });
+    };
+
+    auto s = concore::let_value(concore::just(3), std::move(let_value_fun));
+    REQUIRE(concore::sync_wait(s) == 7);
 }

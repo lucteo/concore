@@ -72,6 +72,18 @@ struct tuple_query_transform {
     };
 };
 
+template <typename F>
+struct tuple_query_transform_ref {
+    template <typename... Ts>
+    struct tmptl {
+#if CONCORE_CPP_VERSION < 17
+        using type = std::result_of<F && (Ts & ...)>::type;
+#else
+        using type = std::invoke_result_t<F, Ts&...>;
+#endif
+    };
+};
+
 //! Get the values_types declared in the sender
 template <typename Sender, template <typename...> class Tuple, template <typename...> class Variant>
 using sender_value_types = typename sender_traits<Sender>::template value_types<Tuple, Variant>;
@@ -85,6 +97,11 @@ using sender_single_return_type =
 template <typename Sender, typename F>
 using transform_return_type = typename sender_value_types<Sender,
         tuple_query_transform<F>::template tmptl, variant_query_one>::type::type;
+
+//! Return type for a transform-like operation, passing the input as reference
+template <typename Sender, typename F>
+using transform_ref_return_type = typename sender_value_types<Sender,
+        tuple_query_transform_ref<F>::template tmptl, variant_query_one>::type::type;
 
 } // namespace detail
 } // namespace concore
