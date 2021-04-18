@@ -125,15 +125,43 @@ private:
     F f_;
 };
 
+template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender, typename F>
+auto create_let_value_sender(Sender&& s, F&& f) {
+    using res_t = detail::transform_ref_return_type<Sender, F>;
+    using val_t = detail::sender_single_return_type<Sender>;
+    return detail::let_value_sender<Sender, F, res_t, val_t>{(Sender &&) s, (F &&) f};
+}
+
+template <typename F>
+struct let_value_create_fun {
+    F f_;
+
+    explicit let_value_create_fun(F&& f)
+        : f_((F &&) f) {}
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        return detail::create_let_value_sender((Sender &&) sender, f_);
+    }
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) && {
+        return detail::create_let_value_sender((Sender &&) sender, (F &&) f_);
+    }
+};
+
 } // namespace detail
 
 inline namespace v1 {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender, typename F>
-auto let_value(Sender s, F f) {
-    using res_t = detail::transform_ref_return_type<Sender, F>;
-    using val_t = detail::sender_single_return_type<Sender>;
-    return detail::let_value_sender<Sender, F, res_t, val_t>{(Sender &&) s, (F &&) f};
+auto let_value(Sender&& s, F&& f) {
+    return detail::create_let_value_sender((Sender &&) s, (F &&) f);
+}
+
+template <typename F>
+auto let_value(F&& f) {
+    return detail::make_sender_algo_wrapper(detail::let_value_create_fun<F>{(F &&) f});
 }
 
 } // namespace v1

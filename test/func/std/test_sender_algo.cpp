@@ -332,3 +332,75 @@ TEST_CASE("when_all works with a single sender", "[sender_algo]") {
     auto s = concore::when_all(concore::just(3));
     REQUIRE(concore::sync_wait(s) == 3);
 }
+
+TEST_CASE("piping works for 'on'", "[sender_algo]") {
+    concore::static_thread_pool pool{1};
+    auto sched = pool.scheduler();
+
+    auto s = concore::just(3) | concore::on(sched);
+    REQUIRE(concore::sync_wait(s) == 3);
+
+    auto s2 = concore::just(3) | concore::on(sched) | concore::on(sched);
+    REQUIRE(concore::sync_wait(s2) == 3);
+}
+
+TEST_CASE("sender can be passed at a later point for 'on'", "[sender_algo]") {
+    concore::static_thread_pool pool{1};
+    auto sched = pool.scheduler();
+
+    auto s = concore::on(sched)(concore::just(3));
+    REQUIRE(concore::sync_wait(s) == 3);
+
+    auto s2 = concore::on(sched)(concore::just(3)) | concore::on(sched);
+    REQUIRE(concore::sync_wait(s2) == 3);
+}
+
+TEST_CASE("piping works for 'transform'", "[sender_algo]") {
+    auto f = [](int x) { return x * x; };
+    auto s = concore::just(3) | concore::transform(f);
+    REQUIRE(concore::sync_wait(s) == 9);
+}
+
+TEST_CASE("sender can be passed at a later point for 'transform'", "[sender_algo]") {
+    auto f = [](int x) { return x * x; };
+    auto s = concore::transform(f)(concore::just(3));
+    REQUIRE(concore::sync_wait(s) == 9);
+}
+
+TEST_CASE("piping works for 'sync_wait'", "[sender_algo]") {
+    auto f = [](int x) { return x * x; };
+    auto val = concore::just(3) | concore::transform(f) | concore::sync_wait();
+    REQUIRE(val == 9);
+}
+
+TEST_CASE("sender can be passed at a later point for 'sync_wait'", "[sender_algo]") {
+    auto val = concore::sync_wait()(concore::just(3));
+    REQUIRE(val == 3);
+}
+
+TEST_CASE("piping works for 'sync_wait_r'", "[sender_algo]") {
+    auto f = [](int x) { return x * x; };
+    auto val = concore::just(3) | concore::transform(f) | concore::sync_wait_r<double>();
+    REQUIRE(val == 9.0);
+}
+
+TEST_CASE("sender can be passed at a later point for 'sync_wait_r'", "[sender_algo]") {
+    auto val = concore::sync_wait_r<double>()(concore::just(3));
+    REQUIRE(val == 3.0);
+}
+
+TEST_CASE("piping works for 'let_value'", "[sender_algo]") {
+    auto let_value_fun = [](int& let_v) {
+        return concore::transform(concore::just(4), [&](int v) { return let_v + v; });
+    };
+    auto s = concore::just(3) | concore::let_value(let_value_fun);
+    REQUIRE(concore::sync_wait(s) == 7);
+}
+
+TEST_CASE("sender can be passed at a later point for 'let_value'", "[sender_algo]") {
+    auto let_value_fun = [](int& let_v) {
+        return concore::transform(concore::just(4), [&](int v) { return let_v + v; });
+    };
+    auto s = concore::let_value(let_value_fun)(concore::just(3));
+    REQUIRE(concore::sync_wait(s) == 7);
+}

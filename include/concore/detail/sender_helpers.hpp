@@ -103,5 +103,42 @@ template <typename Sender, typename F>
 using transform_ref_return_type = typename sender_value_types<Sender,
         tuple_query_transform_ref<F>::template tmptl, variant_query_one>::type::type;
 
+//! Wrapper for a sernder algorithm. This allows the input sender to be passed in later to a sender
+//! algorithm. It allows the sender algorithm to be piped in as p1897 requires.
+template <typename F>
+struct sender_algo_wrapper {
+    //! The functor used to create the actual sender instance
+    F f_;
+
+    explicit sender_algo_wrapper(F&& f)
+        : f_((F &&) f) {}
+
+    //! Call operator that will create the final sender given the input sender
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        return f_((Sender &&) sender);
+    }
+    //! Call operator that will create the final sender given the input sender -- move version
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) && {
+        return ((F &&) f_)((Sender &&) sender);
+    }
+
+    //! Pipe operator, allowing us to pipe the sender algorithms
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    friend auto operator|(Sender&& sender, sender_algo_wrapper&& self) {
+        return std::move(self.f_)((Sender &&) sender);
+    }
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    friend auto operator|(Sender&& sender, const sender_algo_wrapper& self) {
+        return self.f_((Sender &&) sender);
+    }
+};
+
+template <typename F>
+inline auto make_sender_algo_wrapper(F&& f) {
+    return sender_algo_wrapper<F>((F &&) f);
+}
+
 } // namespace detail
 } // namespace concore

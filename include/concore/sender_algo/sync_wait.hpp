@@ -65,7 +65,7 @@ struct sync_wait_receiver {
     }
 };
 
-template <typename Res, typename Sender>
+template <typename Res, CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
 Res sync_wait_impl(Sender&& s) {
     sync_wait_data<Res, Sender> data;
     // Connect the sender and the receiver and submit the work
@@ -78,22 +78,44 @@ Res sync_wait_impl(Sender&& s) {
         std::rethrow_exception(data.eptr_);
 }
 
+struct sync_wait_create_fun {
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        static_assert(typed_sender<Sender>, "Given object is not a `typed_sender`");
+        using SenderPlain = remove_cvref_t<Sender>;
+        using Res = remove_cvref_t<sender_single_return_type<SenderPlain>>;
+        return sync_wait_impl<Res, Sender>((Sender &&) sender);
+    }
+};
+
+template <typename Res>
+struct sync_wait_r_create_fun {
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        static_assert(typed_sender<Sender>, "Given object is not a `typed_sender`");
+        return sync_wait_impl<Res, remove_cvref_t<Sender>>((Sender &&) sender);
+    }
+};
+
 } // namespace detail
 
 inline namespace v1 {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(typed_sender) Sender>
 auto sync_wait(Sender&& s) {
-    static_assert(typed_sender<Sender>, "Given object is not a `typed_sender`");
-    using Res = typename detail::remove_cvref_t<
-            detail::sender_single_return_type<typename detail::remove_cvref_t<Sender>>>;
-    return detail::sync_wait_impl<Res, Sender>((Sender &&) s);
+    return detail::sync_wait_create_fun{}((Sender &&) s);
 }
+
+auto sync_wait() { return detail::make_sender_algo_wrapper(detail::sync_wait_create_fun{}); }
 
 template <typename Res, CONCORE_CONCEPT_OR_TYPENAME(typed_sender) Sender>
 auto sync_wait_r(Sender&& s) {
-    static_assert(typed_sender<Sender>, "Given object is not a `typed_sender`");
-    return detail::sync_wait_impl<Res, Sender>((Sender &&) s);
+    return detail::sync_wait_r_create_fun<Res>{}((Sender &&) s);
+}
+
+template <typename Res>
+auto sync_wait_r() {
+    return detail::make_sender_algo_wrapper(detail::sync_wait_r_create_fun<Res>{});
 }
 
 } // namespace v1

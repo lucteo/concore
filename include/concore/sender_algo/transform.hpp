@@ -82,14 +82,42 @@ private:
     F f_;
 };
 
+template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender, typename F>
+auto create_transform_sender(Sender&& s, F&& f) {
+    using res_t = transform_return_type<remove_cvref_t<Sender>, F>;
+    return transform_sender<remove_cvref_t<Sender>, F, res_t>{(Sender &&) s, (F &&) f};
+}
+
+template <typename F>
+struct transform_create_fun {
+    F f_;
+
+    explicit transform_create_fun(F&& f)
+        : f_((F &&) f) {}
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        return detail::create_transform_sender((Sender &&) sender, f_);
+    }
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) && {
+        return detail::create_transform_sender((Sender &&) sender, (F &&) f_);
+    }
+};
+
 } // namespace detail
 
 inline namespace v1 {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender, typename F>
-auto transform(Sender s, F f) {
-    using res_t = detail::transform_return_type<Sender, F>;
-    return detail::transform_sender<Sender, F, res_t>{(Sender &&) s, (F &&) f};
+auto transform(Sender&& s, F&& f) {
+    return detail::create_transform_sender((Sender &&) s, (F &&) f);
+}
+
+template <typename F>
+auto transform(F&& f) {
+    return detail::make_sender_algo_wrapper(detail::transform_create_fun<F>{(F &&) f});
 }
 
 } // namespace v1

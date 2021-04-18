@@ -104,16 +104,46 @@ private:
     SchedSender schedSender_;
 };
 
+template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender,
+        CONCORE_CONCEPT_OR_TYPENAME(scheduler) Scheduler>
+auto create_on_sender(Sender&& s, Scheduler&& sch) {
+    auto schedSender = concore::schedule((Scheduler &&) sch);
+    using SchedSender = decltype(schedSender);
+    return detail::on_sender<remove_cvref_t<Sender>, SchedSender>{
+            (Sender &&) s, (SchedSender &&) schedSender};
+}
+
+template <CONCORE_CONCEPT_OR_TYPENAME(scheduler) Scheduler>
+struct on_create_fun {
+    Scheduler sch_;
+
+    explicit on_create_fun(Scheduler&& sch)
+        : sch_((Scheduler &&) sch) {}
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        return detail::create_on_sender((Sender &&) sender, sch_);
+    }
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) && {
+        return detail::create_on_sender((Sender &&) sender, (Scheduler &&) sch_);
+    }
+};
+
 } // namespace detail
 
 inline namespace v1 {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender,
         CONCORE_CONCEPT_OR_TYPENAME(scheduler) Scheduler>
-auto on(Sender s, Scheduler sch) {
-    auto schedSender = concore::schedule((Scheduler &&) sch);
-    using SchedSender = decltype(schedSender);
-    return detail::on_sender<Sender, SchedSender>{(Sender &&) s, (SchedSender &&) schedSender};
+auto on(Sender&& s, Scheduler&& sch) {
+    return create_on_sender((Sender &&) s, (Scheduler &&) sch);
+}
+
+template <CONCORE_CONCEPT_OR_TYPENAME(scheduler) Scheduler>
+auto on(Scheduler&& sch) {
+    return detail::make_sender_algo_wrapper(detail::on_create_fun<Scheduler>{(Scheduler &&) sch});
 }
 
 } // namespace v1
