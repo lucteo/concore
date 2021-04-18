@@ -13,6 +13,7 @@
 #endif
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/task.hpp>
+#include <concore/detail/extra_type_traits.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -47,8 +48,15 @@ struct pool_sender_op {
         , receiver_(std::move(r)) {}
 
     void start() noexcept {
-        auto t = [this]() noexcept { concore::set_value(std::move(receiver_)); };
-        pool_enqueue(*pool_, std::move(t));
+        struct task_obj {
+            Receiver receiver_;
+
+            explicit task_obj(Receiver recv)
+                : receiver_(std::move(recv)) {}
+
+            void operator()() { concore::set_value(std::move(receiver_)); }
+        };
+        pool_enqueue(*pool_, task_obj{std::move(receiver_)});
     }
 
 private:
@@ -81,8 +89,8 @@ public:
     static constexpr bool sends_done = true;
 
     template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
-    pool_sender_op<R> connect(R&& r) const {
-        return pool_sender_op<R>(impl_, (R &&) r);
+    pool_sender_op<remove_cvref_t<R>> connect(R&& r) const {
+        return {impl_, (R &&) r};
     }
 
 private:

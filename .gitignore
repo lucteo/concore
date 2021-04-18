@@ -39,6 +39,9 @@
 # VSCode files
 .vscode
 
+# CLion files
+.idea
+
 # Project folders/files
 build
 include/concore/version.hpp
