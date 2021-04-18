@@ -5,6 +5,7 @@
 #include <concore/sender_algo/sync_wait.hpp>
 #include <concore/sender_algo/transform.hpp>
 #include <concore/sender_algo/let_value.hpp>
+#include <concore/sender_algo/when_all.hpp>
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
@@ -313,4 +314,21 @@ TEST_CASE("let_value invokes scheduler on a different thread", "[sender_algo]") 
 
     auto s = concore::let_value(concore::just(3), std::move(let_value_fun));
     REQUIRE(concore::sync_wait(s) == 7);
+}
+
+TEST_CASE("when_all with two simple just senders", "[sender_algo]") {
+    auto s = concore::when_all(concore::just(3), concore::just(0.14));
+    auto ssum = concore::transform(std::move(s), [](int x, double y) { return x + y; });
+    REQUIRE(concore::sync_wait(ssum) == 3.14);
+}
+
+TEST_CASE("when_all returns a sender", "[sender_algo]") {
+    using t = decltype(concore::when_all(concore::just(3), concore::just(0.14)));
+    static_assert(concore::sender<t>, "concore::when_all must return a sender");
+    REQUIRE(concore::sender<t>);
+}
+
+TEST_CASE("when_all works with a single sender", "[sender_algo]") {
+    auto s = concore::when_all(concore::just(3));
+    REQUIRE(concore::sync_wait(s) == 3);
 }

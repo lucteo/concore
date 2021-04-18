@@ -49,7 +49,7 @@ struct sync_wait_receiver {
     explicit sync_wait_receiver(data_t* d)
         : data_(d) {}
 
-    void set_value(Res&& res) noexcept {
+    void set_value(Res res) noexcept {
         try {
             data_->res_ = (Res &&) res;
             data_->notify(1);
@@ -69,7 +69,7 @@ template <typename Res, typename Sender>
 Res sync_wait_impl(Sender&& s) {
     sync_wait_data<Res, Sender> data;
     // Connect the sender and the receiver and submit the work
-    concore::submit((Sender &&) s, sync_wait_receiver{&data});
+    concore::submit((Sender &&) s, sync_wait_receiver<Res, Sender>{&data});
     // Wait for the result and interpret it
     int type = data.wait();
     if (type == 1)
