@@ -103,7 +103,26 @@ template <typename Sender, typename F>
 using transform_ref_return_type = typename sender_value_types<Sender,
         tuple_query_transform_ref<F>::template tmptl, variant_query_one>::type::type;
 
-//! Wrapper for a sernder algorithm. This allows the input sender to be passed in later to a sender
+template <typename F>
+struct sender_algo_wrapper;
+
+template <typename F1, typename F2>
+struct concat_sender_algo_wrapper_fun {
+    sender_algo_wrapper<F1> w1_;
+    sender_algo_wrapper<F2> w2_;
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) const& {
+        return w2_(w1_(sender));
+    }
+
+    template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
+    auto operator()(Sender&& sender) && {
+        return std::move(w2_)(std::move(w1_)(sender));
+    }
+};
+
+//! Wrapper for a sender algorithm. This allows the input sender to be passed in later to a sender
 //! algorithm. It allows the sender algorithm to be piped in as p1897 requires.
 template <typename F>
 struct sender_algo_wrapper {
@@ -132,6 +151,17 @@ struct sender_algo_wrapper {
     template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
     friend auto operator|(Sender&& sender, const sender_algo_wrapper& self) {
         return self.f_((Sender &&) sender);
+    }
+
+    //! Pipe operator, allowing us to concatenate two wrappers
+    template <typename F1>
+    friend auto operator|(sender_algo_wrapper<F1>&& w1, sender_algo_wrapper&& self) {
+        return make_sender_algo_wrapper(
+                concat_sender_algo_wrapper_fun<F1, F>{std::move(w1), std::move(self)});
+    }
+    template <typename F1>
+    friend auto operator|(const sender_algo_wrapper<F1>& w1, const sender_algo_wrapper& self) {
+        return make_sender_algo_wrapper(concat_sender_algo_wrapper_fun<F1, F>{w1, self});
     }
 };
 

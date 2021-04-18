@@ -404,3 +404,17 @@ TEST_CASE("sender can be passed at a later point for 'let_value'", "[sender_algo
     auto s = concore::let_value(let_value_fun)(concore::just(3));
     REQUIRE(concore::sync_wait(s) == 7);
 }
+
+TEST_CASE("partial piping of sender algorithms", "[sender_algo]") {
+    auto f1 = [](int x) { return x * x; };
+    auto f2 = [](int x) { return 2 * x; };
+    auto s = concore::just(3) | (concore::transform(f1) | concore::transform(f2));
+    REQUIRE(concore::sync_wait(s) == 18);
+}
+
+TEST_CASE("partial piping of sender algorithms with sender at the end", "[sender_algo]") {
+    auto f1 = [](int x) { return x * x; };
+    auto f2 = [](int x) { return 2 * x; };
+    auto s = (concore::transform(f1) | concore::transform(f2))(concore::just(3));
+    REQUIRE(concore::sync_wait(s) == 18);
+}
