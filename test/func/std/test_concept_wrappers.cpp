@@ -118,12 +118,12 @@ struct test_receiver {
 
 } // namespace test_models
 
-#if CONCORE_CXX_HAS_CONCEPTS
 TEST_CASE("as_receiver transforms a functor into a receiver", "[execution][concept_wrappers]") {
     using namespace concore;
-    static_assert(receiver_of<as_receiver<decltype([] {})>>);
+    auto f = [] {};
+    f();
+    static_assert(receiver_of<as_receiver<decltype(f)>>);
 }
-#endif
 
 TEST_CASE("as_receiver passed to a sender will call the given ftor",
         "[execution][concept_wrappers]") {
@@ -138,16 +138,17 @@ TEST_CASE("as_receiver passed to a sender will call the given ftor",
     concore::submit(signal_sender{}, recv);
     CHECK(called);
 
-#if CONCORE_CXX_HAS_CONCEPTS
-    static_assert(receiver_of<as_receiver<decltype([] {})>>);
-#endif
+    auto void_fun = [] {};
+    void_fun();
+    static_assert(receiver_of<as_receiver<decltype(void_fun)>>);
 }
 
-#if CONCORE_CXX_HAS_CONCEPTS
+#if CONCORE_CPP_VERSION >= 17
 TEST_CASE("as_invocable transforms a receiver into a functor", "[execution][concept_wrappers]") {
     using namespace concore;
     using namespace test_models;
-    static_assert(std::invocable<as_invocable<my_receiver0>>);
+    using invocalbe_t = as_invocable<my_receiver0>;
+    static_assert(std::is_invocable<invocalbe_t>::value, "invalid as_invocable");
 }
 #endif
 
@@ -187,14 +188,12 @@ TEST_CASE("as_invocable properly calls the right methods in the receiver",
     CHECK(l3.state_ == 2); // set_error() called
 }
 
-#if CONCORE_CXX_HAS_CONCEPTS
 TEST_CASE("as_operation transforms an executor and a receiver into an operation_state",
         "[execution][concept_wrappers]") {
     using namespace concore;
     using namespace test_models;
     static_assert(operation_state<as_operation<my_executor, my_receiver0>>);
 }
-#endif
 
 TEST_CASE("as_operation produces a good operation", "[execution][concept_wrappers]") {
     using namespace concore;

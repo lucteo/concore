@@ -1,12 +1,13 @@
 #pragma once
 
 #include <concore/detail/cxx_features.hpp>
-
-#if CONCORE_CXX_HAS_CONCEPTS
+#include <concore/detail/extra_type_traits.hpp>
 
 #include <concore/_cpo/_cpo_execute.hpp>
 
+#if CONCORE_CXX_HAS_CONCEPTS
 #include <concepts>
+#endif
 #include <type_traits>
 
 namespace concore {
@@ -16,6 +17,8 @@ namespace detail {
 struct invocable_archetype {
     void operator()() & noexcept {}
 };
+
+#if CONCORE_CXX_HAS_CONCEPTS
 
 template <typename E, typename F>
 concept executor_of_impl = std::invocable<std::remove_cvref_t<F>&>&&
@@ -27,6 +30,18 @@ concept executor_of_impl = std::invocable<std::remove_cvref_t<F>&>&&
     concore::execute(e, (F &&) f);
 };
 
+#else
+
+template <typename E, typename F>
+inline constexpr bool executor_of_impl                                                   //
+        = std::is_constructible<concore::detail::remove_cvref_t<F>, F>::value            //
+                && std::is_move_constructible<concore::detail::remove_cvref_t<F>>::value //
+                        && std::is_copy_constructible<E>::value                          //
+                                && std::is_copy_constructible_v<E>                       //
+                                        && detail::cpo_execute::has_execute<E, F>;
+
+#endif
+
 }; // namespace detail
 
 inline namespace v1 {
@@ -34,13 +49,11 @@ inline namespace v1 {
 using detail::invocable_archetype;
 
 template <typename E>
-concept executor = detail::executor_of_impl<E, detail::invocable_archetype>;
+CONCORE_CONCEPT_OR_BOOL(executor) = detail::executor_of_impl<E, detail::invocable_archetype>;
 
 template <typename E, typename F>
-concept executor_of = executor<E>&& detail::executor_of_impl<E, F>;
+CONCORE_CONCEPT_OR_BOOL(executor_of) = executor<E>&& detail::executor_of_impl<E, F>;
 
 } // namespace v1
 
 } // namespace concore
-
-#endif

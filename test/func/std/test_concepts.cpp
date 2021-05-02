@@ -2,12 +2,11 @@
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
 
-#if CONCORE_CXX_HAS_CONCEPTS
-
 TEST_CASE("thread_pool executor models the executor concept", "[execution][concepts]") {
     auto pool = concore::static_thread_pool(2);
     auto ex = pool.executor();
     REQUIRE(concore::executor<decltype(ex)>);
+    static_cast<void>(ex);
 }
 
 struct not_quite_executor {
@@ -189,14 +188,16 @@ struct my_scheduler {
 };
 } // namespace test_models
 
+void void_fun() {}
+
 TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
     using namespace concore;
     using namespace test_models;
 
-    using void_fun = decltype([]() {});
+    using void_fun_t = decltype(&void_fun);
 
     REQUIRE(executor<my_executor>);
-    REQUIRE(executor_of<my_executor, void_fun>);
+    REQUIRE(executor_of<my_executor, void_fun_t>);
     REQUIRE_FALSE(receiver<my_executor>);
     REQUIRE_FALSE(receiver_of<my_executor>);
     REQUIRE_FALSE(operation_state<my_executor>);
@@ -270,6 +271,7 @@ TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts
     REQUIRE(scheduler<my_scheduler>);
     auto snd = my_scheduler{}.schedule();
     REQUIRE(sender<decltype(snd)>);
+    static_cast<void>(snd);
 }
 
 TEST_CASE("other types don't satisfy the scheduler concept", "[execution][concepts]") {
@@ -288,5 +290,3 @@ TEST_CASE("operation types satisfy the operation_state concept", "[execution][co
 
     REQUIRE(operation_state<my_operation>);
 }
-
-#endif

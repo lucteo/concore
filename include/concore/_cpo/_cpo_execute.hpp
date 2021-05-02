@@ -51,6 +51,10 @@ inline const struct execute_t final {
     }
 } execute{};
 
+template <typename E, typename F>
+CONCORE_CONCEPT_OR_BOOL(has_execute) =
+        meets_tag_invoke<execute_t, E, F> || meets_inner_fun<E, F> || meets_outer_fun<E, F>;
+
 } // namespace cpo_execute
 } // namespace detail
 
