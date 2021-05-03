@@ -3,6 +3,7 @@
 #include <concore/detail/cxx_features.hpp>
 
 #include <exception>
+#include <stdexcept>
 
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_done.hpp>

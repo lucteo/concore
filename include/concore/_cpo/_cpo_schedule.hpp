@@ -61,6 +61,10 @@ inline const struct schedule_t final {
     }
 } schedule{};
 
+template <typename S>
+CONCORE_CONCEPT_OR_BOOL(
+        has_schedule) = meets_tag_invoke<schedule_t, S> || meets_inner_fun<S> || meets_outer_fun<S>;
+
 } // namespace cpo_schedule
 } // namespace detail
 

@@ -179,7 +179,7 @@ public:
      */
     template <typename F>
     void execute(F&& f) const {
-        pool_enqueue(*impl_, task_function{f});
+        pool_enqueue(*impl_, task_function{(F &&) f});
     }
 
     /**
