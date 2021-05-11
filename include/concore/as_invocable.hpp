@@ -50,10 +50,10 @@ struct as_invocable {
         receiver_ = other.receiver_;
         other.receiver_ = nullptr;
     }
-    //! Copy constructor is DISABLED
-    as_invocable(const as_invocable&) = delete;
-    //! Copy assignment is DISABLED
-    as_invocable& operator=(const as_invocable&) = delete;
+    //! Copy constructor
+    as_invocable(const as_invocable&) = default;
+    //! Copy assignment
+    as_invocable& operator=(const as_invocable&) = default;
     //! Destructor
     ~as_invocable() {
         if (receiver_)
