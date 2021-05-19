@@ -5,4 +5,3 @@ rapidcheck/20200131
 
 [generators]
 cmake
-cmake_multi

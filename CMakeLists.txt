@@ -3,8 +3,12 @@ cmake_minimum_required(VERSION 3.17.0)
 # Project information
 project(concore LANGUAGES CXX)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup(TARGETS)
+if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+    conan_basic_setup(TARGETS)
+else()
+    message(ERROR "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
+endif()
 
 # Get the library version
 set(concore_BUILD_VERSION 0)
