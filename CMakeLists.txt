@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.9.0)
+cmake_minimum_required(VERSION 3.17.0)
 
 # Project information
 project(concore LANGUAGES CXX)
@@ -36,21 +36,6 @@ string(TIMESTAMP concore_BUILD_YEAR "%Y")
 
 # Code Coverage Configuration
 add_library(coverage_config INTERFACE)
-
-option(CODE_COVERAGE "Enable coverage reporting" OFF)
-if(CODE_COVERAGE AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
-    # Add required flags (GCC & LLVM/Clang)
-    target_compile_options(coverage_config INTERFACE
-        -O0        # no optimization
-        -g         # generate debug info
-        --coverage # sets all required flags
-    )
-    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.13)
-        target_link_options(coverage_config INTERFACE --coverage)
-    else()
-        target_link_libraries(coverage_config INTERFACE --coverage)
-    endif()
-endif()
 
 # Library options
 option(concore.use2020 "Use 2020 preview features" OFF)
@@ -171,55 +156,6 @@ if(${TBB_tbb_FOUND})
     add_definitions(-DCONCORE_USE_TBB=1)
 endif()
 
-# Add target for clang-format
-find_program(CLANG_FORMAT "clang-format")
-if(CLANG_FORMAT)
-    add_custom_target(
-        clang-format
-        COMMAND
-            find ../include/ ../src/ ../test/ -name '*.c' -o -name '*.cpp' -o -name '*.h' -o -name '*.hpp'
-            | xargs ${CLANG_FORMAT} -i --style=file
-        # COMMAND
-        #     ${CLANG_FORMAT} --dump-config --style=file
-    )
-endif()
-
-# Add target for clang-tidy
-find_program(CLANG_TIDY "clang-tidy")
-if(CLANG_TIDY)
-    add_custom_target(
-        clang-tidy
-        COMMAND
-            find ../include/ ../src/ ../test/ -name '*.c' -o -name '*.cpp'
-            | xargs ${CLANG_TIDY}
-    )
-endif()
-
-
-if(ENABLE_TIDY)
-    # Search for clang-tidy and clang-apply-replacements
-    find_program(CLANG_TIDY "clang-tidy")
-
-    message(STATUS "Tidy checks are enabled while building")
-
-    set(TIDY_HEADER_FILTER ${CMAKE_SOURCE_DIR}/*)
-
-    # Set extra arguments
-    set(TIDY_FIX 1)
-    set(TIDY_EXTRA_ARGS -quiet;-format-style=file)
-    if (TIDY_FIX)
-        set(TIDY_EXTRA_ARGS ${TIDY_EXTRA_ARGS};-fix)
-    endif()
-
-    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY};${TIDY_EXTRA_ARGS}"
-        CACHE STRING "" FORCE)
-else()
-    set(CMAKE_CXX_CLANG_TIDY "")
-endif()
-
-# Ensure generation of compile_commands.json; needed for clang-tidy
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)
     enable_testing()
@@ -240,22 +176,6 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.hpp"
 )
-
-# Also install cmake helper
-# include(CMakePackageConfigHelpers)
-# write_basic_package_version_file(
-#   ${CMAKE_CURRENT_BINARY_DIR}/concoreConfigVersion.cmake
-#   VERSION ${concore_BUILD_VERSION}
-#   COMPATIBILITY SameMajorVersion )
-# install(EXPORT concoreTargets
-#   FILE concoreTargets.cmake
-#   NAMESPACE concore::
-#   DESTINATION share/cmake/concore
-# )
-# install(FILES
-#   "${concore_BINARY_DIR}/concoreConfigVersion.cmake"
-#   DESTINATION share/cmake/concore
-# )
 
 # Basic CPack support
 include(InstallRequiredSystemLibraries)
