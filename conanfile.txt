@@ -1,6 +1,6 @@
 [requires]
 Catch2/2.11.0@catchorg/stable
-benchmark/1.5.0
+benchmark/1.5.3
 rapidcheck/20200131
 
 [generators]
