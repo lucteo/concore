@@ -95,7 +95,7 @@ TEST_CASE("global_executor executes tasks according to their prio") {
                     count--;
             }
             REQUIRE(count == 0);
-            REQUIRE(num_wrong <= std::thread::hardware_concurrency());
+            REQUIRE(num_wrong <= int(std::thread::hardware_concurrency()));
         }
     }
 }
