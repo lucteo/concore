@@ -79,7 +79,7 @@ if(concore.profiling.tracy)
     set(concore.profiling.include "Tracy.hpp")
     add_library(concore_profiling STATIC "${TRACY_PATH}/TracyClient.cpp")
     target_compile_features(concore_profiling PRIVATE cxx_std_17)
-    target_include_directories(concore_profiling PUBLIC "${TRACY_PATH}")
+    target_include_directories(concore_profiling PRIVATE "${TRACY_PATH}")
     add_definitions(-DTRACY_ENABLE=1)
 endif()
 
@@ -90,7 +90,7 @@ target_compile_definitions(concore PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
 
 # Do we have to link with profiling?
 if (TARGET concore_profiling)
-    target_link_libraries(concore PUBLIC concore_profiling)
+    target_link_libraries(concore PRIVATE concore_profiling)
 endif()
 
 # If testing is enabled, dive in the corresponding subdirectory

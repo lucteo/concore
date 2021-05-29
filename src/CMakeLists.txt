@@ -35,13 +35,39 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 target_link_libraries(concore PUBLIC Threads::Threads)
 
+# Define installation settings for concore
+install(TARGETS concore EXPORT concoreTargets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        INCLUDES DESTINATION include
+)
+install(EXPORT concoreTargets
+        FILE concoreTargets.cmake
+        NAMESPACE Concore::
+        DESTINATION lib/cmake/concore
+)
 
-# Targets for installation
-install(TARGETS concore
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib)
+# Ensure that all the include files are installed (but not the .in file)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
   DESTINATION include
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.hpp"
+)
+
+# Write the concoreConfig.cmake and concoreConfigVersion.cmake files
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file("concoreConfigVersion.cmake"
+        VERSION ${concore_BUILD_VERSION}
+        COMPATIBILITY SameMajorVersion
+)
+configure_package_config_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/Config.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/concoreConfig.cmake
+        INSTALL_DESTINATION lib/cmake/concore
+)
+install(FILES
+            "${CMAKE_CURRENT_BINARY_DIR}/concoreConfig.cmake"
+            "${CMAKE_CURRENT_BINARY_DIR}/concoreConfigVersion.cmake"
+        DESTINATION lib/cmake/concore
 )
