@@ -38,9 +38,6 @@ endif()
 string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP concore_BUILD_YEAR "%Y")
 
-# Code Coverage Configuration
-add_library(coverage_config INTERFACE)
-
 # Library options
 option(concore.use2020 "Use 2020 preview features" OFF)
 option(concore.testing "Compile the concore tests" ON)
@@ -70,21 +67,6 @@ message(STATUS)
 # Write the version information to 'version.hpp'
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp)
 
-# The source files for the concore library
-set(concore_sourceFiles
-    "src/lib/detail/exec_context.cpp"
-    "src/lib/low_level/semaphore.cpp"
-    "src/lib/task.cpp"
-    "src/lib/init.cpp"
-    "src/lib/n_serializer.cpp"
-    "src/lib/pipeline.cpp"
-    "src/lib/rw_serializer.cpp"
-    "src/lib/serializer.cpp"
-    "src/lib/task_graph.cpp"
-    "src/lib/task_group.cpp"
-    "src/lib/std/thread_pool.cpp"
-)
-
 # Configure profiling
 if(concore.profiling.tracy)
     find_path(TRACY_PATH "Tracy.hpp" PATH "${concore.profiling.path}")
@@ -101,63 +83,14 @@ if(concore.profiling.tracy)
     add_definitions(-DTRACY_ENABLE=1)
 endif()
 
-# The concore library target
-add_library(concore STATIC ${concore_sourceFiles})
-
-# Set the right C++ standard
-if (concore.use2020)
-    add_definitions(-DUSE_CXX2020=1)
-    target_compile_features(concore PUBLIC cxx_std_20)
-
-    # Additional flags to turn on experimental features
-    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoroutines")
-    endif()
-    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 10.0 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11.0)
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fmodules")
-    endif()
-else()
-    target_compile_features(concore PUBLIC cxx_std_17)
-endif()
+add_subdirectory(src)
 
 # Prevent linking errors with CXX11 or older ABI (visible when linking with rapidcheck)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_USE_CXX11_ABI=1")
-
-# Turn all warnings
-target_compile_options(concore PRIVATE
-     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-          -Wall>
-     $<$<CXX_COMPILER_ID:MSVC>:
-          /W4>)
-
-
-# Declare the public include directories
-target_include_directories(concore PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include/>
-  $<INSTALL_INTERFACE:include>
-)
-
-# Ensure that we link with the threading library
-set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-find_package(Threads REQUIRED)
-target_link_libraries(concore PUBLIC Threads::Threads)
+target_compile_definitions(concore PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
 
 # Do we have to link with profiling?
 if (TARGET concore_profiling)
     target_link_libraries(concore PUBLIC concore_profiling)
-endif()
-
-# Coverage config
-target_link_libraries(concore PUBLIC coverage_config)
-
-
-# Check if Intel TBB can be found
-find_package(tbb QUIET)
-if(${TBB_tbb_FOUND})
-    message(STATUS "TBB was also found on the system")
-    message(STATUS)
-    target_link_libraries(concore PUBLIC TBB::tbb)
-    add_definitions(-DCONCORE_USE_TBB=1)
 endif()
 
 # If testing is enabled, dive in the corresponding subdirectory
@@ -166,20 +99,21 @@ if(concore.testing)
     add_subdirectory(test)
 endif()
 
+# Check if Intel TBB can be found
+find_package(tbb QUIET)
+if(${TBB_tbb_FOUND})
+    message(STATUS "TBB was also found on the system")
+    message(STATUS)
+    target_link_libraries(concore PUBLIC TBB::tbb)
+    target_compile_definitions(concore PUBLIC CONCORE_USE_TBB=1)
+endif()
+
 # Targets for installation
-install(TARGETS concore
-    ARCHIVE DESTINATION lib
-    LIBRARY DESTINATION lib)
 if(concore.profiling.tracy)
     install(TARGETS concore_profiling
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
 endif()
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore
-  DESTINATION include
-  USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.hpp"
-)
 
 # Basic CPack support
 include(InstallRequiredSystemLibraries)
