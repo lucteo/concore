@@ -68,21 +68,21 @@ message(STATUS "Code coverage    : ${CODE_COVERAGE}")
 message(STATUS)
 
 # Write the version information to 'version.hpp'
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp)
 
 # The source files for the concore library
 set(concore_sourceFiles
-    "src/detail/exec_context.cpp"
-    "src/low_level/semaphore.cpp"
-    "src/task.cpp"
-    "src/init.cpp"
-    "src/n_serializer.cpp"
-    "src/pipeline.cpp"
-    "src/rw_serializer.cpp"
-    "src/serializer.cpp"
-    "src/task_graph.cpp"
-    "src/task_group.cpp"
-    "src/std/thread_pool.cpp"
+    "src/lib/detail/exec_context.cpp"
+    "src/lib/low_level/semaphore.cpp"
+    "src/lib/task.cpp"
+    "src/lib/init.cpp"
+    "src/lib/n_serializer.cpp"
+    "src/lib/pipeline.cpp"
+    "src/lib/rw_serializer.cpp"
+    "src/lib/serializer.cpp"
+    "src/lib/task_graph.cpp"
+    "src/lib/task_group.cpp"
+    "src/lib/std/thread_pool.cpp"
 )
 
 # Configure profiling
@@ -133,7 +133,7 @@ target_compile_options(concore PRIVATE
 
 # Declare the public include directories
 target_include_directories(concore PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include/>
   $<INSTALL_INTERFACE:include>
 )
 
@@ -175,7 +175,7 @@ if(concore.profiling.tracy)
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib)
 endif()
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore
   DESTINATION include
   USE_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN "*.hpp"
