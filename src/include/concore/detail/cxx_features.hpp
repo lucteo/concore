@@ -52,7 +52,8 @@
 #define CONCORE_CXX_HAS_MODULES 0
 #endif
 
-#if CONCORE_USE_CXX2020 && !CONCORE_CXX_HAS_MODULES && CONCORE_CPP_COMPILER(clang) && __clang_major__ == 10
+#if CONCORE_USE_CXX2020 && !CONCORE_CXX_HAS_MODULES && CONCORE_CPP_COMPILER(clang) &&              \
+        __clang_major__ == 10
 #include <experimental/coroutine>
 #define CONCORE_CXX_HAS_PARTIAL_MODULES 1
 #else
