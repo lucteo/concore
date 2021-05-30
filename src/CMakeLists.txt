@@ -35,6 +35,17 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 target_link_libraries(concore PUBLIC Threads::Threads)
 
+# Check if Intel TBB can be found
+if (NOT concore.no_tbb)
+    find_package(tbb QUIET)
+    if(${TBB_tbb_FOUND})
+        message(STATUS "TBB was also found on the system")
+        message(STATUS)
+        target_link_libraries(concore PUBLIC TBB::tbb)
+        target_compile_definitions(concore PUBLIC CONCORE_USE_TBB=1)
+    endif()
+endif()
+
 set(TARGETS_TO_INSTALL concore)
 
 # Configure profiling

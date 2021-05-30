@@ -41,6 +41,7 @@ string(TIMESTAMP concore_BUILD_YEAR "%Y")
 # Library options
 option(concore.use2020 "Use 2020 preview features" OFF)
 option(concore.testing "Compile the concore tests" ON)
+option(concore.no_tbb "Don't use TBB, even if found on the system" OFF)
 option(concore.profiling "Add profiling info the the library" OFF)
 option(concore.profiling.tracy "Use Tracy library for profiling" OFF)
 option(concore.profiling.include "The header to include for profiling" "")
@@ -76,15 +77,6 @@ target_compile_definitions(concore PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
 if(concore.testing)
     enable_testing()
     add_subdirectory(test)
-endif()
-
-# Check if Intel TBB can be found
-find_package(tbb QUIET)
-if(${TBB_tbb_FOUND})
-    message(STATUS "TBB was also found on the system")
-    message(STATUS)
-    target_link_libraries(concore PUBLIC TBB::tbb)
-    target_compile_definitions(concore PUBLIC CONCORE_USE_TBB=1)
 endif()
 
 # Basic CPack support
