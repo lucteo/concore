@@ -67,31 +67,10 @@ message(STATUS)
 # Write the version information to 'version.hpp'
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp)
 
-# Configure profiling
-if(concore.profiling.tracy)
-    find_path(TRACY_PATH "Tracy.hpp" PATH "${concore.profiling.path}")
-    if(NOT EXISTS "${TRACY_PATH}")
-        message(FATAL_ERROR "Cannot find Tracy folder; try setting the concore.profiling.path variable to point to Tracy directory")
-    endif()
-    message(STATUS "Tracy path   : ${TRACY_PATH}")
-    message(STATUS)
-    set(concore.profiling ON)
-    set(concore.profiling.include "Tracy.hpp")
-    add_library(concore_profiling STATIC "${TRACY_PATH}/TracyClient.cpp")
-    target_compile_features(concore_profiling PRIVATE cxx_std_17)
-    target_include_directories(concore_profiling PRIVATE "${TRACY_PATH}")
-    add_definitions(-DTRACY_ENABLE=1)
-endif()
-
 add_subdirectory(src)
 
 # Prevent linking errors with CXX11 or older ABI (visible when linking with rapidcheck)
 target_compile_definitions(concore PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
-
-# Do we have to link with profiling?
-if (TARGET concore_profiling)
-    target_link_libraries(concore PRIVATE concore_profiling)
-endif()
 
 # If testing is enabled, dive in the corresponding subdirectory
 if(concore.testing)
@@ -106,13 +85,6 @@ if(${TBB_tbb_FOUND})
     message(STATUS)
     target_link_libraries(concore PUBLIC TBB::tbb)
     target_compile_definitions(concore PUBLIC CONCORE_USE_TBB=1)
-endif()
-
-# Targets for installation
-if(concore.profiling.tracy)
-    install(TARGETS concore_profiling
-        ARCHIVE DESTINATION lib
-        LIBRARY DESTINATION lib)
 endif()
 
 # Basic CPack support

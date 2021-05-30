@@ -35,8 +35,32 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 find_package(Threads REQUIRED)
 target_link_libraries(concore PUBLIC Threads::Threads)
 
+set(TARGETS_TO_INSTALL concore)
+
+# Configure profiling
+if(concore.profiling.tracy)
+    find_path(TRACY_PATH "Tracy.hpp" PATH "${concore.profiling.path}")
+    if(NOT EXISTS "${TRACY_PATH}")
+        message(FATAL_ERROR "Cannot find Tracy folder; try setting the concore.profiling.path variable to point to Tracy directory")
+    endif()
+    message(STATUS "Tracy path   : ${TRACY_PATH}")
+    message(STATUS)
+    set(concore.profiling ON)
+    set(concore.profiling.include "Tracy.hpp")
+
+    # Add a library around TracyClient.cpp
+    add_library(concore_profiling STATIC "${TRACY_PATH}/TracyClient.cpp")
+    target_compile_features(concore_profiling PRIVATE cxx_std_17)
+    target_include_directories(concore_profiling PUBLIC "${TRACY_PATH}")
+    target_compile_definitions(concore_profiling PUBLIC TRACY_ENABLE=1)
+
+    target_link_libraries(concore PUBLIC concore_profiling)
+    set(TARGETS_TO_INSTALL ${TARGETS_TO_INSTALL} concore_profiling)
+endif()
+
+
 # Define installation settings for concore
-install(TARGETS concore EXPORT concoreTargets
+install(TARGETS ${TARGETS_TO_INSTALL} EXPORT concoreTargets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         RUNTIME DESTINATION bin
@@ -50,9 +74,9 @@ install(EXPORT concoreTargets
 
 # Ensure that all the include files are installed (but not the .in file)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
-  DESTINATION include
-  USE_SOURCE_PERMISSIONS
-  FILES_MATCHING PATTERN "*.hpp"
+        DESTINATION include
+        USE_SOURCE_PERMISSIONS
+        FILES_MATCHING PATTERN "*.hpp"
 )
 
 # Write the concoreConfig.cmake and concoreConfigVersion.cmake files
@@ -71,3 +95,4 @@ install(FILES
             "${CMAKE_CURRENT_BINARY_DIR}/concoreConfigVersion.cmake"
         DESTINATION lib/cmake/concore
 )
+
