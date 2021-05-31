@@ -1,4 +1,5 @@
 
+#include "benchmark_helpers.hpp"
 #include <concore/conc_reduce.hpp>
 #include <concore/profiling.hpp>
 #if CONCORE_USE_TBB
@@ -253,12 +254,6 @@ static void BM_string_tbb_parallel_reduce(benchmark::State& state) {
 //     }
 // }
 // #endif
-
-static void BM_____(benchmark::State& state) {
-    for (auto _ : state) {
-    }
-}
-#define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
 #define BENCHMARK_CASE1(fun, m)                                                                    \
     BENCHMARK(fun)->Unit(benchmark::kMillisecond)->Args({10'000'000, (int)(m)})
