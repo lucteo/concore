@@ -363,7 +363,10 @@ static void BM_fresnel_omp_for(benchmark::State& state) {
 #endif // CONCORE_USE_GLM
 
 #if CONCORE_USE_GLM
-static void BM_____(benchmark::State& /*state*/) {}
+static void BM_____(benchmark::State& state) {
+    for (auto _ : state) {
+    }
+}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 #endif
 

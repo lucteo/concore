@@ -239,8 +239,11 @@ static void BM_latency_rw_serializer(benchmark::State& state) {
             concore::rw_serializer(concore::spawn_continuation_executor{}).writer(), state);
 }
 
-static void BM___(benchmark::State& /*state*/) {}
-#define BENCHMARK_PAUSE() BENCHMARK(BM___)
+static void BM_____(benchmark::State& state) {
+    for (auto _ : state) {
+    }
+}
+#define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
 #define BENCHMARK_CASE1(fun) BENCHMARK(fun)->UseManualTime()
 #define BENCHMARK_CASE2(fun)                                                                       \

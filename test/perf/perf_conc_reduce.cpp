@@ -254,7 +254,10 @@ static void BM_string_tbb_parallel_reduce(benchmark::State& state) {
 // }
 // #endif
 
-static void BM_____(benchmark::State& /*state*/) {}
+static void BM_____(benchmark::State& state) {
+    for (auto _ : state) {
+    }
+}
 #define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
 #define BENCHMARK_CASE1(fun, m)                                                                    \
