@@ -21,10 +21,6 @@ class ConcoreRecipe(ConanFile):
    exports = "LICENSE"
    exports_sources = ("src/*", "include/*", "CMakeLists.txt")
 
-   def source(self):
-      # TODO: do we want to generate the version file here?
-      pass
-
    def config_options(self):
        if self.settings.os == "Windows":
            del self.options.fPIC

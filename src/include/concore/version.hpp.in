@@ -1,15 +1,18 @@
 #pragma once
 
 //! The library version as a string
-#define CONCORE_VERSION_STRING "${concore_BUILD_VERSION}"
+#define CONCORE_VERSION_STRING "@PROJECT_VERSION@"
 //! The major version of the library
-#define CONCORE_VERSION_MAJOR ${concore_MAJOR_VERSION}
+#define CONCORE_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
 //! The minor version of the library
-#define CONCORE_VERSION_MINOR ${concore_MINOR_VERSION}
+#define CONCORE_VERSION_MINOR @PROJECT_VERSION_MINOR@
+//! The patch version of the library
+#define CONCORE_VERSION_PATCH @PROJECT_VERSION_PATCH@
+
+//! The library version, as a number, including the major, minor and the patch version
+#define CONCORE_VERSION_NUM ((CONCORE_VERSION_MAJOR)*1000000 + (CONCORE_VERSION_MINOR)*1000 + (CONCORE_VERSION_PATCH)
+
 //! The date in which the library was built/packaged
 #define CONCORE_VERSION_DATE "${concore_BUILD_DATE}"
 //! The year in which the library was built/packaged
 #define CONCORE_BUILD_YEAR ${concore_BUILD_YEAR}
-
-//! The library version, as a number, including the major and the minor version
-#define CONCORE_VERSION_NUM ((CONCORE_VERSION_MAJOR)*1000 + (CONCORE_VERSION_MINOR))

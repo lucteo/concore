@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17.0)
 
-# Project information
+# Define the concore project
 project(concore LANGUAGES CXX)
 
 if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -10,31 +10,10 @@ else()
     message(ERROR "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
 endif()
 
-# Get the library version
-set(concore_BUILD_VERSION 0)
-set(concore_MAJOR_VERSION 0)
-set(concore_MINOR_VERSION 0)
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/.git)
-    find_package(Git)
-    if(GIT_FOUND)
-        execute_process(
-            COMMAND ${GIT_EXECUTABLE} describe --long --tags --dirty --always
-            WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-            OUTPUT_VARIABLE "concore_BUILD_VERSION"
-            ERROR_QUIET
-            OUTPUT_STRIP_TRAILING_WHITESPACE)
-    endif()
-endif()
-if(${concore_BUILD_VERSION} MATCHES "v([0-9]+)\\.([0-9]+).*")
-    string(REGEX REPLACE
-        "v([0-9]+)\\.([0-9]+).*"
-        "\\1"
-        concore_MAJOR_VERSION ${concore_BUILD_VERSION})
-    string(REGEX REPLACE
-        "v([0-9]+)\\.([0-9]+).*"
-        "\\2"
-        concore_MINOR_VERSION ${concore_BUILD_VERSION})
-endif()
+# Set the version of the project
+project(concore VERSION "${CONAN_PACKAGE_VERSION}")
+
+# Set the current build date
 string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
 string(TIMESTAMP concore_BUILD_YEAR "%Y")
 
@@ -51,9 +30,7 @@ option(concore.profiling.path "Path to be used for searching the profiling code"
 message(STATUS "System           : ${CMAKE_SYSTEM}")
 message(STATUS "System name      : ${CMAKE_SYSTEM_NAME}")
 message(STATUS "System ver       : ${CMAKE_SYSTEM_VERSION}")
-message(STATUS "Library ver      : ${concore_BUILD_VERSION}")
-message(STATUS "  major ver      : ${concore_MAJOR_VERSION}")
-message(STATUS "  minor ver      : ${concore_MINOR_VERSION}")
+message(STATUS "Library ver      : ${PROJECT_VERSION}")
 message(STATUS "Build date       : ${concore_BUILD_DATE}")
 message(STATUS "Build year       : ${concore_BUILD_YEAR}")
 message(STATUS "Use C++ 2020     : ${concore.use2020}")
@@ -62,7 +39,6 @@ message(STATUS "Use profiling    : ${concore.profiling}")
 message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
 message(STATUS "Profiling include: ${concore.profiling.include}")
 message(STATUS "Profiling path   : ${concore.profiling.path}")
-message(STATUS "Code coverage    : ${CODE_COVERAGE}")
 message(STATUS)
 
 # Write the version information to 'version.hpp'
