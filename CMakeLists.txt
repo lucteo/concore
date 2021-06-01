@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.17.0)
 
 # Define the concore project
-project(concore LANGUAGES CXX)
+project(concore-dev LANGUAGES CXX)
 
 if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
     include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
@@ -11,49 +11,23 @@ else()
 endif()
 
 # Set the version of the project
-project(concore VERSION "${CONAN_PACKAGE_VERSION}")
+project(concore-dev VERSION "${CONAN_PACKAGE_VERSION}")
 
-# Set the current build date
-string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
-string(TIMESTAMP concore_BUILD_YEAR "%Y")
-
-# Library options
-option(concore.use2020 "Use 2020 preview features" OFF)
-option(concore.testing "Compile the concore tests" ON)
-option(concore.no_tbb "Don't use TBB, even if found on the system" OFF)
-option(concore.profiling "Add profiling info the the library" OFF)
-option(concore.profiling.tracy "Use Tracy library for profiling" OFF)
-option(concore.profiling.include "The header to include for profiling" "")
-option(concore.profiling.path "Path to be used for searching the profiling code" "")
-
-# Print configuration
+# Print CMake configuration
 message(STATUS "System           : ${CMAKE_SYSTEM}")
 message(STATUS "System name      : ${CMAKE_SYSTEM_NAME}")
 message(STATUS "System ver       : ${CMAKE_SYSTEM_VERSION}")
-message(STATUS "Library ver      : ${PROJECT_VERSION}")
-message(STATUS "Build date       : ${concore_BUILD_DATE}")
-message(STATUS "Build year       : ${concore_BUILD_YEAR}")
-message(STATUS "Use C++ 2020     : ${concore.use2020}")
-message(STATUS "Use testing      : ${concore.testing}")
-message(STATUS "Use profiling    : ${concore.profiling}")
-message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
-message(STATUS "Profiling include: ${concore.profiling.include}")
-message(STATUS "Profiling path   : ${concore.profiling.path}")
 message(STATUS)
 
-# Write the version information to 'version.hpp'
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/include/concore/version.hpp)
-
+# The main concore library
 add_subdirectory(src)
 
 # Prevent linking errors with CXX11 or older ABI (visible when linking with rapidcheck)
 target_compile_definitions(concore PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
 
-# If testing is enabled, dive in the corresponding subdirectory
-if(concore.testing)
-    enable_testing()
-    add_subdirectory(test)
-endif()
+# Testing code
+enable_testing()
+add_subdirectory(test)
 
 # Basic CPack support
 include(InstallRequiredSystemLibraries)

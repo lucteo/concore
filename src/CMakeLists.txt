@@ -1,3 +1,32 @@
+cmake_minimum_required(VERSION 3.17.0)
+
+project(concore VERSION 0.6.0 LANGUAGES CXX)
+
+# Set the version and current build date
+set(concore_VERSION "${PROJECT_VERSION}")
+set(concore_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+string(TIMESTAMP concore_BUILD_DATE "%Y-%m-%d")
+string(TIMESTAMP concore_BUILD_YEAR "%Y")
+
+# Library options
+option(concore.use2020 "Use 2020 preview features" OFF)
+option(concore.no_tbb "Don't use TBB, even if found on the system" OFF)
+option(concore.profiling "Add profiling info the the library" OFF)
+option(concore.profiling.tracy "Use Tracy library for profiling" OFF)
+option(concore.profiling.include "The header to include for profiling" "")
+option(concore.profiling.path "Path to be used for searching the profiling code" "")
+
+message(STATUS "Library ver      : ${concore_VERSION}")
+message(STATUS "Build date       : ${concore_BUILD_DATE}")
+message(STATUS "Build year       : ${concore_BUILD_YEAR}")
+message(STATUS "Use C++ 2020     : ${concore.use2020}")
+message(STATUS "Use profiling    : ${concore.profiling}")
+message(STATUS "Use Tracy        : ${concore.profiling.tracy}")
+message(STATUS "Profiling include: ${concore.profiling.include}")
+message(STATUS "Profiling path   : ${concore.profiling.path}")
+message(STATUS)
+
+
 # The source files for the concore library
 set(concore_sourceFiles
     "lib/detail/exec_context.cpp"
@@ -15,6 +44,14 @@ set(concore_sourceFiles
 
 # The concore library target
 add_library(concore STATIC ${concore_sourceFiles})
+
+# Set library version
+set_target_properties(concore PROPERTIES
+                      VERSION "${concore_VERSION}"
+                      SOVERSION "${concore_VERSION_MAJOR}")
+
+# Write the version information to 'version.hpp'
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/concore/version.hpp)
 
 # Declare the public include directories
 target_include_directories(concore PUBLIC
@@ -93,7 +130,7 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/concore
 # Write the concoreConfig.cmake and concoreConfigVersion.cmake files
 include(CMakePackageConfigHelpers)
 write_basic_package_version_file("concoreConfigVersion.cmake"
-        VERSION ${concore_BUILD_VERSION}
+        VERSION "${concore_VERSION}"
         COMPATIBILITY SameMajorVersion
 )
 configure_package_config_file(
