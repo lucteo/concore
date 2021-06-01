@@ -1,7 +1,3 @@
-# Project settings
-include_directories(".")
-include_directories("../include")
-
 # The source files for the functional tests
 set(func_sourceFiles
     "func/test_main.cpp"
@@ -47,14 +43,23 @@ set(func_sourceFiles
 # Add the functional tests executable
 add_executable(test.concore ${func_sourceFiles})
 target_link_libraries(test.concore concore)
-if (TARGET concore_profiling)
-    target_link_libraries(test.concore concore_profiling)
-endif()
+target_include_directories(test.concore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-# The tests depend on Catch2, rapidcheck
-find_package(Catch2 REQUIRED)
-target_link_libraries(test.concore CONAN_PKG::Catch2)
+# The tests depend on catch2, rapidcheck
+target_link_libraries(test.concore CONAN_PKG::catch2)
 target_link_libraries(test.concore CONAN_PKG::rapidcheck)
+
+# Check if TBB was enabled
+get_target_property(CONCORE_DEFINES concore COMPILE_DEFINITIONS)
+message(STATUS "Concore compile definitions: ${CONCORE_DEFINES}")
+set(tbb_link_target 0)
+if(CONCORE_DEFINES MATCHES "^CONCORE_USE_TBB=1" OR CONCORE_DEFINES MATCHES ";CONCORE_USE_TBB=1")
+    find_package(Tbb REQUIRED)
+    set(tbb_link_target 1)
+endif()
+if(tbb_link_target)
+    target_link_libraries(test.concore TBB::tbb)
+endif()
 
 # Discover the Catch2 test built by the application
 include(CTest)
@@ -68,12 +73,14 @@ target_compile_options(test.concore PUBLIC
      $<$<CXX_COMPILER_ID:MSVC>:
           /W4>)
 
+set(EXTRA_DEFS "")
+
 # Check for OpenMP
 find_package(OpenMP QUIET)
 if(OpenMP_CXX_FOUND)
-    message(STATUS "OpenMP was also found on the system")
+    message(STATUS "OpenMP was also found on the system -- will be used for testing")
     message(STATUS)
-    add_definitions(-DCONCORE_USE_OPENMP=1)
+    set(EXTRA_DEFS ${EXTRA_DEFS} CONCORE_USE_OPENMP=1)
 endif()
 
 # Check if glm (OpenGL Mathematics) can be found
@@ -81,9 +88,9 @@ find_package(glm QUIET)
 if(${glm_FOUND})
     find_path(glm_inc_dir NAMES "glm/vec4.hpp" HINTS ${GLM_INCLUDE_DIRS})
     if(EXISTS ${glm_inc_dir})
-        message(STATUS "glm was also found on the system")
+        message(STATUS "glm was also found on the system -- will be used for testing")
         message(STATUS)
-        add_definitions(-DCONCORE_USE_GLM=1)
+        set(EXTRA_DEFS ${EXTRA_DEFS} CONCORE_USE_GLM=1)
     elseif()
         set(${glm_FOUND} 0)
     endif()
@@ -97,8 +104,10 @@ endif()
 function(def_perf_test target sourceFile)
     add_executable(${target} ${sourceFile})
     target_link_libraries(${target} concore CONAN_PKG::benchmark)
-    if (TARGET concore_profiling)
-        target_link_libraries(${target} concore_profiling)
+    target_compile_definitions(${target} PUBLIC ${EXTRA_DEFS})
+    target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+    if(tbb_link_target)
+        target_link_libraries(${target} TBB::tbb)
     endif()
 endfunction()
 

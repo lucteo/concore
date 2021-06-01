@@ -18,6 +18,7 @@ mkdir -p "${CURDIR}/../../${BUILDDIR}"
 docker run ${DOCKER_RUN_PARAMS} -e INPUT_CC='gcc-9' -e INPUT_CHECKS='cppcheck clang-tidy' \
     -e INPUT_BUILDDIR="/github/workspace/${BUILDDIR}" \
     -e INPUT_PREBUILD_COMMAND="conan config set storage.path=/github/workspace/${BUILDDIR}/.conan" \
+    -e INPUT_CONANFLAGS="-e CONAN_RUN_TESTS=1" \
     -e INPUT_CPPCHECKFLAGS='--enable=warning,style,performance,portability --inline-suppr' \
     -e INPUT_CLANGTIDYFLAGS="-quiet ${SRCFILES} -j 4" \
     action-cxx-toolkit

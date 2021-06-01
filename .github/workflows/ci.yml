@@ -10,6 +10,8 @@ jobs:
         with:
           cc: gcc
           checks: build test install warnings
+        env:
+          CONAN_RUN_TESTS: 1
   build-gcc-concepts:
     runs-on: ubuntu-latest
     steps:
@@ -19,6 +21,8 @@ jobs:
           cc: gcc
           cmakeflags: -Dconcore.use2020=yes
           checks: build test install warnings
+        env:
+          CONAN_RUN_TESTS: 1
   build-clang:
     runs-on: ubuntu-latest
     strategy:
@@ -31,6 +35,8 @@ jobs:
           cc: ${{ matrix.cc }}
           conanflags: -s compiler.libcxx=libstdc++11
           checks: build test
+        env:
+          CONAN_RUN_TESTS: 1
   build-clang-cxx14:
     runs-on: ubuntu-latest
     steps:
@@ -41,6 +47,8 @@ jobs:
           cxxflags: -std=c++14
           conanflags: -s compiler.libcxx=libstdc++11
           checks: build test
+        env:
+          CONAN_RUN_TESTS: 1
   static-checks:
     runs-on: ubuntu-latest
     steps:
@@ -51,6 +59,8 @@ jobs:
           checks: cppcheck clang-tidy
           clangtidyflags: '-quiet'
           cppcheckflags: '--enable=warning,style,performance,portability --inline-suppr'
+        env:
+          CONAN_RUN_TESTS: 1
   clang-format:
     runs-on: ubuntu-latest
     steps:
@@ -58,7 +68,7 @@ jobs:
       - uses: docker://lucteo/action-cxx-toolkit:latest
         with:
           checks: clang-format
-          clangformatdirs: src include test
+          clangformatdirs: src test
   sanitizer:
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +76,8 @@ jobs:
       - uses: docker://lucteo/action-cxx-toolkit:latest
         with:
           checks: sanitize=address sanitize=undefined
+        env:
+          CONAN_RUN_TESTS: 1
   coverage:
     runs-on: ubuntu-latest
     steps:
@@ -74,6 +86,7 @@ jobs:
         with:
           checks: coverage=codecov
         env:
+          CONAN_RUN_TESTS: 1
           GITHUB_ACTION: ${GITHUB_ACTION}
           GITHUB_REF: ${GITHUB_REF}
           GITHUB_REPOSITORY: ${GITHUB_REPOSITORY}

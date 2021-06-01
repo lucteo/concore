@@ -1,4 +1,5 @@
 
+#include "benchmark_helpers.hpp"
 #include <concore/conc_sort.hpp>
 #include <concore/profiling.hpp>
 #if CONCORE_USE_TBB
@@ -173,9 +174,6 @@ static void BM_string_tbb_parallel_sort(benchmark::State& state) {
     }
 }
 #endif
-
-static void BM_____(benchmark::State& /*state*/) {}
-#define BENCHMARK_PAUSE() BENCHMARK(BM_____)
 
 #define BENCHMARK_CASE(fun)                                                                        \
     BENCHMARK(fun)->UseManualTime()->Unit(benchmark::kMillisecond)->Arg(10'000'000);

@@ -1,0 +1,5 @@
+[requires]
+concore/0.6.0@demo/testing
+
+[generators]
+cmake
