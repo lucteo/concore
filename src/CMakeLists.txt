@@ -43,7 +43,7 @@ set(concore_sourceFiles
 )
 
 # The concore library target
-add_library(concore STATIC ${concore_sourceFiles})
+add_library(concore ${concore_sourceFiles})
 
 # Set library version
 set_target_properties(concore PROPERTIES
