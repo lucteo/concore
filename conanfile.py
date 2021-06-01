@@ -41,11 +41,6 @@ class ConcoreRecipe(ConanFile):
        if self.settings.os == "Windows":
            del self.options.fPIC
 
-   def configure(self):
-      # TODO: do we want to provide a header+inline source version of the library? If yes, this is the place to do it
-      # TODO: shared vs static library
-      pass
-
    def build(self):
       # Note: options "shared" and "fPIC" are automatically handled in CMake
       cmake = self._configure_cmake()
@@ -61,6 +56,8 @@ class ConcoreRecipe(ConanFile):
 
    def _configure_cmake(self):
       cmake = CMake(self)
+      if self.settings.compiler == "Visual Studio" and self.options.shared:
+         cmake.definitions["CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS"] = True
       cmake.configure(source_folder=None if self._run_tests else "src")
       return cmake
 
