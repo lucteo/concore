@@ -12,6 +12,5 @@ target_link_libraries(concore_test_conan CONAN_PKG::concore)
 # Test cmake target
 find_package(concore CONFIG REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Tbb REQUIRED)
 add_executable(concore_test_cmake test_package.cpp)
 target_link_libraries(concore_test_cmake Concore::concore)

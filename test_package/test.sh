@@ -11,7 +11,7 @@ mkdir -p ${CURDIR}/build
 pushd ${CURDIR}/build
 
 # Ensure that the concore package is created for demo/testing
-#conan create ${CURDIR}/.. demo/testing
+conan create ${CURDIR}/.. demo/testing
 
 # Run the test package
 conan install .. --build=missing -s build_type=Release

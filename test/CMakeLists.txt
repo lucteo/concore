@@ -49,6 +49,18 @@ target_include_directories(test.concore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(test.concore CONAN_PKG::catch2)
 target_link_libraries(test.concore CONAN_PKG::rapidcheck)
 
+# Check if TBB was enabled
+get_target_property(CONCORE_DEFINES concore COMPILE_DEFINITIONS)
+message(STATUS "Concore compile definitions: ${CONCORE_DEFINES}")
+set(tbb_link_target 0)
+if(CONCORE_DEFINES MATCHES "^CONCORE_USE_TBB=1" OR CONCORE_DEFINES MATCHES ";CONCORE_USE_TBB=1")
+    find_package(Tbb REQUIRED)
+    set(tbb_link_target 1)
+endif()
+if(tbb_link_target)
+    target_link_libraries(test.concore TBB::tbb)
+endif()
+
 # Discover the Catch2 test built by the application
 include(CTest)
 include(Catch)
@@ -94,6 +106,9 @@ function(def_perf_test target sourceFile)
     target_link_libraries(${target} concore CONAN_PKG::benchmark)
     target_compile_definitions(${target} PUBLIC ${EXTRA_DEFS})
     target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+    if(tbb_link_target)
+        target_link_libraries(${target} TBB::tbb)
+    endif()
 endfunction()
 
 def_perf_test(perf.executors "perf/perf_executors.cpp")
