@@ -1,3 +1,4 @@
+#include "benchmark_helpers.hpp"
 #include <concore/global_executor.hpp>
 #include <concore/dispatch_executor.hpp>
 #ifdef CONCORE_USE_TBB
@@ -238,9 +239,6 @@ static void BM_latency_rw_serializer(benchmark::State& state) {
     test_latency_ser(
             concore::rw_serializer(concore::spawn_continuation_executor{}).writer(), state);
 }
-
-static void BM___(benchmark::State& /*state*/) {}
-#define BENCHMARK_PAUSE() BENCHMARK(BM___)
 
 #define BENCHMARK_CASE1(fun) BENCHMARK(fun)->UseManualTime()
 #define BENCHMARK_CASE2(fun)                                                                       \
