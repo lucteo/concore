@@ -106,6 +106,8 @@ if(concore.profiling.tracy)
     set(TARGETS_TO_INSTALL ${TARGETS_TO_INSTALL} concore_profiling)
 endif()
 
+add_library(Concore::concore ALIAS concore)
+
 
 # Define installation settings for concore
 install(TARGETS ${TARGETS_TO_INSTALL} EXPORT concoreTargets
