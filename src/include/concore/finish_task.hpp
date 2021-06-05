@@ -79,9 +79,10 @@ struct finish_event {
      *
      * @see notify_done()
      */
-    task_continuation_function get_continuation() const {
+    task_continuation_function get_continuation(int count) const {
         assert(impl_);
-        impl_->ref_count_++;
+        assert(count >= 1);
+        impl_->ref_count_ += count;
         auto pimpl = impl_;
         return [pimpl](std::exception_ptr) { on_notify_done(pimpl); };
     }
@@ -161,11 +162,26 @@ private:
  *          system_cleanup();
  *      });
  *      // Spawn 3 tasks
- *      concore::spawn(concore::task{[]{ do_work1(); }, {}, done_task.get_continuation()});
- *      concore::spawn(concore::task{[]{ do_work2(); }, {}, done_task.get_continuation()});
- *      concore::spawn(concore::task{[]{ do_work3(); }, {}, done_task.get_continuation()});
+ *      auto cont = done_task.get_continuation(3);  // this continuation will be used 3 times
+ *      concore::spawn(concore::task{[]{ do_work1(); }, {}, cont});
+ *      concore::spawn(concore::task{[]{ do_work2(); }, {}, cont});
+ *      concore::spawn(concore::task{[]{ do_work3(); }, {}, cont});
  *      // When they complete, the done task is triggered
  * @endcode
+ *
+ * Please note that the finish task will be executed the first time the needed condition is
+ * fulfilled. If there multiple places in which this condition can be true, then there might be a
+ * race condition in the code. For example, there is a race condition in the following code:
+ * @code {.cpp}
+ *      concore::finish_task done_task([]{...});
+ *      concore::spawn(concore::task{[]{ do_work1(); }, {}, done_task.get_continuation()});
+ *      // done_task might be invoked at this point...
+ *      concore::spawn(concore::task{[]{ do_work2(); }, {}, done_task.get_continuation()});
+ *      // ... or at this point
+ * @endcode
+ *
+ * If the first spawned task executes fast enough, then the finish task might be executed before we
+ * attempt to spawn the second task. This doesn't appear to be desired outcome.
  *
  * @see finish_event, finish_wait
  */
@@ -191,6 +207,7 @@ struct finish_task {
 
     /**
      * @brief Get a continuation object to be used by a predecessor
+     * @param count The number times this continuation object would be used; default=1
      * @return The continuation functor to be called to trigger the done task
      * @details
      *
@@ -204,7 +221,9 @@ struct finish_task {
      * Calling this function will increase the internal counter. Calling the returned function will
      * decrease it. When that reaches zero, the current task is enqueued.
      */
-    task_continuation_function get_continuation() const { return event_.get_continuation(); }
+    task_continuation_function get_continuation(int count = 1) const {
+        return event_.get_continuation(count);
+    }
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }
@@ -233,6 +252,9 @@ private:
  * Alternatively, one can pass an initial count of tasks to the constructor, and then calling
  * `event().notify_done()` for the given number of times to unblock the wait.
  *
+ * After whe @ref wait() function is called, the object cannot be waited on one more time. This
+ * means that it is useless to use the object after the @ref wait() call.
+ *
  * Example usage:
  * @code
  *      concore::finish_wait done;
@@ -252,10 +274,11 @@ struct finish_wait {
     explicit finish_wait(int initial_count = 0)
         : wait_grp_(task_group::create(task_group::current_task_group()))
         , event_(std::make_shared<detail::finish_event_impl>(
-                  task{[] {}, wait_grp_}, inline_executor{}, initial_count)) {}
+                  task{[] {}, wait_grp_}, inline_executor{}, initial_count + 1)) {}
 
     /**
      * @brief Get a continuation object to be used by a predecessor
+     * @param count The number times this continuation object would be used; default=1
      * @return The continuation functor to be called to unblock the wait
      * @details
      *
@@ -268,7 +291,9 @@ struct finish_wait {
      * Calling this function will increase the internal counter. Calling the returned function will
      * decrease it. When that reaches zero, the busy-waiting will be ended.
      */
-    task_continuation_function get_continuation() const { return event_.get_continuation(); }
+    task_continuation_function get_continuation(int count = 1) const {
+        return event_.get_continuation(count);
+    }
 
     //! Getter for the finish_event object that should be distributed to other tasks.
     finish_event event() const { return event_; }
@@ -287,7 +312,13 @@ struct finish_wait {
      * This can be called several times, but after the first time this is unblocked, the subsequent
      * calls will exit immediately.
      */
-    void wait() { concore::wait(wait_grp_); }
+    void wait() {
+        // When constructing this, we incremented the count once more.
+        // This way, we ensure that we don't trigger the done task before all the get_continuation()
+        // calls are made
+        event_.notify_done();
+        concore::wait(wait_grp_);
+    }
 
 private:
     //! The task group we are waiting on
