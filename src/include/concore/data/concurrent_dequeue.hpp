@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include "spin_backoff.hpp"
+#include "concore/low_level/spin_backoff.hpp"
 
 #include <atomic>
 #include <vector>
