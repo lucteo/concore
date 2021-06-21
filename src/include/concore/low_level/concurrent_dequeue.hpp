@@ -62,13 +62,14 @@ struct bounded_dequeue {
     bool reserve_back(uint16_t& pos) {
         const auto max_dist = static_cast<uint16_t>(size_ - 3);
         fast_range old{}, desired{};
-        old.int_value = fast_range_.load();
+        old.int_value = fast_range_.load(std::memory_order_relaxed);
         while (true) {
             if (uint16_t(old.end - old.start) > max_dist)
                 return false;
             desired = old;
             desired.end++;
-            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value)) {
+            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value,
+                        std::memory_order_acq_rel, std::memory_order_relaxed)) {
                 pos = old.end;
                 return true;
             }
@@ -79,13 +80,14 @@ struct bounded_dequeue {
     bool reserve_front(uint16_t& pos) {
         const auto max_dist = static_cast<uint16_t>(size_ - 3);
         fast_range old{}, desired{};
-        old.int_value = fast_range_.load();
+        old.int_value = fast_range_.load(std::memory_order_relaxed);
         while (true) {
             if (uint16_t(old.end - old.start) > max_dist)
                 return false;
             desired = old;
             desired.start--;
-            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value)) {
+            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value,
+                        std::memory_order_acq_rel, std::memory_order_relaxed)) {
                 pos = desired.start;
                 return true;
             }
@@ -94,13 +96,14 @@ struct bounded_dequeue {
     //! Consumes one slot at the front of the fast queue. Yields the position of the consumed item.
     bool consume_front(uint16_t& pos) {
         fast_range old{}, desired{};
-        old.int_value = fast_range_.load();
+        old.int_value = fast_range_.load(std::memory_order_relaxed);
         while (true) {
             if (old.start == old.end)
                 return false;
             desired = old;
             desired.start++;
-            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value)) {
+            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value,
+                        std::memory_order_acq_rel, std::memory_order_relaxed)) {
                 pos = old.start;
                 return true;
             }
@@ -109,13 +112,14 @@ struct bounded_dequeue {
     //! Consumes one slot at the front of the fast queue. Yields the position of the reserved item.
     bool consume_back(uint16_t& pos) {
         fast_range old{}, desired{};
-        old.int_value = fast_range_.load();
+        old.int_value = fast_range_.load(std::memory_order_relaxed);
         while (true) {
             if (old.start == old.end)
                 return false;
             desired = old;
             desired.end--;
-            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value)) {
+            if (fast_range_.compare_exchange_weak(old.int_value, desired.int_value,
+                        std::memory_order_acq_rel, std::memory_order_relaxed)) {
                 pos = desired.end;
                 return true;
             }
@@ -129,19 +133,17 @@ struct bounded_dequeue {
 
         // Typically, the item is not being used by anybody else; but in rare conditions it might
         // not have finished to be destructed. In that case, wait for it to become free.
+        int old = static_cast<int>(item_state::freed);
+        int desired = static_cast<int>(item_state::constructing);
         spin_backoff spinner;
-        while (true) {
-            int old = static_cast<int>(item_state::freed);
-            int desired = static_cast<int>(item_state::constructing);
-            if (item.state_.compare_exchange_strong(old, desired))
-                break;
+        while (!item.state_.compare_exchange_strong(
+                old, desired, std::memory_order_acq_rel, std::memory_order_relaxed))
             spinner.pause();
-        }
 
         // Ok. Now we can finally construct the element
-        item.elem_ = elem;
+        item.elem_ = std::move(elem);
         assert(item.state_.load() == static_cast<int>(item_state::constructing));
-        item.state_ = static_cast<int>(item_state::valid);
+        item.state_.store(static_cast<int>(item_state::valid), std::memory_order_release);
     }
 
     //! Extract an element from the fast queue.
@@ -153,18 +155,16 @@ struct bounded_dequeue {
         // constructed. In that case, wait for it to become valid, before getting the data out of
         // it.
         spin_backoff spinner;
-        while (true) {
-            int old = static_cast<int>(item_state::valid);
-            int desired = static_cast<int>(item_state::destructing);
-            if (item.state_.compare_exchange_strong(old, desired))
-                break;
+        int old = static_cast<int>(item_state::valid);
+        int desired = static_cast<int>(item_state::destructing);
+        while (!item.state_.compare_exchange_strong(
+                old, desired, std::memory_order_acq_rel, std::memory_order_relaxed))
             spinner.pause();
-        }
 
         // Ok. Now we can finally pop the element
         elem = std::move(item.elem_);
         assert(item.state_.load() == static_cast<int>(item_state::destructing));
-        item.state_ = static_cast<int>(item_state::freed);
+        item.state_.store(static_cast<int>(item_state::freed), std::memory_order_release);
     }
 };
 
