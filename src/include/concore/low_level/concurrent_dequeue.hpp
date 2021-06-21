@@ -142,7 +142,6 @@ struct bounded_dequeue {
 
         // Ok. Now we can finally construct the element
         item.elem_ = std::move(elem);
-        assert(item.state_.load() == static_cast<int>(item_state::constructing));
         item.state_.store(static_cast<int>(item_state::valid), std::memory_order_release);
     }
 
@@ -163,7 +162,6 @@ struct bounded_dequeue {
 
         // Ok. Now we can finally pop the element
         elem = std::move(item.elem_);
-        assert(item.state_.load() == static_cast<int>(item_state::destructing));
         item.state_.store(static_cast<int>(item_state::freed), std::memory_order_release);
     }
 };
