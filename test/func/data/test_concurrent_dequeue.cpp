@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <concore/low_level/concurrent_dequeue.hpp>
+#include <concore/data/concurrent_dequeue.hpp>
 #include <concore/profiling.hpp>
 
 #include "test_common/task_countdown.hpp"

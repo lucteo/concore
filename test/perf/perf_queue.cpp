@@ -1,4 +1,4 @@
-#include <concore/low_level/concurrent_dequeue.hpp>
+#include <concore/data/concurrent_dequeue.hpp>
 #include <concore/data/concurrent_queue.hpp>
 #include <concore/low_level/spin_backoff.hpp>
 #include <concore/profiling.hpp>
