@@ -137,7 +137,8 @@ TEST_CASE("concurrent_dequeue: multiple threads pushing and popping continuously
     constexpr int num_push_front_threads = 3;
     constexpr int num_pop_back_threads = 3;
     constexpr int num_pop_front_threads = 3;
-    constexpr int num_threads = num_push_back_threads + num_push_front_threads + num_pop_back_threads + num_pop_front_threads;
+    constexpr int num_threads = num_push_back_threads + num_push_front_threads +
+                                num_pop_back_threads + num_pop_front_threads;
 
     // used for a synchronized start
     task_countdown barrier{num_threads};
