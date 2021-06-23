@@ -41,6 +41,10 @@ struct bounded_dequeue {
         valid,
         destructing,
     };
+
+    //! The storage type for our elements
+    using storage_t = typename std::aligned_storage<sizeof(T), alignof(T)>::type;
+
     //! We need to add an atomic to the element, to know the state of each element.
     struct wrapped_elem { // NOLINT(cppcoreguidelines-pro-type-member-init)
         //! Indicates that the 'elem_' is considered part of the queue, and can be popped.
@@ -48,7 +52,7 @@ struct bounded_dequeue {
         //! While constructing the element this is false.
         std::atomic<int> state_{0};
         //! The element that we store in our queue
-        T elem_;
+        storage_t elem_;
     };
     //! The size of the queue with fast access
     const uint16_t size_;
@@ -150,7 +154,7 @@ struct bounded_dequeue {
                 static_cast<int>(item_state::constructing));
 
         // Ok. Now we can finally construct the element
-        item.elem_ = std::move(elem);
+        new (&item.elem_) T(std::forward<T>(elem));
         assert(item.state_.load() == static_cast<int>(item_state::constructing));
         item.state_.store(static_cast<int>(item_state::valid), std::memory_order_release);
     }
@@ -167,7 +171,8 @@ struct bounded_dequeue {
                 static_cast<int>(item_state::destructing));
 
         // Ok. Now we can finally pop the element
-        elem = std::move(item.elem_);
+        elem = std::move(reinterpret_cast<T&>(item.elem_));
+        reinterpret_cast<T&>(item.elem_).~T();
         assert(item.state_.load() == static_cast<int>(item_state::destructing));
         item.state_.store(static_cast<int>(item_state::freed), std::memory_order_release);
     }
@@ -214,6 +219,9 @@ public:
     //! The value type stored in the concurrent dequeue
     using value_type = T;
 
+    //! Default constructor
+    concurrent_dequeue();
+
     /**
      * @brief      Constructs a new instance of the queue, with the given preallocated size.
      *
@@ -225,6 +233,20 @@ public:
      * The number of reserved elements should be bigger than the expected concurrency.
      */
     explicit concurrent_dequeue(size_t expected_size);
+    //! Destructor
+    ~concurrent_dequeue() = default;
+
+    //! Copy constructor
+    concurrent_dequeue(const concurrent_dequeue&) = default;
+    //! Copy assignment
+    concurrent_dequeue& operator=(const concurrent_dequeue&) = default;
+
+    //! Move constructor
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    concurrent_dequeue(concurrent_dequeue&&) = default;
+    //! Move assignment
+    // NOLINTNEXTLINE(performance-noexcept-move-constructor)
+    concurrent_dequeue& operator=(concurrent_dequeue&&) = default;
 
     //! Pushes one element in the back of the queue.
     //! This is considered the default pushing operation.
@@ -254,6 +276,10 @@ private:
     //! The number of elements stored in slow_access_elems_; used it before trying to take the lock
     std::atomic<int> num_elements_slow_{0};
 };
+
+template <typename T>
+inline concurrent_dequeue<T>::concurrent_dequeue()
+    : fast_deque_(1024) {}
 
 template <typename T>
 inline concurrent_dequeue<T>::concurrent_dequeue(size_t expected_size)
