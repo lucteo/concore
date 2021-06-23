@@ -22,7 +22,7 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     //! Handler to be called whenever we have an exception while enqueueing the next task
     except_fun_t except_fun_;
     //! The queue of tasks that wait to be executed
-    concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
+    concurrent_queue<task> waiting_tasks_;
     //! The number of tasks that are in the queue
     std::atomic<int> count_{0};
 

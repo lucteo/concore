@@ -22,9 +22,9 @@ struct rw_serializer::impl : std::enable_shared_from_this<impl> {
     //! Handler to be called whenever we have an exception while enqueueing the next task
     except_fun_t except_fun_;
     //! The queue of READ tasks
-    concurrent_queue<task, queue_type::multi_prod_multi_cons> read_tasks_;
+    concurrent_queue<task> read_tasks_;
     //! The queue of WRITE tasks
-    concurrent_queue<task, queue_type::multi_prod_single_cons> write_tasks_;
+    concurrent_queue<task> write_tasks_;
     //! The number of READ and WRITE tasks in the queues; interpreted with `count_bits`
     std::atomic<uint64_t> combined_count_{0};
 

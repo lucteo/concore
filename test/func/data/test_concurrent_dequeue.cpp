@@ -201,3 +201,65 @@ TEST_CASE("concurrent_dequeue: multiple threads pushing and popping continuously
     int pops = num_pops.load();
     CHECK(pushes == pops);
 }
+
+std::atomic<int> g_num_ctors_{0};
+std::atomic<int> g_num_copy_ctors_{0};
+std::atomic<int> g_num_move_ctors_{0};
+std::atomic<int> g_num_dtors_{0};
+std::atomic<int> g_num_copy_oper_{0};
+std::atomic<int> g_num_move_oper_{0};
+
+void reset_counters() {
+    g_num_ctors_ = 0;
+    g_num_copy_ctors_ = 0;
+    g_num_move_ctors_ = 0;
+    g_num_dtors_ = 0;
+    g_num_copy_oper_ = 0;
+    g_num_move_oper_ = 0;
+}
+
+struct my_obj {
+    my_obj() { g_num_ctors_++; }
+    my_obj(const my_obj&) { g_num_copy_ctors_++; }
+    my_obj(my_obj&&) noexcept { g_num_move_ctors_++; }
+    ~my_obj() { g_num_dtors_++; }
+    my_obj& operator=(const my_obj&) {
+        g_num_copy_oper_++;
+        return *this;
+    }
+    my_obj& operator=(my_obj&&) noexcept {
+        g_num_move_oper_++;
+        return *this;
+    }
+};
+
+TEST_CASE("concurrent_dequeue: ctors and dtors", "[concurrent_dequeue]") {
+    constexpr int num_elements = 100;
+
+    reset_counters();
+    concore::concurrent_dequeue<my_obj> queue(1024);
+
+    // Push some elements in the queue
+    for (int i = 0; i < num_elements; i++) {
+        queue.push_back(my_obj());
+    }
+    REQUIRE(g_num_ctors_.load() == num_elements);
+    REQUIRE(g_num_copy_ctors_.load() == 0);
+    REQUIRE(g_num_move_ctors_.load() == num_elements);
+    REQUIRE(g_num_dtors_.load() == num_elements);
+    REQUIRE(g_num_copy_oper_.load() == 0);
+    REQUIRE(g_num_move_oper_.load() == 0);
+
+    // Pop now all the elements
+    my_obj obj;
+    for (int i = 0; i < num_elements; i++) {
+        bool res = queue.try_pop_front(obj);
+        REQUIRE(res);
+    }
+    REQUIRE(g_num_ctors_.load() == num_elements + 1);
+    REQUIRE(g_num_copy_ctors_.load() == 0);
+    REQUIRE(g_num_move_ctors_.load() == num_elements);
+    REQUIRE(g_num_dtors_.load() == 2 * num_elements);
+    REQUIRE(g_num_copy_oper_.load() == 0);
+    REQUIRE(g_num_move_oper_.load() == num_elements);
+}
