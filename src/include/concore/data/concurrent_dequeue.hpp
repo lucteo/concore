@@ -13,10 +13,23 @@
 #include <deque>
 #include <mutex>
 #include <cassert>
+#include <utility>
 
 namespace concore {
 
 namespace detail {
+
+//! Does a spin-loop and change the atomic from a given state to another.
+//! The transition must always start in the "from" state.
+inline void spin_switch_state(std::atomic<int>& state, int from, int to) {
+    int old = from;
+    spin_backoff spinner;
+    while (!state.compare_exchange_strong(
+            old, to, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+        old = from;
+        spinner.pause();
+    }
+}
 
 //! Bounded deque implementation, to be used if we the number of elements are relatively low.
 template <typename T>
@@ -133,15 +146,12 @@ struct bounded_dequeue {
 
         // Typically, the item is not being used by anybody else; but in rare conditions it might
         // not have finished to be destructed. In that case, wait for it to become free.
-        int old = static_cast<int>(item_state::freed);
-        int desired = static_cast<int>(item_state::constructing);
-        spin_backoff spinner;
-        while (!item.state_.compare_exchange_strong(
-                old, desired, std::memory_order_acq_rel, std::memory_order_relaxed))
-            spinner.pause();
+        spin_switch_state(item.state_, static_cast<int>(item_state::freed),
+                static_cast<int>(item_state::constructing));
 
         // Ok. Now we can finally construct the element
         item.elem_ = std::move(elem);
+        assert(item.state_.load() == static_cast<int>(item_state::constructing));
         item.state_.store(static_cast<int>(item_state::valid), std::memory_order_release);
     }
 
@@ -153,15 +163,12 @@ struct bounded_dequeue {
         // Typically, the item is valid; but in rare conditions it might not have finished to be
         // constructed. In that case, wait for it to become valid, before getting the data out of
         // it.
-        spin_backoff spinner;
-        int old = static_cast<int>(item_state::valid);
-        int desired = static_cast<int>(item_state::destructing);
-        while (!item.state_.compare_exchange_strong(
-                old, desired, std::memory_order_acq_rel, std::memory_order_relaxed))
-            spinner.pause();
+        spin_switch_state(item.state_, static_cast<int>(item_state::valid),
+                static_cast<int>(item_state::destructing));
 
         // Ok. Now we can finally pop the element
         elem = std::move(item.elem_);
+        assert(item.state_.load() == static_cast<int>(item_state::destructing));
         item.state_.store(static_cast<int>(item_state::freed), std::memory_order_release);
     }
 };
