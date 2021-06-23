@@ -171,8 +171,8 @@ struct bounded_dequeue {
                 static_cast<int>(item_state::destructing));
 
         // Ok. Now we can finally pop the element
-        elem = std::move(reinterpret_cast<T&>(item.elem_));
-        reinterpret_cast<T&>(item.elem_).~T();
+        elem = std::move(reinterpret_cast<T&>(item.elem_)); // NOLINT
+        reinterpret_cast<T&>(item.elem_).~T();              // NOLINT
         assert(item.state_.load() == static_cast<int>(item_state::destructing));
         item.state_.store(static_cast<int>(item_state::freed), std::memory_order_release);
     }
