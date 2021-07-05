@@ -191,10 +191,10 @@ public:
     //! Move operator
     task& operator=(task&&) = default;
 
-    //! Copy constructor is DISABLED
-    task(const task&) = delete;
-    //! Copy assignment operator is DISABLED
-    task& operator=(const task&) = delete;
+    //! Copy constructor
+    task(const task&) = default;
+    //! Copy assignment operatorD
+    task& operator=(const task&) = default;
 
     /**
      * @brief      Swap the content of the task with another task
