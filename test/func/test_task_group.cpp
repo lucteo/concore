@@ -173,15 +173,18 @@ TEST_CASE("task_group is inherited on spawn", "[task_group]") {
 
 void test_task_group_and_serializers(concore::any_executor executor) {
     auto grp = concore::task_group::create();
-    auto ftor = []() {
+    std::atomic<int> num_cancelled{0};
+    auto ftor = [&num_cancelled]() {
         CONCORE_PROFILING_SCOPE_N("ftor");
         int counter = 0;
         while (!concore::task_group::is_current_task_cancelled()) {
             std::this_thread::sleep_for(1ms);
-            if (counter++ > 1000)
+            if (counter++ > 1000) {
                 FAIL("task was not properly canceled in time");
+                return;
+            }
         }
-        REQUIRE(concore::task_group::is_current_task_cancelled());
+        num_cancelled++;
     };
     // Start the tasks
     for (int i = 0; i < 10; i++)
@@ -202,6 +205,7 @@ void test_task_group_and_serializers(concore::any_executor executor) {
 
     // Now, ensure that we execute the last task
     concore::wait(grpEnd);
+    REQUIRE(num_cancelled.load() >= 1);
     REQUIRE(reached_end_task.load());
 
     SUCCEED("tasks properly canceled");
