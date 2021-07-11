@@ -193,7 +193,7 @@ public:
 
     //! Copy constructor
     task(const task&) = default;
-    //! Copy assignment operatorD
+    //! Copy assignment operator
     task& operator=(const task&) = default;
 
     /**
