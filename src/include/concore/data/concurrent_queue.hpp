@@ -26,6 +26,18 @@ inline namespace v1 {
  *
  * There can be any number of threads calling @ref push() and @ref pop().
  *
+ * @warning: The move constructor of the given type must not throw.
+ *
+ * Exceptions guarantees:
+ * - push might throw while allocating memory; in this case, the element is not added
+ *
+ * Thread safety: except the following methods, everything else can be used concurrently:
+ * - constructors
+ * - copy/move assignments
+ * - @ref unsafe_clear()
+ *
+ * This queue does not provide any iterators, as those would be thread unsafe.
+ *
  * @see push(), try_pop(), concurrent_dequeue
  */
 template <typename T>
@@ -94,7 +106,11 @@ public:
      *
      * @see push()
      */
-    bool try_pop(T& elem) { return data_.try_pop_front(elem); }
+    bool try_pop(T& elem) noexcept { return data_.try_pop_front(elem); }
+
+    //! Clears the content of the queue.
+    //! This is not thread safe.
+    void unsafe_clear() noexcept { return data_.unsafe_clear(); }
 
 private:
     //! This is implemented in terms of a concurrent dequeue

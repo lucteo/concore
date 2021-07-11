@@ -14,6 +14,7 @@
 #include <mutex>
 #include <cassert>
 #include <utility>
+#include <type_traits>
 
 namespace concore {
 
@@ -21,13 +22,23 @@ namespace detail {
 
 //! Does a spin-loop and change the atomic from a given state to another.
 //! The transition must always start in the "from" state.
-inline void spin_switch_state(std::atomic<int>& state, int from, int to) {
+inline void spin_switch_state(std::atomic<int>& state, int from, int to) noexcept {
     int old = from;
     spin_backoff spinner;
     while (!state.compare_exchange_strong(
             old, to, std::memory_order_acq_rel, std::memory_order_relaxed)) {
         old = from;
         spinner.pause();
+    }
+}
+
+template <typename T, bool can_move_assign = std::is_nothrow_move_assignable_v<T>>
+void safe_move(T&& src, T& dest) {
+    if constexpr (can_move_assign) {
+        dest = std::move((T &&) src);
+    } else {
+        dest.~T();
+        new (&dest) T((T &&) src);
     }
 }
 
@@ -76,7 +87,7 @@ struct bounded_dequeue {
 
     //! Reserve one slot at the back of the fast queue. Yields the position of the reserved item.
     //! Returns false if we don't have enough room to add new elements.
-    bool reserve_back(uint16_t& pos) {
+    bool reserve_back(uint16_t& pos) noexcept {
         const auto max_dist = static_cast<uint16_t>(size_ - 3);
         fast_range old{}, desired{};
         old.int_value = fast_range_.load(std::memory_order_relaxed);
@@ -94,7 +105,7 @@ struct bounded_dequeue {
     }
     //! Reserve one slot at the front of the fast queue. Yields the position of the reserved item.
     //! Returns false if we don't have enough room to add new elements.
-    bool reserve_front(uint16_t& pos) {
+    bool reserve_front(uint16_t& pos) noexcept {
         const auto max_dist = static_cast<uint16_t>(size_ - 3);
         fast_range old{}, desired{};
         old.int_value = fast_range_.load(std::memory_order_relaxed);
@@ -111,7 +122,7 @@ struct bounded_dequeue {
         }
     }
     //! Consumes one slot at the front of the fast queue. Yields the position of the consumed item.
-    bool consume_front(uint16_t& pos) {
+    bool consume_front(uint16_t& pos) noexcept {
         fast_range old{}, desired{};
         old.int_value = fast_range_.load(std::memory_order_relaxed);
         while (true) {
@@ -127,7 +138,7 @@ struct bounded_dequeue {
         }
     }
     //! Consumes one slot at the front of the fast queue. Yields the position of the reserved item.
-    bool consume_back(uint16_t& pos) {
+    bool consume_back(uint16_t& pos) noexcept {
         fast_range old{}, desired{};
         old.int_value = fast_range_.load(std::memory_order_relaxed);
         while (true) {
@@ -145,7 +156,7 @@ struct bounded_dequeue {
 
     //! Construct an element in the fast queue.
     //! The place at position 'pos' is already reserved
-    void construct_in_fast(uint16_t pos, T&& elem) {
+    void construct_in_fast(uint16_t pos, T&& elem) noexcept {
         wrapped_elem& item = circular_buffer_[pos % size_];
 
         // Typically, the item is not being used by anybody else; but in rare conditions it might
@@ -161,7 +172,7 @@ struct bounded_dequeue {
 
     //! Extract an element from the fast queue.
     //! The place at position 'pos' is already marked as free
-    void extract_from_fast(uint16_t pos, T& elem) {
+    void extract_from_fast(uint16_t pos, T& elem) noexcept {
         wrapped_elem& item = circular_buffer_[pos % size_];
 
         // Typically, the item is valid; but in rare conditions it might not have finished to be
@@ -171,10 +182,24 @@ struct bounded_dequeue {
                 static_cast<int>(item_state::destructing));
 
         // Ok. Now we can finally pop the element
-        elem = std::move(reinterpret_cast<T&>(item.elem_)); // NOLINT
-        reinterpret_cast<T&>(item.elem_).~T();              // NOLINT
+        T& el = reinterpret_cast<T&>(item.elem_); // NOLINT
+        safe_move(std::move(el), elem);
+        el.~T(); // NOLINT(bugprone-use-after-move)
         assert(item.state_.load() == static_cast<int>(item_state::destructing));
         item.state_.store(static_cast<int>(item_state::freed), std::memory_order_release);
+    }
+
+    //! Clears the content of the queue.
+    //! Not thread-safe.
+    void unsafe_clear() noexcept {
+        for (auto& el : circular_buffer_) {
+            auto old_state = el.state_.load(std::memory_order_relaxed);
+            if (old_state == static_cast<int>(item_state::valid)) {
+                el.state_.store(static_cast<int>(item_state::freed), std::memory_order_relaxed);
+                reinterpret_cast<T&>(el.elem_).~T(); // NOLINT
+            }
+        }
+        fast_range_.store(0, std::memory_order_release);
     }
 };
 
@@ -193,6 +218,9 @@ inline namespace v1 {
  * Operations on the concurrent queue when we have few elements are fast: we only make atomic
  * operations, no memory allocation. We only use spin mutexes in this case.
  *
+ * If we have less than a configured number of elements (see constructor) then we would only use the
+ * fast queue. If the number of elements grows above this limit, we would switch to the slow queue.
+ *
  * If we have too many elements in the queue, we switch to a slower implementation that can grow to
  * a very large number of elements. For this we use regular mutexes.
  *
@@ -207,11 +235,27 @@ inline namespace v1 {
  *
  * Note 4: we expect contention over the atomic that stores the begin/end position in the fast queue
  *
- * The intent of this queue is to hold tasks in the task system. There, we typically add any
+ * One main use of this queue is to hold tasks in the task system. There, we typically add any
  * enqueued tasks to the end of the queue. The tasks that are spawned while working on some task are
  * pushed to the front of the queue. The popping of the tasks is typically done on the front of the
  * queue, but when stealing tasks, popping is done from the back of the queue -- trying to maximize
  * locality for nearby tasks.
+ *
+ * @warning: The move constructor of the given type must not throw.
+ *
+ * Exceptions guarantees:
+ * - fast queue: never throws
+ * - slow queue: push might throw while allocating memory; in this case, the element is not added to
+ *   the dequeue
+ *
+ * Thread safety: except the following methods, everything else can be used concurrently:
+ * - constructors
+ * - copy/move assignments
+ * - @ref unsafe_clear()
+ *
+ * The dequeue does not provide any iterators, as those would be thread unsafe.
+ *
+ * @see concurrent_queue
  */
 template <typename T>
 class concurrent_dequeue {
@@ -257,13 +301,13 @@ public:
 
     //! Try to pop one element from the front of the queue. Returns false if the queue is empty.
     //! This is considered the default popping operation.
-    bool try_pop_front(T& elem);
+    bool try_pop_front(T& elem) noexcept;
 
     //! Try to pop one element from the back of the queue. Returns false if the queue is empty.
-    bool try_pop_back(T& elem);
+    bool try_pop_back(T& elem) noexcept;
 
     //! Clears the queue
-    void unsafe_clear();
+    void unsafe_clear() noexcept;
 
 private:
     //! The fast dequeue implementation; uses a fixed number of elements.
@@ -314,7 +358,7 @@ inline void concurrent_dequeue<T>::push_front(T&& elem) {
 }
 
 template <typename T>
-inline bool concurrent_dequeue<T>::try_pop_front(T& elem) {
+inline bool concurrent_dequeue<T>::try_pop_front(T& elem) noexcept {
     // If we can extract one element from the fast queue, move an element from there
     uint16_t pos{0};
     if (fast_deque_.consume_front(pos)) {
@@ -326,7 +370,7 @@ inline bool concurrent_dequeue<T>::try_pop_front(T& elem) {
         if (slow_access_elems_.empty())
             return false;
         num_elements_slow_--;
-        elem = std::move(slow_access_elems_.front());
+        detail::safe_move(std::move(slow_access_elems_.front()), elem);
         slow_access_elems_.pop_front();
         return true;
     } else
@@ -334,7 +378,7 @@ inline bool concurrent_dequeue<T>::try_pop_front(T& elem) {
 }
 
 template <typename T>
-inline bool concurrent_dequeue<T>::try_pop_back(T& elem) {
+inline bool concurrent_dequeue<T>::try_pop_back(T& elem) noexcept {
     // If we can extract one element from the fast queue, move an element from there
     uint16_t pos{0};
     if (fast_deque_.consume_back(pos)) {
@@ -346,7 +390,7 @@ inline bool concurrent_dequeue<T>::try_pop_back(T& elem) {
         if (slow_access_elems_.empty())
             return false;
         num_elements_slow_--;
-        elem = std::move(slow_access_elems_.back());
+        detail::safe_move(std::move(slow_access_elems_.back()), elem);
         slow_access_elems_.pop_back();
         return true;
     } else
@@ -354,12 +398,12 @@ inline bool concurrent_dequeue<T>::try_pop_back(T& elem) {
 }
 
 template <typename T>
-inline void concurrent_dequeue<T>::unsafe_clear() {
-    fast_deque_.fast_range_ = 0;
-    for (auto& el : fast_deque_.circular_buffer_)
-        el.state_ = 0;
+inline void concurrent_dequeue<T>::unsafe_clear() noexcept {
+    // Clear the slow access elements
     slow_access_elems_.clear();
     num_elements_slow_ = 0;
+    // Clear the fast access elements
+    fast_deque_.unsafe_clear();
 }
 
 } // namespace v1
