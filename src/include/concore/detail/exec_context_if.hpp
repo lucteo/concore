@@ -15,22 +15,46 @@ class exec_context;
 struct worker_thread_data;
 
 /**
- * @brief Enqeueue a task in the execution context.
+ * @brief Enqueue a task in the execution context.
  *
  * @param ctx  The execution context object in which we enqueue the task
  * @param t    The task we want to be executed
- * @param prio The priority of the enqeueued task
+ * @param prio The priority of the enqueued task
  *
  * This will add the task in the execution's context queue of tasks to be executed. As opposed to
- * spawning, the eqnueuing tries to get the tasks executed in roughly the same order in which they
+ * spawning, the enqueuing tries to get the tasks executed in roughly the same order in which they
  * were added. Also, this supports adding tasks with different priorities.
  *
  * This is defined outside of the exec_context class, so that users don't have to include the
  * class header.
  *
- * @see  do_spawn(), exec_context
+ * This can throw. If that happens, the task object passed in is not moved from.
+ *
+ * @see  do_enqueue_noexcept() do_spawn(), exec_context
  */
 void do_enqueue(exec_context& ctx, task&& t, task_priority prio = task_priority::normal);
+
+/**
+ * @brief Enqueue a task in the execution context (noexcept).
+ *
+ * @param ctx  The execution context object in which we enqueue the task
+ * @param t    The task we want to be executed
+ * @param prio The priority of the enqueued task
+ *
+ * This will add the task in the execution's context queue of tasks to be executed. As opposed to
+ * spawning, the enqueuing tries to get the tasks executed in roughly the same order in which they
+ * were added. Also, this supports adding tasks with different priorities.
+ *
+ * This is defined outside of the exec_context class, so that users don't have to include the
+ * class header.
+ *
+ * This never throws. If there is an exception generated while trying to enqueue the task, then the
+ * continuation function of the task will be called with the exception that occurred.
+ *
+ * @see  do_enqueue(), do_spawn(), exec_context
+ */
+void do_enqueue_noexcept(
+        exec_context& ctx, task&& t, task_priority prio = task_priority::normal) noexcept;
 
 /**
  * @brief Spawns a task in the execution context.
@@ -39,8 +63,8 @@ void do_enqueue(exec_context& ctx, task&& t, task_priority prio = task_priority:
  * @param t             The task to be spawned
  * @param wake_workers  True if we need to wake any workers for this
  *
- * As opposed to enquing tasks, this will add the tasks to the front of the queue, so that the tasks
- * will roughly executed in the LIFO order. The aim for this one is to maximize locality.
+ * As opposed to enqueuing tasks, this will add the tasks to the front of the queue, so that the
+ * tasks will roughly executed in the LIFO order. The aim for this one is to maximize locality.
  *
  * If we are spawning a task at the end of another task, or when the current thread is ready to
  * execute new work, then it may be faster if we don't wake other worker threads; we know that the
@@ -50,9 +74,36 @@ void do_enqueue(exec_context& ctx, task&& t, task_priority prio = task_priority:
  * This is defined outside of the exec_context class, so that users don't have to include the
  * class header.
  *
+ * This can throw. If that happens, the task object passed in is not moved from.
+ *
  * @see  do_enqueue(), exec_context
  */
 void do_spawn(exec_context& ctx, task&& t, bool wake_workers = true);
+
+/**
+ * @brief Spawns a task in the execution context (noexcept).
+ *
+ * @param ctx           The execution context object in which we spawn the task
+ * @param t             The task to be spawned
+ * @param wake_workers  True if we need to wake any workers for this
+ *
+ * As opposed to enqueuing tasks, this will add the tasks to the front of the queue, so that the
+ * tasks will roughly executed in the LIFO order. The aim for this one is to maximize locality.
+ *
+ * If we are spawning a task at the end of another task, or when the current thread is ready to
+ * execute new work, then it may be faster if we don't wake other worker threads; we know that the
+ * current thread will be able to pick this task soon enough. In this case, pass `false` for the
+ * @ref wake_workers parameter.
+ *
+ * This is defined outside of the exec_context class, so that users don't have to include the
+ * class header.
+ *
+ * This never throws. If there is an exception generated while trying to spawn the task, then the
+ * continuation function of the task will be called with the exception that occurred.
+ *
+ * @see  do_enqueue(), exec_context
+ */
+void do_spawn_noexcept(exec_context& ctx, task&& t, bool wake_workers = true) noexcept;
 
 /**
  * @brief Busy-wait until the given task group is not active anymore.

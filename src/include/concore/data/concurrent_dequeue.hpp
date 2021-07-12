@@ -246,7 +246,9 @@ inline namespace v1 {
  * Exceptions guarantees:
  * - fast queue: never throws
  * - slow queue: push might throw while allocating memory; in this case, the element is not added to
- *   the dequeue
+ * the dequeue
+ * - if exception is thrown when allocating memory, the data is not moved away from the object
+ * passed in
  *
  * Thread safety: except the following methods, everything else can be used concurrently:
  * - constructors
