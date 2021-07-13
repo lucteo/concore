@@ -54,7 +54,7 @@ TEST_CASE("various executor types model the task_executor concept", "[execution]
     // other
     ensure_task_executor<concore::delegating_executor>();
     ensure_task_executor<concore::inline_executor>();
-    // ensure_task_executor<concore::static_thread_pool::executor_type>();
+    ensure_task_executor<concore::static_thread_pool::executor_type>();
 
     // serializers
     // ensure_task_executor<concore::serializer>();

@@ -35,8 +35,10 @@ struct pool_data;
 //! Gets the task group associated with the given pool. Used for testing
 task_group get_associated_group(const static_thread_pool& pool);
 
-//! Enqueue a task into the task pool
+//! Enqueue a task functor into the task pool
 void pool_enqueue(pool_data& pool, task_function&& t);
+//! Enqueue a task into the task pool
+void pool_enqueue_noexcept(pool_data& pool, task&& t) noexcept;
 
 //! Operation struct that models operation_state concept.
 //! Returned when the user calls 'connect' on the thread pool sender.
@@ -181,6 +183,8 @@ public:
     void execute(F&& f) const {
         pool_enqueue(*impl_, task_function{(F &&) f});
     }
+
+    void execute(task t) const noexcept { pool_enqueue_noexcept(*impl_, std::move(t)); }
 
     /**
      * \brief   Bulk-executes the given functor in the current thread pool.

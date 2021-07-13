@@ -261,6 +261,17 @@ public:
     const task_group& get_task_group() const { return task_group_; }
 
     /**
+     * @brief Sets the task group for the task
+     * @param grp The group that we want to set
+     *
+     * @details
+     *
+     * This is useful when manipulating tasks. One should not change the task
+     * group for tasks that are in execution.
+     */
+    void set_task_group(task_group grp) noexcept { task_group_ = std::move(grp); }
+
+    /**
      * @brief Returns the current executing task (if any)
      * @details
      *
