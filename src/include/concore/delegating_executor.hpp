@@ -15,6 +15,10 @@ inline namespace v1 {
  *
  * All the functor objects passed to the @ref execute() method will be delegated to a function that
  * takes a @ref task parameter. This function is passed to the constructor of the class.
+ *
+ * The function can throw exceptions. If the function throws while executing a task, the expectation
+ * is that it will not move away content from the given task. This way, we can call the continuation
+ * handler store in the task.
  */
 struct delegating_executor {
     //! The type of the function to be used to delegate execution to
@@ -25,7 +29,16 @@ struct delegating_executor {
         : fun_(std::move(f)) {}
 
     //! Method called to execute work in this executor
-    void execute(task t) const { fun_(std::move(t)); }
+    void execute(task t) const noexcept {
+        try {
+            // We expect that if there is an exception, the task object is not moved
+            fun_(std::move(t));
+        } catch (...) {
+            auto cont = t.get_continuation();
+            if (cont)
+                cont(std::current_exception());
+        }
+    }
     //! @overload
     template <typename F>
     void execute(F&& f) const {
