@@ -102,29 +102,29 @@ TEST_CASE("conc_for can work with plain forward iterators", "[conc_for]") {
     }));
 }
 
-// TEST_CASE("conc_for forwards the exceptions", "[conc_for]") {
-//     PROPERTY([](concore::partition_hints hints) {
-//         constexpr int num_iter = 100;
-//         std::atomic<int> count = 0;
-//
-//         // Do the iterations in parallel
-//         auto iter_work = [&count](int i) {
-//             if (i == 0)
-//                 throw std::runtime_error("some error");
-//             if (!concore::task_group::is_current_task_cancelled())
-//                 count++;
-//         };
-//         try {
-//             concore::conc_for(integral_iterator(0), integral_iterator(num_iter), iter_work,
-//             hints); RC_FAIL("Exception was not properly thrown");
-//         } catch (const std::runtime_error& ex) {
-//             RC_ASSERT(std::string(ex.what()) == std::string("some error"));
-//         } catch (...) {
-//             RC_FAIL("Exception does not match");
-//         }
-//         RC_ASSERT(count.load() < num_iter);
-//     });
-// }
+TEST_CASE("conc_for forwards the exceptions", "[conc_for]") {
+    PROPERTY([](concore::partition_hints hints) {
+        constexpr int num_iter = 100;
+        std::atomic<int> count = 0;
+
+        // Do the iterations in parallel
+        auto iter_work = [&count](int i) {
+            if (i == 0)
+                throw std::runtime_error("some error");
+            if (!concore::task_group::is_current_task_cancelled())
+                count++;
+        };
+        try {
+            concore::conc_for(integral_iterator(0), integral_iterator(num_iter), iter_work, hints);
+            RC_FAIL("Exception was not properly thrown");
+        } catch (const std::runtime_error& ex) {
+            RC_ASSERT(std::string(ex.what()) == std::string("some error"));
+        } catch (...) {
+            RC_FAIL("Exception does not match");
+        }
+        RC_ASSERT(count.load() < num_iter);
+    });
+}
 
 TEST_CASE("conc_for can be used to implement transform", "[conc_for]") {
     PROPERTY([](concore::partition_hints hints, std::vector<int> v) {

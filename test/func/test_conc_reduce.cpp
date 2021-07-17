@@ -68,51 +68,51 @@ TEST_CASE("conc_reduce can be canceled", "[conc_reduce]") {
                 integral_iterator(0), integral_iterator(1000), 0, op, reduction, grp, hints);
     });
 }
-// TEST_CASE("conc_reduce forwards the exceptions in the binary operation", "[conc_reduce]") {
-//     PROPERTY([](concore::partition_hints hints) {
-//         constexpr int num_iter = 100;
-//         int res = 0;
-//         int not_expected = (num_iter - 1) * num_iter / 2;
-//
-//         auto op = [](int id, int i) -> int {
-//             if (i == 0)
-//                 throw std::runtime_error("some error");
-//             return id + i;
-//         };
-//         auto reduction = [](int lhs, int rhs) -> int { return lhs + rhs; };
-//         try {
-//             res = concore::conc_reduce(
-//                     integral_iterator(0), integral_iterator(num_iter), 0, op, reduction, hints);
-//             RC_FAIL("Exception was not properly thrown");
-//         } catch (const std::runtime_error& ex) {
-//             RC_ASSERT(std::string(ex.what()) == std::string("some error"));
-//         } catch (...) {
-//             RC_FAIL("Exception does not match");
-//         }
-//         RC_ASSERT(res < not_expected);
-//     });
-// }
-// TEST_CASE("conc_reduce forwards the exceptions in the reduce operation", "[conc_reduce]") {
-//     PROPERTY([](concore::partition_hints hints) {
-//         constexpr int num_iter = 100;
-//         int res = 0;
-//         int not_expected = (num_iter - 1) * num_iter / 2;
-//
-//         auto op = [](int id, int i) -> int { return id + i; };
-//         auto reduction = [](int lhs, int rhs) -> int {
-//             if (lhs != 0)
-//                 throw std::runtime_error("some error");
-//             return lhs + rhs;
-//         };
-//         try {
-//             res = concore::conc_reduce(
-//                     integral_iterator(0), integral_iterator(num_iter), 0, op, reduction, hints);
-//             RC_FAIL("Exception was not properly thrown");
-//         } catch (const std::runtime_error& ex) {
-//             RC_ASSERT(std::string(ex.what()) == std::string("some error"));
-//         } catch (...) {
-//             RC_FAIL("Exception does not match");
-//         }
-//         RC_ASSERT(res < not_expected);
-//     });
-// }
+TEST_CASE("conc_reduce forwards the exceptions in the binary operation", "[conc_reduce]") {
+    PROPERTY([](concore::partition_hints hints) {
+        constexpr int num_iter = 100;
+        int res = 0;
+        int not_expected = (num_iter - 1) * num_iter / 2;
+
+        auto op = [](int id, int i) -> int {
+            if (i == 0)
+                throw std::runtime_error("some error");
+            return id + i;
+        };
+        auto reduction = [](int lhs, int rhs) -> int { return lhs + rhs; };
+        try {
+            res = concore::conc_reduce(
+                    integral_iterator(0), integral_iterator(num_iter), 0, op, reduction, hints);
+            RC_FAIL("Exception was not properly thrown");
+        } catch (const std::runtime_error& ex) {
+            RC_ASSERT(std::string(ex.what()) == std::string("some error"));
+        } catch (...) {
+            RC_FAIL("Exception does not match");
+        }
+        RC_ASSERT(res < not_expected);
+    });
+}
+TEST_CASE("conc_reduce forwards the exceptions in the reduce operation", "[conc_reduce]") {
+    PROPERTY([](concore::partition_hints hints) {
+        constexpr int num_iter = 100;
+        int res = 0;
+        int not_expected = (num_iter - 1) * num_iter / 2;
+
+        auto op = [](int id, int i) -> int { return id + i; };
+        auto reduction = [](int lhs, int rhs) -> int {
+            if (lhs != 0)
+                throw std::runtime_error("some error");
+            return lhs + rhs;
+        };
+        try {
+            res = concore::conc_reduce(
+                    integral_iterator(0), integral_iterator(num_iter), 0, op, reduction, hints);
+            RC_FAIL("Exception was not properly thrown");
+        } catch (const std::runtime_error& ex) {
+            RC_ASSERT(std::string(ex.what()) == std::string("some error"));
+        } catch (...) {
+            RC_FAIL("Exception does not match");
+        }
+        RC_ASSERT(res < not_expected);
+    });
+}
