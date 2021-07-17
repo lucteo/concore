@@ -46,30 +46,31 @@ TEST_CASE("conc_scan is equivalent to std::partial_sum (forward_list)", "[conc_s
     });
 }
 
-TEST_CASE("conc_scan forwards the exceptions", "[conc_scan]") {
-    PROPERTY([](concore::partition_hints hints) {
-        constexpr int num_iter = 100;
-        int res = 0;
-
-        std::vector<int> dest(num_iter, 0);
-
-        auto op = [](int id, int i) -> int {
-            if (i == 0)
-                throw std::runtime_error("some error");
-            return id + i;
-        };
-        try {
-            res = concore::conc_scan(
-                    integral_iterator(0), integral_iterator(num_iter), dest.begin(), 0, op, hints);
-            RC_FAIL("Exception was not properly thrown");
-        } catch (const std::runtime_error& ex) {
-            RC_ASSERT(std::string(ex.what()) == std::string("some error"));
-        } catch (...) {
-            RC_FAIL("Exception does not match");
-        }
-        RC_ASSERT(res == 0);
-    });
-}
+// TEST_CASE("conc_scan forwards the exceptions", "[conc_scan]") {
+//     PROPERTY([](concore::partition_hints hints) {
+//         constexpr int num_iter = 100;
+//         int res = 0;
+//
+//         std::vector<int> dest(num_iter, 0);
+//
+//         auto op = [](int id, int i) -> int {
+//             if (i == 0)
+//                 throw std::runtime_error("some error");
+//             return id + i;
+//         };
+//         try {
+//             res = concore::conc_scan(
+//                     integral_iterator(0), integral_iterator(num_iter), dest.begin(), 0, op,
+//                     hints);
+//             RC_FAIL("Exception was not properly thrown");
+//         } catch (const std::runtime_error& ex) {
+//             RC_ASSERT(std::string(ex.what()) == std::string("some error"));
+//         } catch (...) {
+//             RC_FAIL("Exception does not match");
+//         }
+//         RC_ASSERT(res == 0);
+//     });
+// }
 
 TEST_CASE("conc_scan on non-commutative operations (static)", "[conc_scan]") {
     int sz = ('Z' - 'A' + 1) * 2;

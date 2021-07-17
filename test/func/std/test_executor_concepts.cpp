@@ -49,7 +49,7 @@ TEST_CASE("various executor types model the task_executor concept", "[execution]
     ensure_task_executor<concore::spawn_continuation_executor>();
 
     // generic
-    // ensure_task_executor<concore::any_executor>();
+    ensure_task_executor<concore::any_executor>();
 
     // other
     ensure_task_executor<concore::delegating_executor>();

@@ -22,8 +22,7 @@ set(func_sourceFiles
     "func/test_any_executor.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
-    "func/test_executors_match_concept.cpp"
-    "func/test_task_continuation.cpp"
+        "func/test_task_continuation.cpp"
 
     "func/std/test_thread_pool.cpp"
     "func/std/test_concepts.cpp"

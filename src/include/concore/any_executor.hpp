@@ -26,7 +26,8 @@ struct executor_base {
     executor_base& operator=(const executor_base&) = delete;
     executor_base& operator=(executor_base&&) = delete;
 
-    virtual void execute(task t) const = 0;
+    virtual void execute(task_function f) const = 0;
+    virtual void execute(task t) const noexcept = 0;
     virtual executor_base* clone() const = 0;
     virtual bool is_same(const executor_base& other) const = 0;
     virtual const std::type_info& target_type() const noexcept = 0;
@@ -34,12 +35,15 @@ struct executor_base {
     virtual const void* target() const noexcept = 0;
 };
 
-template <CONCORE_CONCEPT_OR_TYPENAME(executor) Executor>
+template <typename Executor>
 struct executor_wrapper : executor_base {
+    static_assert(task_executor<Executor>, "Type needs to match task_executor concept");
+
     explicit executor_wrapper(Executor e)
         : exec_(std::forward<Executor>(e)) {}
 
-    void execute(task t) const override { concore::execute(exec_, std::move(t)); }
+    void execute(task_function f) const override { concore::execute(exec_, std::move(f)); }
+    void execute(task t) const noexcept override { concore::execute(exec_, std::move(t)); }
     executor_wrapper* clone() const override { return new executor_wrapper(exec_); }
     bool is_same(const executor_base& other) const override {
         return exec_ == static_cast<const executor_wrapper&>(other).exec_;
@@ -157,10 +161,25 @@ public:
     template <typename F>
     void execute(F&& f) const {
         assert(wrapper_);
-        wrapper_->execute(task{std::forward<F>(f)});
+        wrapper_->execute(std::forward<F>(f));
     }
-    //! @overload
-    void execute(task t) const {
+    /**
+     * @brief The main execution method of this executor
+     *
+     * @param t The task to be executed in the wrapped executor
+     *
+     * @details
+     *
+     * This implements the `execute()` CPO for this executor object, making it conform to the
+     * executor concept. It forwards the call to the underlying executor.
+     *
+     * This guarantees that no exceptions will be thrown. If, some exceptions appear in the
+     * enqueuing of the task, then these will be reported to the continuation function stored in the
+     * task.
+     *
+     * @see executor
+     */
+    void execute(task t) const noexcept {
         assert(wrapper_);
         wrapper_->execute(std::move(t));
     }
@@ -189,7 +208,7 @@ public:
     }
 
     //! Equality operator
-    friend inline bool operator==(any_executor l, any_executor r) {
+    friend inline bool operator==(const any_executor& l, const any_executor& r) {
         if (!l && !r)
             return true;
         else if (l && r && l.target_type() == r.target_type())
@@ -198,15 +217,21 @@ public:
             return false;
     }
     //! @overload
-    friend inline bool operator==(any_executor l, std::nullptr_t) { return l.wrapper_ == nullptr; }
+    friend inline bool operator==(const any_executor& l, std::nullptr_t) {
+        return l.wrapper_ == nullptr;
+    }
     //! @overload
-    friend inline bool operator==(std::nullptr_t, any_executor r) { return r.wrapper_ == nullptr; }
+    friend inline bool operator==(std::nullptr_t, const any_executor& r) {
+        return r.wrapper_ == nullptr;
+    }
     //! Inequality operator
-    friend inline bool operator!=(any_executor l, any_executor r) { return !(l == r); }
+    friend inline bool operator!=(const any_executor& l, const any_executor& r) {
+        return !(l == r);
+    }
     //! @overload
-    friend inline bool operator!=(any_executor l, std::nullptr_t r) { return !(l == r); }
+    friend inline bool operator!=(const any_executor& l, std::nullptr_t r) { return !(l == r); }
     //! @overload
-    friend inline bool operator!=(std::nullptr_t l, any_executor r) { return !(l == r); }
+    friend inline bool operator!=(std::nullptr_t l, const any_executor& r) { return !(l == r); }
 
 private:
     //! The wrapped executor object

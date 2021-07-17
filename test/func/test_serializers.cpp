@@ -69,10 +69,7 @@ void check_execute_with_exceptions(Creator creat) {
 
 //! Creates an executor that increments a counter when executed
 // concore::delegating_executor get_throwing_exec() {
-//     auto ftor = [](concore::task t) {
-//         throw std::logic_error("err");
-//         concore::global_executor{}.execute(std::move(t));
-//     };
+//     auto ftor = [](concore::task t) { throw std::logic_error("err"); };
 //     return concore::delegating_executor(std::move(ftor));
 // }
 
