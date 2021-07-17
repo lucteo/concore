@@ -166,11 +166,29 @@ rw_serializer::reader_type::reader_type(std::shared_ptr<impl> impl)
     : impl_(std::move(impl)) {}
 
 void rw_serializer::reader_type::do_enqueue(task t) const { impl_->enqueue_read(std::move(t)); }
+void rw_serializer::reader_type::do_enqueue_noexcept(task t) const noexcept {
+    try {
+        impl_->enqueue_read(std::move(t));
+    } catch (...) {
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
 
 rw_serializer::writer_type::writer_type(std::shared_ptr<impl> impl)
     : impl_(std::move(impl)) {}
 
 void rw_serializer::writer_type::do_enqueue(task t) const { impl_->enqueue_write(std::move(t)); }
+void rw_serializer::writer_type::do_enqueue_noexcept(task t) const noexcept {
+    try {
+        impl_->enqueue_write(std::move(t));
+    } catch (...) {
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
 
 rw_serializer::rw_serializer(any_executor base_executor, any_executor cont_executor)
     : impl_(std::make_shared<impl>(base_executor, cont_executor)) {}

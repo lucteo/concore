@@ -57,8 +57,8 @@ TEST_CASE("various executor types model the task_executor concept", "[execution]
     ensure_task_executor<concore::static_thread_pool::executor_type>();
 
     // serializers
-    // ensure_task_executor<concore::serializer>();
-    // ensure_task_executor<concore::n_serializer>();
-    // ensure_task_executor<concore::rw_serializer::reader_type>();
-    // ensure_task_executor<concore::rw_serializer::writer_type>();
+    ensure_task_executor<concore::serializer>();
+    ensure_task_executor<concore::n_serializer>();
+    ensure_task_executor<concore::rw_serializer::reader_type>();
+    ensure_task_executor<concore::rw_serializer::writer_type>();
 }

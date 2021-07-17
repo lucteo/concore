@@ -77,8 +77,20 @@ public:
             do_enqueue(task{std::forward<F>(f)});
         }
 
-        //! @overload
-        void execute(task t) const { do_enqueue(std::move(t)); }
+        /**
+         * @brief      Enqueue a functor as a write operation in the RW serializer
+         *
+         * @details
+         *
+         * Depending on the state of the parent @ref rw_serializer object this will enqueue the task
+         * immediately (if there are no *WRITE* tasks), or it will place it in a waiting list to be
+         * executed later. The tasks on the waiting lists will be enqueued once there are no more
+         * *WRITE* tasks.
+         *
+         * If the enqueuing throws, then the serializer remains valid (can enqueue and execute other
+         * tasks). The exception will be passed to the continuation of the given task.
+         */
+        void execute(task t) const noexcept { do_enqueue_noexcept(std::move(t)); }
 
         //! Equality operator
         friend inline bool operator==(reader_type l, reader_type r) { return l.impl_ == r.impl_; }
@@ -88,6 +100,7 @@ public:
     private:
         //! Implementation method for enqueueing a READ task
         void do_enqueue(task t) const;
+        void do_enqueue_noexcept(task t) const noexcept;
     };
 
     /**
@@ -117,8 +130,20 @@ public:
             do_enqueue(task{std::forward<F>(f)});
         }
 
-        //! @overload
-        void execute(task t) const { do_enqueue(std::move(t)); }
+        /**
+         * @brief      Enqueue a functor as a write operation in the RW serializer
+         *
+         * @details
+         *
+         * Depending on the state of the parent @ref rw_serializer object this will enqueue the task
+         * immediately (if there are no other tasks executing), or it will place it in a waiting
+         * list to be executed later. The tasks on the waiting lists will be enqueued, in order, one
+         * by one. No new *READ* tasks are executed while we have *WRITE* tasks in the waiting list.
+         *
+         * If the enqueuing throws, then the serializer remains valid (can enqueue and execute other
+         * tasks). The exception will be passed to the continuation of the given task.
+         */
+        void execute(task t) const noexcept { do_enqueue_noexcept(std::move(t)); }
 
         //! @copydoc execute()
         void operator()(task t) const { do_enqueue(std::move(t)); }
@@ -131,6 +156,7 @@ public:
     private:
         //! Implementation method for enqueueing WRITE tasks
         void do_enqueue(task t) const;
+        void do_enqueue_noexcept(task t) const noexcept;
     };
 
     /**

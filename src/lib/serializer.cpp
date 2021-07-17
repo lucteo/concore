@@ -81,6 +81,15 @@ serializer::serializer(any_executor base_executor, any_executor cont_executor)
 
 void serializer::do_enqueue(task t) const { impl_->enqueue(std::move(t)); }
 
+void serializer::do_enqueue_noexcept(task t) const noexcept {
+    try {
+        impl_->enqueue(std::move(t));
+    } catch (...) {
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
 void serializer::set_exception_handler(except_fun_t except_fun) {
     impl_->except_fun_ = std::move(except_fun);
 }

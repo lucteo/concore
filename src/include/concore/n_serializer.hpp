@@ -90,8 +90,23 @@ public:
         do_enqueue(task{std::forward<F>(f)});
     }
 
-    //! @overload
-    void execute(task t) const { do_enqueue(std::move(t)); }
+    /**
+     * @brief      Executes the given functor in the context of the N serializer.
+     *
+     * @param      f     The task functor to be enqueued in the serializer
+     *
+     * @details
+     *
+     * If there are no more than *N* tasks in the serializer, this task will be enqueued in the
+     * `base_executor` given to the constructor (default is @ref global_executor). If there are
+     * already enough other tasks in the serializer, the given task will be placed in a waiting
+     * list. When all the previous tasks are executed, this task will also be enqueued for
+     * execution.
+     *
+     * If the enqueuing throws, then the serializer remains valid (can enqueue and execute other
+     * tasks). The exception will be passed to the continuation of the given task.
+     */
+    void execute(task t) const noexcept { do_enqueue_noexcept(std::move(t)); }
 
     /**
      * @brief      Sets the exception handler for enqueueing tasks
@@ -124,6 +139,7 @@ private:
 
     //! Enqueues a task for execution
     void do_enqueue(task t) const;
+    void do_enqueue_noexcept(task t) const noexcept;
 };
 
 } // namespace v1
