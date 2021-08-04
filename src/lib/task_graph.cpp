@@ -17,7 +17,6 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
     std::atomic<int32_t> pred_count_{0};
     std::vector<chained_task> next_tasks_;
     any_executor executor_;
-    except_fun_t except_fun_;
 
     chained_task_impl(task t, any_executor executor)
         : task_fun_(std::move(t))
@@ -27,13 +26,13 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
     }
 
     //! Called whenever this task is done, to continue with the execution of the graph
-    void on_cont(std::exception_ptr) {
+    void on_cont(std::exception_ptr) noexcept {
         CONCORE_PROFILING_SCOPE_N("chained_task.on_cont");
         // Try to execute the next tasks
         for (auto& n : next_tasks_) {
             if (n.impl_->pred_count_-- == 1) {
-                chained_task next(std::move(n)); // don't keep the ref here anymore
-                detail::enqueue_next(executor_, task(next), except_fun_);
+                chained_task next(std::move(n));                // don't keep the ref here anymore
+                executor_.execute(task{next.impl_->task_fun_}); // execute a copy of the task
             }
         }
         next_tasks_.clear();
@@ -62,29 +61,22 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
 inline namespace v1 {
 
 chained_task::chained_task(task t, any_executor executor)
-    : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {}
+    : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {
 
-void chained_task::operator()() {
+    impl_->set_continuation();
+}
+
+void chained_task::operator()() noexcept {
     CONCORE_PROFILING_SCOPE_N("chained_task.()");
     assert(impl_->pred_count_.load() == 0);
 
-    // Set a new continuation to the task to be executed, to trigger the next chained tasks
-    impl_->set_continuation();
-
     // Execute the current task
     impl_->task_fun_();
-
-    // Clear the continuation from our main task
-    impl_->task_fun_.set_continuation({});
-}
-
-void chained_task::set_exception_handler(except_fun_t except_fun) {
-    impl_->except_fun_ = std::move(except_fun);
 }
 
 chained_task::operator bool() const noexcept { return static_cast<bool>(impl_); }
 
-void chained_task::clear_next() {
+void chained_task::clear_next() noexcept {
     for (auto& n : impl_->next_tasks_)
         n.impl_->pred_count_--;
     impl_->next_tasks_.clear();

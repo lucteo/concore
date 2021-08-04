@@ -218,6 +218,9 @@ public:
      *
      * This is typically called after some time has passed since task creation. The user must ensure
      * that the functor stored in the task is safe to be executed at that point.
+     *
+     * This does not invalidate the task object, by itself. Theoretically, this can be called
+     * multiple times in a row.
      */
     void operator()();
 

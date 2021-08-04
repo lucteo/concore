@@ -101,23 +101,12 @@ public:
      * to start executing the successors that don't have any other active predecessors.
      *
      * This will use the executor given at construction to start successor tasks.
+     *
+     * The exceptions raised during the execution of the task, will be reported to the continuation
+     * of the task executed (and to the task group of the task). In any case, the successor tasks
+     * will be executed.
      */
-    void operator()();
-
-    /**
-     * @brief      Sets the exception handler for enqueueing tasks
-     *
-     * @param      except_fun  The function to be called whenever an exception occurs.
-     *
-     * @details
-     *
-     * The exception handler set here will be called whenever an exception is thrown while
-     * enqueueing a follow-up task. It will not be called whenever the task itself throws an
-     * exception; that will be handled by the exception handler set in the group of the task.
-     *
-     * @see task_group::set_exception_handler
-     */
-    void set_exception_handler(except_fun_t except_fun);
+    void operator()() noexcept;
 
     /**
      * @brief      Bool conversion operator.
@@ -131,7 +120,7 @@ public:
      *
      * This is useful for constructing and destroying task graphs manually.
      */
-    void clear_next();
+    void clear_next() noexcept;
 
 private:
     //! Implementation data for a chained task
