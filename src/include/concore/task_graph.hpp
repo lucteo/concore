@@ -125,6 +125,8 @@ public:
 private:
     //! Implementation data for a chained task
     std::shared_ptr<detail::chained_task_impl> impl_;
+    //! The task that should be executed; we actually execute copies of these objects
+    std::shared_ptr<task> to_execute_;
 
     friend struct detail::chained_task_impl;
     friend void add_dependency(chained_task, chained_task);

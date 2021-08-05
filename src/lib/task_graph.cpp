@@ -13,14 +13,12 @@ namespace detail {
 
 //! The data for a chained_task
 struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl> {
-    task task_fun_;
     std::atomic<int32_t> pred_count_{0};
     std::vector<chained_task> next_tasks_;
     any_executor executor_;
 
-    chained_task_impl(task t, any_executor executor)
-        : task_fun_(std::move(t))
-        , executor_(executor) {
+    chained_task_impl(any_executor executor)
+        : executor_(executor) {
         if (!executor)
             executor_ = concore::spawn_executor{};
     }
@@ -31,8 +29,8 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
         // Try to execute the next tasks
         for (auto& n : next_tasks_) {
             if (n.impl_->pred_count_-- == 1) {
-                chained_task next(std::move(n));                // don't keep the ref here anymore
-                executor_.execute(task{next.impl_->task_fun_}); // execute a copy of the task
+                chained_task next(std::move(n));      // don't keep the ref here anymore
+                executor_.execute(*next.to_execute_); // execute a copy of the task
             }
         }
         next_tasks_.clear();
@@ -40,8 +38,8 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
 
     //! Set the continuation of the task, so that it executes the next tasks in the graph.
     //! If the task already has a continuation, that would be called first.
-    void set_continuation() {
-        auto inner_cont = task_fun_.get_continuation();
+    void set_continuation(task& t) {
+        auto inner_cont = t.get_continuation();
         task_continuation_function cont;
         if (inner_cont) {
             cont = [inner_cont, p_this = shared_from_this()](std::exception_ptr ex) {
@@ -52,7 +50,7 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
             cont = [p_this = shared_from_this()](
                            std::exception_ptr ex) { p_this->on_cont(std::move(ex)); };
         }
-        task_fun_.set_continuation(std::move(cont));
+        t.set_continuation(std::move(cont));
     }
 };
 
@@ -61,9 +59,9 @@ struct chained_task_impl : public std::enable_shared_from_this<chained_task_impl
 inline namespace v1 {
 
 chained_task::chained_task(task t, any_executor executor)
-    : impl_(std::make_shared<detail::chained_task_impl>(std::move(t), executor)) {
-
-    impl_->set_continuation();
+    : impl_(std::make_shared<detail::chained_task_impl>(std::move(executor)))
+    , to_execute_(std::make_shared<task>(std::move(t))) {
+    impl_->set_continuation(*to_execute_);
 }
 
 void chained_task::operator()() noexcept {
@@ -71,7 +69,7 @@ void chained_task::operator()() noexcept {
     assert(impl_->pred_count_.load() == 0);
 
     // Execute the current task
-    impl_->task_fun_();
+    (*to_execute_)();
 }
 
 chained_task::operator bool() const noexcept { return static_cast<bool>(impl_); }
