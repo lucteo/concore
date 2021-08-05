@@ -22,7 +22,7 @@ set(func_sourceFiles
     "func/test_any_executor.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
-        "func/test_task_continuation.cpp"
+    "func/test_task_continuation.cpp"
 
     "func/std/test_thread_pool.cpp"
     "func/std/test_concepts.cpp"
@@ -35,6 +35,7 @@ set(func_sourceFiles
     "func/std/test_cpo_connect.cpp"
     "func/std/test_cpo_submit.cpp"
     "func/std/test_sender_algo.cpp"
+    "func/std/test_sender_done_error.cpp"
 
     "func/profiling_helper_test.cpp" # Must be last
 )

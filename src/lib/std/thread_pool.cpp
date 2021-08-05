@@ -66,6 +66,15 @@ void pool_enqueue(pool_data& pool, task_function&& t) {
     pool.ctx_->enqueue(task{std::move(t), pool.grp_});
 }
 
+bool pool_enqueue_check_cancel(pool_data& pool, task_function&& t) {
+    if (pool.grp_.is_cancelled())
+        return false;
+    else {
+        pool.ctx_->enqueue(task{std::move(t), pool.grp_});
+        return true;
+    }
+}
+
 void pool_enqueue_noexcept(pool_data& pool, task&& t) noexcept {
     try {
         if (t.get_task_group()) {

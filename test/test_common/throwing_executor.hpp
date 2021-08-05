@@ -2,7 +2,7 @@
 
 struct throwing_executor {
     template <typename F>
-    void execute(F f) const {
+    void execute(F&& f) const {
         throw std::logic_error("err");
     }
     void execute(concore::task&& t) const noexcept {
