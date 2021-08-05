@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/any_executor.hpp>
 #include <concore/inline_executor.hpp>
+#include "test_common/throwing_executor.hpp"
 
 #include <atomic>
 #include <thread>
@@ -68,26 +69,6 @@ TEST_CASE("any_executor can expose the type_info for the wrapped executor", "[an
     REQUIRE(e3.target_type() == typeid(concore::inline_executor));
     REQUIRE(e4.target_type() == typeid(concore::inline_executor));
 }
-
-struct throwing_executor {
-    template <typename F>
-    void execute(F f) const {
-        throw std::logic_error("err");
-    }
-    void execute(concore::task t) const noexcept {
-        auto cont = t.get_continuation();
-        if (cont) {
-            try {
-                throw std::logic_error("err");
-            } catch (...) {
-                cont(std::current_exception());
-            }
-        }
-    }
-
-    friend inline bool operator==(throwing_executor, throwing_executor) { return true; }
-    friend inline bool operator!=(throwing_executor, throwing_executor) { return false; }
-};
 
 TEST_CASE("any_executor doesn't throw when enqueuing tasks", "[any_executor]") {
     concore::any_executor e1{throwing_executor{}};
