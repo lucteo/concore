@@ -28,6 +28,8 @@ inline namespace v1 {
  * thrown, the @ref set_error() function is called.
  *
  * If the functor is never called, the destructor of this object will call set_done().
+ * Alternatively, if the receiver is called manually, dismiss() can be called to prevent the
+ * destructor for calling set_done().
  *
  * @see as_receiver
  */
@@ -78,6 +80,11 @@ struct as_invocable {
             receiver_ = nullptr;
         }
     }
+
+    //! Called to dismiss the call of set_done() in the destructor.
+    //! This should be called whenever the user externally calls one of the CPOs
+    //! on the receiver.
+    void dismiss() noexcept { receiver_ = nullptr; }
 
 private:
     //! The receiver object to forward the call to
