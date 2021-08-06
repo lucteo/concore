@@ -90,7 +90,7 @@ TEST_CASE("as_operation calls set_done when executor cancelled execution", "[sen
 TEST_CASE("as_sender calls set_error when executor throws", "[sender_algo]") {
     bool executed{false};
     concore::as_sender<throwing_executor> sender{{}};
-    concore::submit(std::move(sender), expect_error_receiver{&executed});
+    concore::submit(sender, expect_error_receiver{&executed});
     REQUIRE(executed);
 }
 
@@ -101,7 +101,7 @@ TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender
 
     bool executed{false};
     concore::as_sender<decltype((ex))> sender{ex};
-    concore::submit(std::move(sender), expect_done_receiver{&executed});
+    concore::submit(sender, expect_done_receiver{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
@@ -170,7 +170,7 @@ TEST_CASE("transform propagates set_error", "[sender_algo]") {
     auto sender = concore::transform(int_throwing_sender(), [](int x) { return x * x; });
 
     bool executed{false};
-    concore::submit(std::move(sender), expect_error_receiver{&executed});
+    concore::submit(sender, expect_error_receiver{&executed});
     REQUIRE(executed);
 }
 
@@ -209,7 +209,7 @@ TEST_CASE("let_value propagates set_error", "[sender_algo]") {
     auto s = concore::let_value(int_throwing_sender(), std::move(let_value_fun));
 
     bool executed{false};
-    concore::submit(std::move(s), expect_error_receiver{&executed});
+    concore::submit(s, expect_error_receiver{&executed});
     REQUIRE(executed);
 }
 
