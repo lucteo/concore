@@ -87,3 +87,66 @@ TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender
     my_pool.wait();
     REQUIRE(executed);
 }
+
+TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") {
+    struct throwing_scheduler {
+        concore::as_sender<throwing_executor> schedule() noexcept {
+            return concore::as_sender<throwing_executor>{{}};
+        }
+    };
+
+    concore::static_thread_pool my_pool{1};
+    auto ex = my_pool.executor();
+
+    bool executed{false};
+    concore::as_sender<decltype(ex)> sender{ex};
+    auto sender1 = on(sender, throwing_scheduler{});
+    auto op = concore::connect(sender1, expect_error_receiver{&executed});
+    op.start();
+    my_pool.wait();
+    REQUIRE(executed);
+}
+
+TEST_CASE("on calls set_error when scheduler reports error", "[sender_algo]") {
+    concore::static_thread_pool my_pool{1};
+
+    bool executed{false};
+    concore::as_sender<throwing_executor> sender{{}};
+    auto sender1 = on(sender, my_pool.scheduler());
+    auto op = concore::connect(sender1, expect_error_receiver{&executed});
+    op.start();
+    my_pool.wait();
+    REQUIRE(executed);
+}
+
+TEST_CASE("on calls set_done when base sender cancelled execution", "[sender_algo]") {
+    concore::static_thread_pool my_pool{1};
+    concore::static_thread_pool my_pool2{1};
+    auto ex = my_pool.executor();
+    my_pool.stop();
+
+    bool executed{false};
+    concore::as_sender<decltype(ex)> sender{ex};
+    auto sender1 = on(sender, my_pool2.scheduler());
+    auto op = concore::connect(sender1, expect_done_receiver{&executed});
+    op.start();
+    my_pool.wait();
+    my_pool2.wait();
+    REQUIRE(executed);
+}
+
+TEST_CASE("on calls set_done when scheduler cancelled execution", "[sender_algo]") {
+    concore::static_thread_pool my_pool{1};
+    concore::static_thread_pool my_pool2{1};
+    auto ex = my_pool.executor();
+    my_pool2.stop();
+
+    bool executed{false};
+    concore::as_sender<decltype(ex)> sender{ex};
+    auto sender1 = on(sender, my_pool2.scheduler());
+    auto op = concore::connect(sender1, expect_done_receiver{&executed});
+    op.start();
+    my_pool.wait();
+    my_pool2.wait();
+    REQUIRE(executed);
+}
