@@ -134,7 +134,7 @@ struct when_all_sender_oper_state {
 
     void on_set_error(std::exception_ptr eptr) noexcept {
         int old = 0;
-        if (state_.compare_exchange_strong(old, 2))
+        if (state_.compare_exchange_strong(old, 1))
             eptr_ = std::move(eptr);
         on_incoming_complete();
     }
