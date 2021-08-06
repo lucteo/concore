@@ -14,24 +14,24 @@ namespace concore {
 inline namespace v1 {
 
 /**
- * @brief   Wrapper that transforms a receiver into a functor
+ * @brief   Wrapper that transforms an executor into a sender
  *
- * @tparam  R The type of the receiver
+ * @tparam  E The type of the executor
  *
  * @details
  *
- * The receiver should model `receiver_of<>`.
+ * The executor should model `executor<>`.
+ *
+ * When provided with a receiver (that takes no value), this will create an operation state that
+ * will call the receiver. It will call `set_value()`. If the enqueueing of the task into the
+ * executor throws, it will call `set_error()`. If the executor cannot execute any tasks, e.g., it
+ * was stopped, then `set_done()` will be called.
  *
  * This will store a reference to the receiver; the receiver must not get out of scope.
  *
- * When this functor is called set_value() will be called on the receiver. If an exception is
- * thrown, the set_error() function is called.
- *
- * If the functor is never called, the destructor of this object will call set_done().
- *
  * This types models the @ref sender concept.
  *
- * @see sender, receiver_of, as_operation
+ * @see sender, executor, as_operation
  */
 template <typename E>
 struct as_sender {
