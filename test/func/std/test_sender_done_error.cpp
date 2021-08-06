@@ -88,13 +88,16 @@ TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender
     REQUIRE(executed);
 }
 
-TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") {
-    struct throwing_scheduler {
-        concore::as_sender<throwing_executor> schedule() noexcept {
-            return concore::as_sender<throwing_executor>{{}};
-        }
-    };
+struct throwing_scheduler {
+    concore::as_sender<throwing_executor> schedule() noexcept {
+        return concore::as_sender<throwing_executor>{{}};
+    }
 
+    friend inline bool operator==(throwing_scheduler, throwing_scheduler) { return true; }
+    friend inline bool operator!=(throwing_scheduler, throwing_scheduler) { return false; }
+};
+
+TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") {
     concore::static_thread_pool my_pool{1};
     auto ex = my_pool.executor();
 
