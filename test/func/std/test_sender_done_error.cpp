@@ -153,3 +153,58 @@ TEST_CASE("on calls set_done when scheduler cancelled execution", "[sender_algo]
     my_pool2.wait();
     REQUIRE(executed);
 }
+
+TEST_CASE("sync_wait raises exception if set_error is called", "[sender_algo]") {
+    concore::as_sender<throwing_executor> sender_void{{}};
+    auto sender_int = concore::transform(sender_void, []() { return 3; });
+    bool exception_caught{false};
+    try {
+        int res = concore::sync_wait(sender_int);
+        (void)res;
+        REQUIRE(false);
+    } catch (...) {
+        exception_caught = true;
+    }
+    REQUIRE(exception_caught);
+}
+
+TEST_CASE("transform propagates set_error", "[sender_algo]") {
+    concore::as_sender<throwing_executor> sender1{{}};
+    auto sender2 = concore::transform(sender1, []() { return 3; });
+    auto sender3 = concore::transform(sender2, [](int) {});
+
+    bool executed{false};
+    auto op = concore::connect(sender3, expect_error_receiver{&executed});
+    op.start();
+    REQUIRE(executed);
+}
+
+TEST_CASE("transform propagates set_done", "[sender_algo]") {
+    concore::static_thread_pool my_pool{1};
+    auto scheduler = my_pool.scheduler();
+    my_pool.stop();
+
+    bool fun_executed{false};
+    auto sender = concore::transform(scheduler.schedule(), [&]() { fun_executed = true; });
+
+    bool executed{false};
+    auto op = concore::connect(sender, expect_done_receiver{&executed});
+    op.start();
+    my_pool.wait();
+    REQUIRE(executed);
+    REQUIRE_FALSE(fun_executed);
+}
+
+TEST_CASE("transform calls set_error if the function throws", "[sender_algo]") {
+    concore::static_thread_pool my_pool{1};
+    auto scheduler = my_pool.scheduler();
+
+    auto f = []() { throw std::logic_error("error"); };
+    auto sender = concore::transform(scheduler.schedule(), std::move(f));
+
+    bool executed{false};
+    auto op = concore::connect(sender, expect_error_receiver{&executed});
+    op.start();
+    my_pool.wait();
+    REQUIRE(executed);
+}

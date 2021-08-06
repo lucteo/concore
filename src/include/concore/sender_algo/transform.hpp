@@ -36,7 +36,12 @@ struct transform_sender_oper_state {
         template <typename... Ts>
         void set_value(Ts... vals) noexcept {
             try {
-                concore::set_value((Receiver &&) receiver_, f_((Ts &&) vals...));
+                using result_type = std::invoke_result_t<F, Ts...>;
+                if constexpr (std::is_void_v<result_type>) {
+                    f_((Ts &&) vals...);
+                    concore::set_value((Receiver &&) receiver_);
+                } else
+                    concore::set_value((Receiver &&) receiver_, f_((Ts &&) vals...));
             } catch (...) {
                 concore::set_error((Receiver &&) receiver_, std::current_exception());
             }
