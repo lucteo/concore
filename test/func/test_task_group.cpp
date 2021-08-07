@@ -297,3 +297,93 @@ TEST_CASE("higher level except handler is called, if the child doesn't have one"
     REQUIRE(cnt_ex_top == 2);
     REQUIRE(cnt_ex_child1 == 1);
 }
+
+TEST_CASE("task notifies task_group when it's created with a group", "[task_group]") {
+    // Create a group; it should be inactive
+    auto grp = concore::task_group::create();
+    CHECK_FALSE(grp.is_active());
+
+    {
+        // Create a task with our group
+        concore::task t{[] {}, grp};
+
+        // Now the group should be active
+        CHECK(grp.is_active());
+    }
+
+    // After the task is destroyed the group is inactive again
+    CHECK_FALSE(grp.is_active());
+}
+TEST_CASE("task notifies task_group when setting a new group", "[task_group]") {
+    // Create a group; it should be inactive
+    auto grp = concore::task_group::create();
+    CHECK_FALSE(grp.is_active());
+
+    {
+        // Create a task with no group; our group should still be inactive
+        concore::task t{[] {}, {}};
+        CHECK_FALSE(grp.is_active());
+
+        // Set the group to the task
+        t.set_task_group(grp);
+
+        // Now the group should be active
+        CHECK(grp.is_active());
+    }
+
+    // After the task is destroyed the group is inactive again
+    CHECK_FALSE(grp.is_active());
+}
+
+// Functor that checks that the group is active at the destruction point
+// This can be used both as a task function object, or continuation object
+struct group_checker_ftor {
+    concore::task_group grp_;
+    bool* should_check_;
+
+    group_checker_ftor(const group_checker_ftor&) = default;
+    group_checker_ftor(group_checker_ftor&&) = default;
+    group_checker_ftor& operator=(const group_checker_ftor&) = default;
+    group_checker_ftor& operator=(group_checker_ftor&&) = default;
+
+    ~group_checker_ftor() {
+        if (*should_check_) {
+            CHECK(grp_.is_active());
+        }
+    }
+
+    void operator()() {
+        if (*should_check_) {
+            CHECK(grp_.is_active());
+        }
+    }
+    void operator()(std::exception_ptr) {
+        if (*should_check_) {
+            CHECK(grp_.is_active());
+        }
+    }
+};
+
+TEST_CASE("task_group is active when the task function & continuation are destroyed",
+        "[task_group]") {
+    // Create a group; it should be inactive
+    auto grp = concore::task_group::create();
+    CHECK_FALSE(grp.is_active());
+
+    bool should_check{false};
+
+    {
+        // Create a task with no group; our group should still be inactive
+        concore::task t{group_checker_ftor{grp, &should_check}, grp,
+                group_checker_ftor{grp, &should_check}};
+
+        // After both functors are created, and the task joined the group turn on the checking for
+        // the group active
+        CHECK(grp.is_active());
+        should_check = true;
+    }
+    // When destroying the task, the group must remain active until both ftors are destroyed
+
+    // After the task is destroyed the group is inactive again
+    CHECK_FALSE(grp.is_active());
+}

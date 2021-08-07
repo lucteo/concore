@@ -17,20 +17,21 @@ void task::operator()() {
     detail::g_current_task = this;
 
     // If the task is canceled, just execute the continuation
-    if (task_group_ && task_group_.is_cancelled()) {
+    const task_group& grp = task_group_.get_task_group();
+    if (grp && grp.is_cancelled()) {
         if (cont_fun_)
             cont_fun_(std::make_exception_ptr(task_cancelled{}));
         return;
     }
 
     try {
-        detail::task_group_access::on_starting_task(task_group_);
+        detail::task_group_access::on_starting_task(grp);
         fun_();
-        detail::task_group_access::on_task_done(task_group_);
+        detail::task_group_access::on_task_done(grp);
         if (cont_fun_)
             cont_fun_(std::exception_ptr{});
     } catch (...) {
-        detail::task_group_access::on_task_exception(task_group_, std::current_exception());
+        detail::task_group_access::on_task_exception(grp, std::current_exception());
         if (cont_fun_)
             cont_fun_(std::current_exception());
     }
