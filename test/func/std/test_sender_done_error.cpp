@@ -94,17 +94,17 @@ TEST_CASE("as_sender calls set_error when executor throws", "[sender_algo]") {
     REQUIRE(executed);
 }
 
-// TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender_algo]") {
-//     concore::static_thread_pool my_pool{1};
-//     auto ex = my_pool.executor();
-//     my_pool.stop();
-//
-//     bool executed{false};
-//     concore::as_sender<decltype((ex))> sender{ex};
-//     concore::submit(sender, expect_done_receiver{&executed});
-//     my_pool.wait();
-//     REQUIRE(executed);
-// }
+TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender_algo]") {
+    concore::static_thread_pool my_pool{1};
+    auto ex = my_pool.executor();
+    my_pool.stop();
+
+    bool executed{false};
+    concore::as_sender<decltype((ex))> sender{ex};
+    concore::submit(sender, expect_done_receiver{&executed});
+    my_pool.wait();
+    REQUIRE(executed);
+}
 
 TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") {
     concore::static_thread_pool my_pool{1};

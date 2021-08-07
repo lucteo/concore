@@ -51,7 +51,7 @@ struct as_operation {
 
     //! Starts the asynchronous operation
     void start() noexcept {
-        auto f = as_invocable<receiver_type>(receiver_);
+        auto f = as_invocable<receiver_type>(std::move(receiver_));
         try {
             concore::execute(std::move(executor_), std::move(f));
         } catch (...) {

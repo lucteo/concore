@@ -36,21 +36,21 @@ inline namespace v1 {
 template <typename R>
 struct as_invocable {
     //! Constructor from receiver
-    explicit as_invocable(R& r) noexcept
-        : receiver_(&r) {
+    explicit as_invocable(R r) noexcept
+        : receiver_((R &&) r) {
 #if CONCORE_CXX_HAS_CONCEPTS
         static_assert(receiver_of<R>, "Type needs to match receiver_of<> concept");
 #endif
     }
     //! Move constructor
-    explicit as_invocable(as_invocable&& other) noexcept
+    as_invocable(as_invocable&& other) noexcept
         : receiver_(std::move(other.receiver_)) {
-        other.receiver_ = nullptr;
+        other.handled_ = true;
     }
     //! Move assignment
     as_invocable& operator=(as_invocable&& other) noexcept {
-        receiver_ = other.receiver_;
-        other.receiver_ = nullptr;
+        receiver_ = std::move(other.receiver_);
+        other.handled_ = true;
     }
     //! Copy constructor
     as_invocable(const as_invocable&) = default;
@@ -58,8 +58,8 @@ struct as_invocable {
     as_invocable& operator=(const as_invocable&) = default;
     //! Destructor
     ~as_invocable() {
-        if (receiver_)
-            concore::set_done(std::move(*receiver_));
+        if (!handled_)
+            concore::set_done(std::move(receiver_));
     }
 
     /**
@@ -72,23 +72,23 @@ struct as_invocable {
      * @see     set_value(), set_error()
      */
     void operator()() noexcept {
+        handled_ = true;
         try {
-            concore::set_value(std::move(*receiver_));
-            receiver_ = nullptr;
+            concore::set_value(std::move(receiver_));
         } catch (...) {
-            concore::set_error(std::move(*receiver_), std::current_exception());
-            receiver_ = nullptr;
+            concore::set_error(std::move(receiver_), std::current_exception());
         }
     }
 
     //! Called to dismiss the call of set_done() in the destructor.
     //! This should be called whenever the user externally calls one of the CPOs
     //! on the receiver.
-    void dismiss() noexcept { receiver_ = nullptr; }
+    void dismiss() noexcept { handled_ = true; }
 
 private:
     //! The receiver object to forward the call to
-    R* receiver_;
+    R receiver_;
+    bool handled_{false};
 };
 
 } // namespace v1

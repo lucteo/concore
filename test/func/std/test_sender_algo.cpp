@@ -133,31 +133,31 @@ TEST_CASE("query value types for just", "[sender_algo]") {
     static_assert(std::is_same_v<vt3, dvt3>, "Invalid value type for `on` sender");
 }
 
-// TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
-//     bool executed = false;
-//     {
-//         concore::static_thread_pool pool{1};
-//         auto sched = pool.scheduler();
-//
-//         auto s1 = concore::just(1);
-//         auto s2 = concore::on(s1, sched);
-//         auto recv = make_fun_receiver([&](int val) {
-//             // Check the content of the value
-//             REQUIRE(val == 1);
-//             // Check that this runs in the scheduler thread
-//             REQUIRE(sched.running_in_this_thread());
-//             // Mark this as executed
-//             executed = true;
-//         });
-//         static_assert(concore::receiver<decltype(recv)>, "invalid receiver");
-//         concore::submit(s2, recv);
-//
-//         // Wait for the task to be executed
-//         std::this_thread::sleep_for(std::chrono::milliseconds(3));
-//         REQUIRE(bounded_wait());
-//     }
-//     REQUIRE(executed);
-// }
+TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
+    bool executed = false;
+    {
+        concore::static_thread_pool pool{1};
+        auto sched = pool.scheduler();
+
+        auto s1 = concore::just(1);
+        auto s2 = concore::on(s1, sched);
+        auto recv = make_fun_receiver([&](int val) {
+            // Check the content of the value
+            REQUIRE(val == 1);
+            // Check that this runs in the scheduler thread
+            REQUIRE(sched.running_in_this_thread());
+            // Mark this as executed
+            executed = true;
+        });
+        static_assert(concore::receiver<decltype(recv)>, "invalid receiver");
+        concore::submit(s2, recv);
+
+        // Wait for the task to be executed
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
+        REQUIRE(bounded_wait());
+    }
+    REQUIRE(executed);
+}
 
 TEST_CASE("on returns a sender", "[sender_algo]") {
     using t = decltype(concore::on(concore::just(1), concore::static_thread_pool{1}.scheduler()));
