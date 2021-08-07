@@ -341,6 +341,10 @@ struct group_checker_ftor {
     concore::task_group grp_;
     bool* should_check_;
 
+    group_checker_ftor(concore::task_group grp, bool* should_check)
+        : grp_(std::move(grp))
+        , should_check_(should_check) {}
+
     group_checker_ftor(const group_checker_ftor&) = default;
     group_checker_ftor(group_checker_ftor&&) = default;
     group_checker_ftor& operator=(const group_checker_ftor&) = default;
