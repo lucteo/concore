@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <concore/low_level/concurrent_dequeue.hpp>
+#include <concore/data/concurrent_dequeue.hpp>
 #include <concore/profiling.hpp>
 
 #include "test_common/task_countdown.hpp"
@@ -131,10 +131,14 @@ TEST_CASE("concurrent_dequeue: multiple threads pushing and popping continuously
         "[concurrent_dequeue]") {
     CONCORE_PROFILING_FUNCTION();
 
-    concore::concurrent_dequeue<int> queue{static_cast<size_t>(20)};
+    concore::concurrent_dequeue<int> queue{static_cast<size_t>(1000)};
 
-    constexpr int num_threads_per_type = 3;
-    constexpr int num_threads = num_threads_per_type * 4;
+    constexpr int num_push_back_threads = 3;
+    constexpr int num_push_front_threads = 3;
+    constexpr int num_pop_back_threads = 3;
+    constexpr int num_pop_front_threads = 3;
+    constexpr int num_threads = num_push_back_threads + num_push_front_threads +
+                                num_pop_back_threads + num_pop_front_threads;
 
     // used for a synchronized start
     task_countdown barrier{num_threads};
@@ -142,35 +146,120 @@ TEST_CASE("concurrent_dequeue: multiple threads pushing and popping continuously
     auto start = std::chrono::high_resolution_clock::now();
     auto end = start + 100ms;
 
-    auto work_fun = [=, &queue, &barrier](int idx, bool pusher, bool front) {
+    std::atomic<int> num_pushes{0};
+    std::atomic<int> num_pops{0};
+
+    auto work_fun = [=, &queue, &barrier, &num_pushes, &num_pops](
+                            int idx, bool pusher, bool front) {
         barrier.task_finished();
         barrier.wait_for_all();
 
         int i = 0;
         int value{0};
         while (std::chrono::high_resolution_clock::now() < end) {
-            if (pusher && front)
-                queue.push_front(i++);
-            else if (pusher && !front)
-                queue.push_back(i++);
-            else if (!pusher && front)
-                queue.try_pop_front(value);
-            else if (!pusher && !front)
-                queue.try_pop_back(value);
+            if (pusher) {
+                if (front)
+                    queue.push_front(i++);
+                else
+                    queue.push_back(i++);
+                num_pushes++;
+            } else {
+                bool pop_succeeded = false;
+                if (front)
+                    pop_succeeded = queue.try_pop_front(value);
+                else
+                    pop_succeeded = queue.try_pop_back(value);
+                if (pop_succeeded)
+                    num_pops++;
+            }
         }
     };
 
     // Start all the threads
     std::vector<std::thread> threads{num_threads};
-    for (int i = 0; i < num_threads_per_type; i++) {
-        threads[i * 4 + 0] = std::thread{work_fun, i * 4 + 0, true, false};
-        threads[i * 4 + 1] = std::thread{work_fun, i * 4 + 1, true, true};
-        threads[i * 4 + 2] = std::thread{work_fun, i * 4 + 2, false, true};
-        threads[i * 4 + 3] = std::thread{work_fun, i * 4 + 3, false, false};
-    }
+    int idx = 0;
+    for (int i = 0; i < num_push_back_threads; i++)
+        threads[idx++] = std::thread{work_fun, idx, true, false};
+    for (int i = 0; i < num_push_front_threads; i++)
+        threads[idx++] = std::thread{work_fun, idx, true, true};
+    for (int i = 0; i < num_push_back_threads; i++)
+        threads[idx++] = std::thread{work_fun, idx, false, false};
+    for (int i = 0; i < num_push_back_threads; i++)
+        threads[idx++] = std::thread{work_fun, idx, false, true};
 
     // Wait for all the threads to finish
     for (int i = 0; i < num_threads; i++)
         threads[i].join();
-    REQUIRE(true);
+
+    // After all the threads are done, we might get some additional items in the queue; pop them
+    int value{0};
+    while (queue.try_pop_front(value))
+        num_pops++;
+
+    // We should get the same number of pushes and of pops
+    int pushes = num_pushes.load();
+    int pops = num_pops.load();
+    CHECK(pushes == pops);
+}
+
+std::atomic<int> g_num_ctors_{0};
+std::atomic<int> g_num_copy_ctors_{0};
+std::atomic<int> g_num_move_ctors_{0};
+std::atomic<int> g_num_dtors_{0};
+std::atomic<int> g_num_copy_oper_{0};
+std::atomic<int> g_num_move_oper_{0};
+
+void reset_counters() {
+    g_num_ctors_ = 0;
+    g_num_copy_ctors_ = 0;
+    g_num_move_ctors_ = 0;
+    g_num_dtors_ = 0;
+    g_num_copy_oper_ = 0;
+    g_num_move_oper_ = 0;
+}
+
+struct my_obj {
+    my_obj() { g_num_ctors_++; }
+    my_obj(const my_obj&) { g_num_copy_ctors_++; }
+    my_obj(my_obj&&) noexcept { g_num_move_ctors_++; }
+    ~my_obj() { g_num_dtors_++; }
+    my_obj& operator=(const my_obj&) {
+        g_num_copy_oper_++;
+        return *this;
+    }
+    my_obj& operator=(my_obj&&) noexcept {
+        g_num_move_oper_++;
+        return *this;
+    }
+};
+
+TEST_CASE("concurrent_dequeue: ctors and dtors", "[concurrent_dequeue]") {
+    constexpr int num_elements = 100;
+
+    reset_counters();
+    concore::concurrent_dequeue<my_obj> queue(1024);
+
+    // Push some elements in the queue
+    for (int i = 0; i < num_elements; i++) {
+        queue.push_back(my_obj());
+    }
+    REQUIRE(g_num_ctors_.load() == num_elements);
+    REQUIRE(g_num_copy_ctors_.load() == 0);
+    REQUIRE(g_num_move_ctors_.load() == num_elements);
+    REQUIRE(g_num_dtors_.load() == num_elements);
+    REQUIRE(g_num_copy_oper_.load() == 0);
+    REQUIRE(g_num_move_oper_.load() == 0);
+
+    // Pop now all the elements
+    my_obj obj;
+    for (int i = 0; i < num_elements; i++) {
+        bool res = queue.try_pop_front(obj);
+        REQUIRE(res);
+    }
+    REQUIRE(g_num_ctors_.load() == num_elements + 1);
+    REQUIRE(g_num_copy_ctors_.load() == 0);
+    REQUIRE(g_num_move_ctors_.load() == num_elements);
+    REQUIRE(g_num_dtors_.load() == 2 * num_elements);
+    REQUIRE(g_num_copy_oper_.load() == 0);
+    REQUIRE(g_num_move_oper_.load() == num_elements);
 }

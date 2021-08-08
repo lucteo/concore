@@ -66,6 +66,32 @@ void pool_enqueue(pool_data& pool, task_function&& t) {
     pool.ctx_->enqueue(task{std::move(t), pool.grp_});
 }
 
+bool pool_enqueue_check_cancel(pool_data& pool, task_function&& t) {
+    if (pool.grp_.is_cancelled())
+        return false;
+    else {
+        pool.ctx_->enqueue(task{std::move(t), pool.grp_});
+        return true;
+    }
+}
+
+void pool_enqueue_noexcept(pool_data& pool, task&& t) noexcept {
+    try {
+        if (t.get_task_group()) {
+            // To keep this in the pool's group wrap the task in another task
+            pool.ctx_->enqueue(task{std::move(t), pool.grp_});
+        } else {
+            // Ensure we are executing this task inside the pool's task group
+            t.set_task_group(pool.grp_);
+            pool.ctx_->enqueue(std::move(t));
+        }
+    } catch (...) {
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
+
 thread_pool_sender::thread_pool_sender(pool_data* impl) noexcept
     : impl_(impl) {}
 thread_pool_sender::thread_pool_sender(const thread_pool_sender& r) noexcept = default;

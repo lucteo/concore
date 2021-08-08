@@ -257,7 +257,7 @@ struct spawn_executor {
         do_spawn(detail::get_exec_context(), task{std::forward<F>(f)});
     }
     //! @overload
-    void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t)); }
+    void execute(task t) const noexcept { do_spawn(detail::get_exec_context(), std::move(t)); }
 
     //! Equality operator; always true
     friend inline bool operator==(spawn_executor, spawn_executor) { return true; }
@@ -286,7 +286,9 @@ struct spawn_continuation_executor {
         do_spawn(detail::get_exec_context(), task{std::forward<F>(f)}, false);
     }
     //! @overload
-    void execute(task t) { do_spawn(detail::get_exec_context(), std::move(t), false); }
+    void execute(task t) const noexcept {
+        do_spawn_noexcept(detail::get_exec_context(), std::move(t), false);
+    }
 
     //! Equality operator; always true
     friend inline bool operator==(spawn_continuation_executor, spawn_continuation_executor) {

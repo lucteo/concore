@@ -102,14 +102,14 @@ struct sync_wait_r_create_fun {
 inline namespace v1 {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(typed_sender) Sender>
-auto sync_wait(Sender&& s) {
+inline auto sync_wait(Sender&& s) {
     return detail::sync_wait_create_fun{}((Sender &&) s);
 }
 
-auto sync_wait() { return detail::make_sender_algo_wrapper(detail::sync_wait_create_fun{}); }
+inline auto sync_wait() { return detail::make_sender_algo_wrapper(detail::sync_wait_create_fun{}); }
 
 template <typename Res, CONCORE_CONCEPT_OR_TYPENAME(typed_sender) Sender>
-auto sync_wait_r(Sender&& s) {
+inline auto sync_wait_r(Sender&& s) {
     return detail::sync_wait_r_create_fun<Res>{}((Sender &&) s);
 }
 

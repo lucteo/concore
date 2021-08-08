@@ -18,9 +18,39 @@ TEST_CASE("finish_task basic usage", "[finish_task]") {
 
     concore::finish_task done_task([&] { is_done = true; });
     // Spawn 3 tasks
-    concore::spawn(concore::task{[&] { work1_done = true; }, {}, done_task.get_continuation()});
-    concore::spawn(concore::task{[&] { work2_done = true; }, {}, done_task.get_continuation()});
-    concore::spawn(concore::task{[&] { work3_done = true; }, {}, done_task.get_continuation()});
+    auto cont = done_task.get_continuation(3); // this continuation will be used 3 times
+    concore::spawn(concore::task{[&] { work1_done = true; }, {}, cont});
+    concore::spawn(concore::task{[&] { work2_done = true; }, {}, cont});
+    concore::spawn(concore::task{[&] { work3_done = true; }, {}, cont});
+
+    // Poor-man wait for all to be complete
+    while (!is_done.load())
+        std::this_thread::sleep_for(1ms);
+
+    CHECK(work1_done.load());
+    CHECK(work2_done.load());
+    CHECK(work3_done.load());
+    CHECK(is_done.load());
+}
+
+TEST_CASE("finish_task is not triggered before the last task", "[finish_task]") {
+    std::atomic<bool> is_done{false};
+    std::atomic<bool> work1_done{false};
+    std::atomic<bool> work2_done{false};
+    std::atomic<bool> work3_done{false};
+
+    concore::finish_task done_task([&] { is_done = true; });
+    // Spawn 3 tasks
+    auto cont = done_task.get_continuation(3); // this continuation will be used 3 times
+    concore::spawn(concore::task{[&] { work1_done = true; }, {}, cont});
+    while (!work1_done.load())
+        std::this_thread::sleep_for(200us);
+    CHECK_FALSE(is_done.load());
+    concore::spawn(concore::task{[&] { work2_done = true; }, {}, cont});
+    while (!work2_done.load())
+        std::this_thread::sleep_for(200us);
+    CHECK_FALSE(is_done.load());
+    concore::spawn(concore::task{[&] { work3_done = true; }, {}, cont});
 
     // Poor-man wait for all to be complete
     while (!is_done.load())
@@ -80,6 +110,47 @@ TEST_CASE("finish_wait basic usage", "[finish_task]") {
     CHECK(work1_done.load());
     CHECK(work2_done.load());
     CHECK(work3_done.load());
+}
+
+TEST_CASE("finish_wait with tasks executing before another get_continuation", "[finish_task]") {
+    std::atomic<bool> work1_done{false};
+    std::atomic<bool> work2_done{false};
+
+    concore::finish_wait done;
+
+    // Spawn the first task and wait for it to complete
+    concore::spawn(concore::task{[&] { work1_done = true; }, {}, done.get_continuation()});
+    while (!work1_done.load())
+        std::this_thread::sleep_for(200us);
+
+    // Span the second task
+    // This is a longer task, given a chance for wait() to finish early
+    concore::spawn(concore::task{[&] {
+                                     std::this_thread::sleep_for(1ms);
+                                     work2_done = true;
+                                 },
+            {}, done.get_continuation()});
+
+    // Wait for both tasks to be done
+    done.wait();
+
+    // Ensure that we've waited for the results of both tasks
+    CHECK(work1_done.load());
+    CHECK(work2_done.load());
+}
+
+TEST_CASE("finish_wait with multiple wait calls", "[finish_task]") {
+    concore::finish_wait done;
+
+    // Get a continuation and immediately trigger it
+    concore::spawn(concore::task{[] {}, {}, done.get_continuation()});
+
+    // Wait once
+    done.wait();
+
+    // Second wait unblocks immediately, even if we have a continuation open
+    auto c = done.get_continuation();
+    done.wait();
 }
 
 TEST_CASE("finish_wait basic usage (old)", "[finish_task]") {

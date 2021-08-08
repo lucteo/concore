@@ -8,6 +8,7 @@
 
 #include "test_common/task_countdown.hpp"
 #include "test_common/task_utils.hpp"
+#include "test_common/throwing_executor.hpp"
 
 #include <stdexcept>
 #include <cstdlib>
@@ -18,12 +19,11 @@
 namespace {
 
 //! Check if the given executor can execute tasks.
-void check_execute_tasks(concore::any_executor e) {
-    int num_tasks = 10;
+void check_execute_tasks(concore::any_executor e, int num_tasks = 10, int expected_run = 10) {
     std::atomic<int> counter{0};
     REQUIRE(enqueue_and_wait(
             e, [&]() { counter++; }, num_tasks));
-    REQUIRE(counter == num_tasks);
+    REQUIRE(counter == expected_run);
 }
 
 //! Creates an executor that increments a counter when executed
@@ -65,15 +65,6 @@ void check_execute_with_exceptions(Creator creat) {
 
     // Ensure that the exception function was called
     REQUIRE(num_exceptions == num_tasks);
-}
-
-//! Creates an executor that increments a counter when executed
-concore::delegating_executor get_throwing_exec() {
-    auto ftor = [](concore::task t) {
-        concore::global_executor{}.execute(std::move(t));
-        throw std::logic_error("err");
-    };
-    return concore::delegating_executor(std::move(ftor));
 }
 
 //! Checks that executing tasks on the given executor, will have the desired level of parallelism:
@@ -340,32 +331,32 @@ TEST_CASE("Serializers can execute tasks with exceptions", "[ser]") {
 
 TEST_CASE("Serializers work if the executor throws exceptions", "[ser]") {
     SECTION("serializer works if the executor throws exceptions") {
-        auto ser = concore::serializer(get_throwing_exec());
+        auto ser = concore::serializer(throwing_executor{});
         std::atomic<int> num_ex = 0;
         ser.set_exception_handler([&](std::exception_ptr) { num_ex++; });
-        check_execute_tasks(ser);
-        REQUIRE(num_ex.load() == 10);
+        check_execute_tasks(ser, 10, 0);
+        REQUIRE(num_ex.load() == 0);
     }
     SECTION("n_serializer works if the executor throws exceptions") {
-        auto ser = concore::n_serializer(4, get_throwing_exec());
+        auto ser = concore::n_serializer(4, throwing_executor{});
         std::atomic<int> num_ex = 0;
         ser.set_exception_handler([&](std::exception_ptr) { num_ex++; });
-        check_execute_tasks(ser);
-        REQUIRE(num_ex.load() == 10);
+        check_execute_tasks(ser, 10, 0);
+        REQUIRE(num_ex.load() == 0);
     }
     SECTION("rw_serializer.reader works if the executor throws exceptions") {
-        auto ser = concore::rw_serializer(get_throwing_exec());
+        auto ser = concore::rw_serializer(throwing_executor{});
         std::atomic<int> num_ex = 0;
         ser.set_exception_handler([&](std::exception_ptr) { num_ex++; });
-        check_execute_tasks(ser.reader());
-        REQUIRE(num_ex.load() == 10);
+        check_execute_tasks(ser.reader(), 10, 0);
+        REQUIRE(num_ex.load() == 0);
     }
     SECTION("rw_serializer.writer works if the executor throws exceptions") {
-        auto ser = concore::rw_serializer(get_throwing_exec());
+        auto ser = concore::rw_serializer(throwing_executor{});
         std::atomic<int> num_ex = 0;
         ser.set_exception_handler([&](std::exception_ptr) { num_ex++; });
-        check_execute_tasks(ser.writer());
-        REQUIRE(num_ex.load() == 10);
+        check_execute_tasks(ser.writer(), 10, 0);
+        REQUIRE(num_ex.load() == 0);
     }
 }
 

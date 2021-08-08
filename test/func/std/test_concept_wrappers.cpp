@@ -3,6 +3,7 @@
 #include <concore/as_invocable.hpp>
 #include <concore/as_operation.hpp>
 #include <concore/as_sender.hpp>
+#include <concore/as_scheduler.hpp>
 #include <concore/execution.hpp>
 
 namespace test_models {
@@ -158,20 +159,23 @@ TEST_CASE("as_invocable properly calls the right methods in the receiver",
     using namespace test_models;
 
     struct logging_receiver {
+        int* state_;
         bool should_throw_{false};
-        int state_{-1};
         void set_value() {
             if (should_throw_)
                 throw std::logic_error("test");
-            state_ = 0;
+            *state_ = 0;
         }
-        void set_done() noexcept { state_ = 1; }
-        void set_error(std::exception_ptr) noexcept { state_ = 2; }
+        void set_done() noexcept { *state_ = 1; }
+        void set_error(std::exception_ptr) noexcept { *state_ = 2; }
     };
 
-    logging_receiver l1;
-    logging_receiver l2;
-    logging_receiver l3{true};
+    int state1 = -1;
+    int state2 = -1;
+    int state3 = -1;
+    logging_receiver l1{&state1};
+    logging_receiver l2{&state2};
+    logging_receiver l3{&state3, true};
 
     {
         auto f1 = as_invocable<logging_receiver>{l1};
@@ -183,9 +187,9 @@ TEST_CASE("as_invocable properly calls the right methods in the receiver",
         f3();
     }
 
-    CHECK(l1.state_ == 0); // set_value() called
-    CHECK(l2.state_ == 1); // set_done() called
-    CHECK(l3.state_ == 2); // set_error() called
+    CHECK(state1 == 0); // set_value() called
+    CHECK(state2 == 1); // set_done() called
+    CHECK(state3 == 2); // set_error() called
 }
 
 TEST_CASE("as_operation transforms an executor and a receiver into an operation_state",
@@ -224,5 +228,19 @@ TEST_CASE("as_sender produces a good sender", "[execution][concept_wrappers]") {
     auto snd = as_sender<my_executor>(my_executor{});
     CHECK_FALSE(called);
     concore::submit(snd, recv);
+    CHECK(called);
+}
+
+TEST_CASE("as_scheduler produces a good scheduler", "[execution][concept_wrappers]") {
+    using namespace concore;
+    using namespace test_models;
+
+    bool called = false;
+
+    test_receiver recv{called};
+    auto sched = as_scheduler<my_executor>(my_executor{});
+    CHECK_FALSE(called);
+    concore::submit(sched.schedule(), recv);
+    static_assert(concore::scheduler<typeof(sched)>, "Type is not a scheduler");
     CHECK(called);
 }

@@ -3,8 +3,7 @@ set(func_sourceFiles
     "func/test_main.cpp"
     "func/low_level/test_semaphore.cpp"
     "func/low_level/test_mutexes.cpp"
-    "func/low_level/test_concurrent_dequeue.cpp"
-    "func/data/test_concurrent_queue.cpp"
+    "func/data/test_concurrent_dequeue.cpp"
     "func/detail/test_worker_tasks.cpp"
     "func/test_inline_executor.cpp"
     "func/test_init.cpp"
@@ -23,11 +22,11 @@ set(func_sourceFiles
     "func/test_any_executor.cpp"
     "func/test_dispatch_executor.cpp"
     "func/test_tbb_executor.cpp"
-    "func/test_executors_match_concept.cpp"
     "func/test_task_continuation.cpp"
 
     "func/std/test_thread_pool.cpp"
     "func/std/test_concepts.cpp"
+    "func/std/test_executor_concepts.cpp"
     "func/std/test_concept_wrappers.cpp"
     "func/std/test_cpo_execute.cpp"
     "func/std/test_cpo_start.cpp"
@@ -36,6 +35,7 @@ set(func_sourceFiles
     "func/std/test_cpo_connect.cpp"
     "func/std/test_cpo_submit.cpp"
     "func/std/test_sender_algo.cpp"
+    "func/std/test_sender_done_error.cpp"
 
     "func/profiling_helper_test.cpp" # Must be last
 )

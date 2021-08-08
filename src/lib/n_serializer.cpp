@@ -72,6 +72,15 @@ n_serializer::n_serializer(int N, any_executor base_executor, any_executor cont_
     : impl_(std::make_shared<impl>(N, base_executor, cont_executor)) {}
 
 void n_serializer::do_enqueue(task t) const { impl_->enqueue(std::move(t)); }
+void n_serializer::do_enqueue_noexcept(task t) const noexcept {
+    try {
+        impl_->enqueue(std::move(t));
+    } catch (...) {
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
 
 void n_serializer::set_exception_handler(except_fun_t except_fun) {
     impl_->except_fun_ = std::move(except_fun);

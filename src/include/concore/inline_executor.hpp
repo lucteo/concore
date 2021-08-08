@@ -26,7 +26,7 @@ struct inline_executor {
         t();
     }
     //! \overload
-    void execute(task t) const { t(); }
+    void execute(task t) const noexcept { t(); }
 
     //! Equality operator; always true
     friend inline bool operator==(inline_executor, inline_executor) { return true; }

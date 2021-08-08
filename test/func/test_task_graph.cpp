@@ -1,11 +1,13 @@
 #include <catch2/catch.hpp>
 #include <concore/task_graph.hpp>
 #include <concore/global_executor.hpp>
+#include <concore/inline_executor.hpp>
 #include <concore/profiling.hpp>
 #include <concore/spawn.hpp>
 
 #include "test_common/task_countdown.hpp"
 #include "test_common/task_utils.hpp"
+#include "test_common/throwing_executor.hpp"
 
 #include <array>
 
@@ -445,22 +447,6 @@ TEST_CASE("chained_task can be created without an executor", "[task_graph]") {
     REQUIRE(task2_executed);
 }
 
-struct throwing_executor {
-    template <typename F>
-    void execute(F f) const {
-        concore::spawn(concore::task{std::forward<F>(f)});
-        throw std::logic_error("err");
-    }
-    void execute(concore::task&& t) const {
-        concore::spawn(std::move(t));
-        throw std::logic_error("err");
-    }
-    void operator()(concore::task t) const { execute(std::move(t)); }
-
-    friend inline bool operator==(throwing_executor, throwing_executor) { return true; }
-    friend inline bool operator!=(throwing_executor, throwing_executor) { return false; }
-};
-
 TEST_CASE("chained_task works with subtasking", "[task_graph]") {
     auto grp_wait = concore::task_group::create();
     auto finish_task = concore::task([]() {}, grp_wait);
@@ -506,26 +492,17 @@ TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_gr
     auto t1 = concore::chained_task([&]() { executed[0] = true; }, throwing_executor{});
     auto t2 = concore::chained_task([&]() { executed[1] = true; }, throwing_executor{});
     auto t3 = concore::chained_task([&]() { executed[2] = true; }, throwing_executor{});
-    auto t4 = concore::chained_task([&]() { executed[3] = true; }, throwing_executor{});
+    auto t4 = concore::chained_task([&]() { executed[3] = true; }, concore::inline_executor{});
     auto t5 = concore::chained_task(
             [&]() {
                 executed[4] = true;
                 concore::global_executor{}.execute(std::move(finish_task));
             },
-            throwing_executor{});
+            concore::inline_executor{});
 
     // Add the dependencies
     concore::add_dependencies(t1, {t2, t3, t4});
     concore::add_dependencies({t2, t3, t4}, t5);
-
-    // Set up the exception handlers
-    std::atomic<int> num_ex = 0;
-    concore::except_fun_t ex_handler = [&](std::exception_ptr) { num_ex++; };
-    t1.set_exception_handler(ex_handler);
-    t2.set_exception_handler(ex_handler);
-    t3.set_exception_handler(ex_handler);
-    t4.set_exception_handler(ex_handler);
-    t5.set_exception_handler(ex_handler);
 
     // Start executing the graph
     t1();
@@ -533,11 +510,8 @@ TEST_CASE("chained_task works (somehow) with an executor that throws", "[task_gr
     REQUIRE(bounded_wait(grp_wait));
     // Ensure all tasks are executed
     REQUIRE(executed[0]);
-    REQUIRE(executed[1]);
-    REQUIRE(executed[2]);
-    REQUIRE(executed[3]);
+    REQUIRE_FALSE(executed[1]);
+    REQUIRE_FALSE(executed[2]);
+    REQUIRE_FALSE(executed[3]);
     REQUIRE(executed[4]);
-
-    // Ensure that our exception handler is called
-    REQUIRE(num_ex.load() == 4);
 }

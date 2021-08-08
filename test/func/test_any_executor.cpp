@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/any_executor.hpp>
 #include <concore/inline_executor.hpp>
+#include "test_common/throwing_executor.hpp"
 
 #include <atomic>
 #include <thread>
@@ -48,12 +49,12 @@ TEST_CASE("any_executor can be compared", "[any_executor]") {
     concore::any_executor e4;
     e4 = concore::inline_executor{};
 
-    REQUIRE(e1 == e2);
-    REQUIRE(e1 != e3);
-    REQUIRE(e1 != e4);
-    REQUIRE(e2 != e3);
-    REQUIRE(e2 != e4);
-    REQUIRE(e3 == e4);
+    REQUIRE((e1 == e2));
+    REQUIRE((e1 != e3));
+    REQUIRE((e1 != e4));
+    REQUIRE((e2 != e3));
+    REQUIRE((e2 != e4));
+    REQUIRE((e3 == e4));
 }
 
 TEST_CASE("any_executor can expose the type_info for the wrapped executor", "[any_executor]") {
@@ -67,4 +68,19 @@ TEST_CASE("any_executor can expose the type_info for the wrapped executor", "[an
     REQUIRE(e2.target_type() == typeid(std::nullptr_t));
     REQUIRE(e3.target_type() == typeid(concore::inline_executor));
     REQUIRE(e4.target_type() == typeid(concore::inline_executor));
+}
+
+TEST_CASE("any_executor doesn't throw when enqueuing tasks", "[any_executor]") {
+    concore::any_executor e1{throwing_executor{}};
+
+    std::atomic<int> counter{0};
+    std::atomic<int> counter_err{0};
+    auto task_fun = [&counter] { counter++; };
+    auto cont_fun = [&counter_err](std::exception_ptr) { counter_err++; };
+    concore::task t{task_fun, {}, cont_fun};
+
+    e1.execute(std::move(t));
+
+    REQUIRE(counter.load() == 0);
+    REQUIRE(counter_err.load() == 1);
 }

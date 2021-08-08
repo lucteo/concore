@@ -16,9 +16,9 @@ mkdir -p "${CURDIR}/../../${BUILDDIR}"
 docker run ${DOCKER_RUN_PARAMS} \
     -e INPUT_BUILDDIR="/github/workspace/${BUILDDIR}" \
     -e INPUT_PREBUILD_COMMAND="conan config set storage.path=/github/workspace/${BUILDDIR}/.conan" \
-    -e INPUT_CONANFLAGS="-e CONAN_RUN_TESTS=1" \
+    -e INPUT_CONANFLAGS="-e CONAN_RUN_TESTS=1 -s compiler.libcxx=libstdc++11" \
     -e INPUT_MAKEFLAGS='-j 4' \
-    -e INPUT_CC='clang' -e INPUT_CONANFLAGS='-s compiler.libcxx=libstdc++11' \
+    -e INPUT_CC='clang' \
     -e INPUT_CHECKS='build test install' action-cxx-toolkit
 status=$?
 printStatus $status

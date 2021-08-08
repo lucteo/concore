@@ -13,6 +13,37 @@
 
 namespace concore {
 
+namespace detail {
+//! Wrapper that ensures that the group is notified whenever the task contains the group.
+struct task_group_wrapper {
+    task_group grp_{};
+
+    task_group_wrapper() = default;
+    explicit task_group_wrapper(task_group&& grp)
+        : grp_(grp) {
+        detail::task_group_access::on_task_created(grp_);
+    }
+    ~task_group_wrapper() { detail::task_group_access::on_task_destroyed(grp_); }
+
+    task_group_wrapper(task_group_wrapper&&) = default;
+    task_group_wrapper& operator=(task_group_wrapper&&) = default;
+
+    task_group_wrapper(const task_group_wrapper& other)
+        : grp_(other.grp_) {
+        detail::task_group_access::on_task_created(grp_);
+    }
+    task_group_wrapper& operator=(const task_group_wrapper& other) {
+        grp_ = other.grp_;
+        detail::task_group_access::on_task_created(grp_);
+        return *this;
+    }
+
+    const task_group& get_task_group() const noexcept { return grp_; }
+
+    // void set_task_group(task_group grp) { return grp_; }
+};
+} // namespace detail
+
 inline namespace v1 {
 
 /**
@@ -137,11 +168,10 @@ public:
      */
     template <typename F, typename CF>
     task(F ftor, task_group grp, CF cont)
-        : fun_(std::move(ftor))
-        , cont_fun_(std::move(cont))
-        , task_group_(grp) {
+        : task_group_(std::move(grp))
+        , fun_(std::move(ftor))
+        , cont_fun_(std::move(cont)) {
         assert(fun_);
-        detail::task_group_access::on_task_created(grp);
     }
     //! @overload
     template <typename F>
@@ -152,10 +182,9 @@ public:
     //! @overload
     template <typename F>
     task(F ftor, task_group grp)
-        : fun_(std::move(ftor))
-        , task_group_(grp) {
+        : task_group_(std::move(grp))
+        , fun_(std::move(ftor)) {
         assert(fun_);
-        detail::task_group_access::on_task_created(grp);
     }
 
     /**
@@ -183,18 +212,20 @@ public:
      * If the task belongs to the group, the group will contain one less active task. If this was
      * the last task registered in the group, after this call, calling @ref task_group::is_active()
      * will yield false.
+     *
+     * We ensure that both functor objects are destroyed before the group can be marked inactive.
      */
-    ~task() { detail::task_group_access::on_task_destroyed(task_group_); }
+    ~task() = default;
 
     //! Move constructor
     task(task&&) = default;
     //! Move operator
     task& operator=(task&&) = default;
 
-    //! Copy constructor is DISABLED
-    task(const task&) = delete;
-    //! Copy assignment operator is DISABLED
-    task& operator=(const task&) = delete;
+    //! Copy constructor
+    task(const task&) = default;
+    //! Copy assignment operator
+    task& operator=(const task&) = default;
 
     /**
      * @brief      Swap the content of the task with another task
@@ -218,6 +249,9 @@ public:
      *
      * This is typically called after some time has passed since task creation. The user must ensure
      * that the functor stored in the task is safe to be executed at that point.
+     *
+     * This does not invalidate the task object, by itself. Theoretically, this can be called
+     * multiple times in a row.
      */
     void operator()();
 
@@ -258,7 +292,20 @@ public:
      *
      * This allows the users to consult the task group associated with the task.
      */
-    const task_group& get_task_group() const { return task_group_; }
+    const task_group& get_task_group() const { return task_group_.get_task_group(); }
+
+    /**
+     * @brief Sets the task group for the task
+     * @param grp The group that we want to set
+     *
+     * @details
+     *
+     * This is useful when manipulating tasks. One should not change the task
+     * group for tasks that are in execution.
+     */
+    void set_task_group(task_group grp) noexcept {
+        task_group_ = detail::task_group_wrapper(std::move(grp));
+    }
 
     /**
      * @brief Returns the current executing task (if any)
@@ -272,6 +319,18 @@ public:
     static task* current_task();
 
 private:
+    /**
+     * The group that this tasks belongs to.
+     *
+     * This can be set by the constructor, or can be set by calling @ref set_task_group().
+     * As the library prefers passing tasks around by moving them, after the task was enqueued, the
+     * task group cannot be changed.
+     *
+     * This object is wrapped so that we notify the group whenever this task joins or leaves the
+     * group. We need to make sure that we exit the group only after both functors are destroyed.
+     */
+    detail::task_group_wrapper task_group_;
+
     /**
      * The function to be called.
      *
@@ -293,15 +352,6 @@ private:
      * executed or not, regardless whether the task has finished successfully or with an exception.
      */
     task_continuation_function cont_fun_;
-
-    /**
-     * The group that this tasks belongs to.
-     *
-     * This can be set by the constructor, or can be set by calling @ref get_task_group().
-     * As the library prefers passing tasks around by moving them, after the task was enqueued, the
-     * task group cannot be changed.
-     */
-    task_group task_group_;
 };
 
 /**

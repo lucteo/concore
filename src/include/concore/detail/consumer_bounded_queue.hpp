@@ -118,7 +118,7 @@ private:
     //! The maximum number of active items
     uint32_t max_active_;
     //! Queue of items that are waiting (or not yet extracted)
-    concurrent_queue<T, queue_type::multi_prod_multi_cons> waiting_;
+    concurrent_queue<T> waiting_;
     //! The count of items in our queue (active & total)
     std::atomic<uint64_t> combined_count_{0};
 

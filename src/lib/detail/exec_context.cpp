@@ -64,8 +64,8 @@ void exec_context::enqueue(task&& t, task_priority prio) {
     assert(p < num_priorities);
 
     // Push the task in the global queue, corresponding to the given prio
-    on_task_added();
     enqueued_tasks_[p].push(std::move(t));
+    on_task_added();
     num_global_tasks_++;
     wakeup_workers();
 }
@@ -82,8 +82,8 @@ void exec_context::spawn(task&& t, bool wake_workers) {
     }
 
     // Add the task to the worker's queue
-    on_task_added();
     data->local_tasks_.push(std::forward<task>(t));
+    on_task_added();
 
     // Wake up the workers
     if (wake_workers)
@@ -367,8 +367,30 @@ void exec_context::on_task_removed() const {
 void do_enqueue(exec_context& ctx, task&& t, task_priority prio) {
     ctx.enqueue(std::move(t), prio);
 }
+void do_enqueue_noexcept(exec_context& ctx, task&& t, task_priority prio) noexcept {
+    try {
+        // If the enqueue fails, we should not be moving from the task
+        ctx.enqueue(std::move(t), prio);
+    } catch (...) {
+        // If the task has a continuation, call it with the current exception
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
 void do_spawn(exec_context& ctx, task&& t, bool wake_workers) {
     ctx.spawn(std::move(t), wake_workers);
+}
+void do_spawn_noexcept(exec_context& ctx, task&& t, bool wake_workers) noexcept {
+    try {
+        // If the enqueue fails, we should not be moving from the task
+        ctx.spawn(std::move(t), wake_workers);
+    } catch (...) {
+        // If the task has a continuation, call it with the current exception
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
 }
 
 void busy_wait_on(exec_context& ctx, task_group& grp) { ctx.busy_wait_on(grp); }

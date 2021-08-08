@@ -22,7 +22,7 @@ struct serializer::impl : std::enable_shared_from_this<impl> {
     //! Handler to be called whenever we have an exception while enqueueing the next task
     except_fun_t except_fun_;
     //! The queue of tasks that wait to be executed
-    concurrent_queue<task, queue_type::multi_prod_single_cons> waiting_tasks_;
+    concurrent_queue<task> waiting_tasks_;
     //! The number of tasks that are in the queue
     std::atomic<int> count_{0};
 
@@ -81,6 +81,15 @@ serializer::serializer(any_executor base_executor, any_executor cont_executor)
 
 void serializer::do_enqueue(task t) const { impl_->enqueue(std::move(t)); }
 
+void serializer::do_enqueue_noexcept(task t) const noexcept {
+    try {
+        impl_->enqueue(std::move(t));
+    } catch (...) {
+        auto cont = t.get_continuation();
+        if (cont)
+            cont(std::current_exception());
+    }
+}
 void serializer::set_exception_handler(except_fun_t except_fun) {
     impl_->except_fun_ = std::move(except_fun);
 }

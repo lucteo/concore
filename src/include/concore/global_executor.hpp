@@ -55,7 +55,9 @@ struct global_executor {
         do_enqueue(detail::get_exec_context(), task{std::forward<F>(f)}, prio_);
     }
     //! \overload
-    void execute(task t) const { do_enqueue(detail::get_exec_context(), std::move(t), prio_); }
+    void execute(task t) const noexcept {
+        do_enqueue_noexcept(detail::get_exec_context(), std::move(t), prio_);
+    }
 
     //! Equality operator
     friend inline bool operator==(global_executor l, global_executor r) {

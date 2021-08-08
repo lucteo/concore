@@ -12,8 +12,11 @@
 #include <concore/_concepts/_concepts_receiver.hpp>
 #endif
 #include <concore/_cpo/_cpo_set_value.hpp>
+#include <concore/_cpo/_cpo_set_done.hpp>
+#include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/task.hpp>
 #include <concore/detail/extra_type_traits.hpp>
+#include <concore/task_cancelled.hpp>
 
 #include <exception>
 #include <type_traits>
@@ -35,8 +38,12 @@ struct pool_data;
 //! Gets the task group associated with the given pool. Used for testing
 task_group get_associated_group(const static_thread_pool& pool);
 
-//! Enqueue a task into the task pool
+//! Enqueue a task functor into the task pool
 void pool_enqueue(pool_data& pool, task_function&& t);
+//! Enqueue a task functor into the task pool; returns false if the pool was stopped
+bool pool_enqueue_check_cancel(pool_data& pool, task_function&& t);
+//! Enqueue a task into the task pool
+void pool_enqueue_noexcept(pool_data& pool, task&& t) noexcept;
 
 //! Operation struct that models operation_state concept.
 //! Returned when the user calls 'connect' on the thread pool sender.
@@ -56,7 +63,12 @@ struct pool_sender_op {
 
             void operator()() { concore::set_value(std::move(receiver_)); }
         };
-        pool_enqueue(*pool_, task_obj{std::move(receiver_)});
+        try {
+            if (!pool_enqueue_check_cancel(*pool_, task_obj{std::move(receiver_)}))
+                concore::set_done(std::move(receiver_));
+        } catch (...) {
+            concore::set_error(std::move(receiver_), std::current_exception());
+        }
     }
 
 private:
@@ -181,6 +193,8 @@ public:
     void execute(F&& f) const {
         pool_enqueue(*impl_, task_function{(F &&) f});
     }
+
+    void execute(task t) const noexcept { pool_enqueue_noexcept(*impl_, std::move(t)); }
 
     /**
      * \brief   Bulk-executes the given functor in the current thread pool.

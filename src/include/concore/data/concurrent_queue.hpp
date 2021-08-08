@@ -6,41 +6,41 @@
  */
 #pragma once
 
-#include "concurrent_queue_type.hpp"
-#include "detail/nodes.hpp"
-#include "detail/concurrent_queue_impl.hpp"
-#include "../low_level/spin_backoff.hpp"
-
-#include <atomic>
+#include "concurrent_dequeue.hpp"
 
 namespace concore {
 
 inline namespace v1 {
 
 /**
- * @brief      Concurrent double-ended queue implementation
+ * @brief      Concurrent queue implementation
  *
  * @tparam     T         The type of elements to store
- * @tparam     conc_type The expected concurrency for the queue
- *
- * Based on the conc_type parameter, this can be:
- *  - single-producer, single-consumer
- *  - single-producer, multi-consumer
- *  - multi-producer, single-consumer
- *  - multi-producer, multi-consumer
- *
- * Note, that the implementation for some of these alternatives might coincide.
  *
  * The queue, has 2 ends:
  *  - the *back*: where new element can be added
  *  - the *front*: from which elements can be extracted
  *
  * The queue has only 2 operations corresponding to pushing new elements into the queue and popping
- * elements out of the queue.
+ * elements out of the queue: @ref push() and @ref try_pop().
  *
- * @see push(), try_pop()
+ * There can be any number of threads calling @ref push() and @ref pop().
+ *
+ * @warning: The move constructor of the given type must not throw.
+ *
+ * Exceptions guarantees:
+ * - push might throw while allocating memory; in this case, the element is not added
+ *
+ * Thread safety: except the following methods, everything else can be used concurrently:
+ * - constructors
+ * - copy/move assignments
+ * - @ref unsafe_clear()
+ *
+ * This queue does not provide any iterators, as those would be thread unsafe.
+ *
+ * @see push(), try_pop(), concurrent_dequeue
  */
-template <typename T, queue_type conc_type = queue_type::multi_prod_multi_cons>
+template <typename T>
 class concurrent_queue {
 public:
     //! The value type of the concurrent queue.
@@ -48,12 +48,26 @@ public:
 
     //! Default constructor. Creates a valid empty queue.
     concurrent_queue() = default;
+    /**
+     * @brief      Constructs a new instance of the queue, with the given preallocated size.
+     *
+     * @param      expected_size  How many elements to preallocate in our fast queue.
+     *
+     * If we ever add more elements in our queue than the given limit, our queue starts to become
+     * slower.
+     *
+     * The number of reserved elements should be bigger than the expected concurrency.
+     */
+    explicit concurrent_queue(size_t expected_size)
+        : data_(expected_size) {}
+
     //! Destructor
     ~concurrent_queue() = default;
-    //! Copy constructor is DISABLED
-    concurrent_queue(const concurrent_queue&) = delete;
-    //! Copy assignment is DISABLED
-    const concurrent_queue& operator=(const concurrent_queue&) = delete;
+
+    //! Copy constructor
+    concurrent_queue(const concurrent_queue&) = default;
+    //! Copy assignment
+    concurrent_queue& operator=(const concurrent_queue&) = default;
 
     //! Move constructor
     // NOLINTNEXTLINE(performance-noexcept-move-constructor)
@@ -69,17 +83,11 @@ public:
      *
      * @details
      *
-     * This ensures that is thread-safe with respect to the chosen queue_type concurrency
-     * policy.
+     * This operation is thread-safe.
      *
      * @see try_pop()
      */
-    void push(T&& elem) {
-        // Fill up a new node; use in-place move ctor
-        node_ptr node = factory_.acquire();
-        detail::construct_in_node(node, std::forward<T>(elem));
-        detail::push_back(queue_, node);
-    }
+    void push(T&& elem) { data_.push_back(std::move(elem)); }
 
     /**
      * @brief      Try to pop one element from the front of the queue
@@ -94,34 +102,19 @@ public:
      * If the queue is not empty, it will extract the element from the front of the queue and store
      * it in the given parameter.
      *
-     * This ensures that is thread-safe with respect to the chosen queue_type concurrency
-     * policy.
+     * This operation is thread-safe.
      *
      * @see push()
      */
-    bool try_pop(T& elem) {
-        node_ptr node{nullptr};
-        if constexpr (detail::is_single_consumer(conc_type))
-            node = detail::try_pop_front_single(queue_);
-        else {
-            node = detail::try_pop_front_multi(queue_);
-        }
-        if (node) {
-            detail::extract_from_node(node, elem);
-            factory_.release(node);
-            return true;
-        } else
-            return false;
-    }
+    bool try_pop(T& elem) noexcept { return data_.try_pop_front(elem); }
+
+    //! Clears the content of the queue.
+    //! This is not thread safe.
+    void unsafe_clear() noexcept { return data_.unsafe_clear(); }
 
 private:
-    using node_ptr = detail::node_ptr;
-
-    //! The data holding the actual queue
-    detail::concurrent_queue_data queue_;
-
-    //! Object that creates nodes, and keeps track of the freed nodes.
-    detail::node_factory<T> factory_;
+    //! This is implemented in terms of a concurrent dequeue
+    concurrent_dequeue<T> data_;
 };
 
 } // namespace v1
