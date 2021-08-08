@@ -5,9 +5,6 @@
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/detail/concept_macros.hpp>
 
-#if CONCORE_CXX_HAS_CONCEPTS
-#include <concepts>
-#endif
 #include <type_traits>
 
 namespace concore {
