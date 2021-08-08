@@ -37,6 +37,8 @@ set(func_sourceFiles
     "func/std/test_sender_algo.cpp"
     "func/std/test_sender_done_error.cpp"
 
+    "func/computation/test_computation.cpp"
+
     "func/profiling_helper_test.cpp" # Must be last
 )
 
