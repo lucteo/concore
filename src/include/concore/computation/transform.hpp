@@ -1,8 +1,5 @@
 #pragma once
 
-#pragma once
-
-#include <concore/task.hpp>
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/_cpo/_cpo_set_done.hpp>
@@ -50,7 +47,7 @@ template <typename PrevComp, typename F>
 struct transform_computation {
     using value_type = typename transform_result<typename PrevComp::value_type, F>::type;
 
-    explicit transform_computation(PrevComp prevComp, F trFun)
+    transform_computation(PrevComp prevComp, F trFun)
         : prevComp_((PrevComp &&) prevComp)
         , trFun_((F &&) trFun) {}
 
@@ -75,7 +72,7 @@ inline namespace v1 {
  * @brief   Returns a computation that transforms the result of a previous computation
  * @tparam  PrevComp    The type of the previous computation
  * @tparam  F           The type of functor used to transform the previous result
- * @param   prevComp    The prvious computation that needs to be transformed
+ * @param   prevComp    The previous computation that needs to be transformed
  * @param   trFun       The functor used to transform the result of the previous computation
  * @return  A computation object
  * @details
@@ -107,7 +104,7 @@ inline namespace v1 {
  */
 template <typename PrevComp, typename F>
 detail::transform_computation<PrevComp, F> transform(PrevComp prevComp, F trFun) {
-    return detail::transform_computation<PrevComp, F>{(PrevComp &&) prevComp, (F &&) trFun};
+    return {(PrevComp &&) prevComp, (F &&) trFun};
 }
 
 // TODO: pipe operator

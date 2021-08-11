@@ -4,6 +4,7 @@
 #include <concore/computation/just_value.hpp>
 #include <concore/computation/from_task.hpp>
 #include <concore/computation/transform.hpp>
+#include <concore/computation/bind.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/inline_executor.hpp>
 #include <concore/thread_pool.hpp>
@@ -11,6 +12,8 @@
 
 #include <string>
 #include <atomic>
+
+using namespace concore::computation;
 
 template <typename C, typename R>
 void ensure_computation() {
@@ -35,14 +38,20 @@ struct test_void_receiver {
 
 struct test_error_receiver {
     bool* called;
-    void set_value() { FAIL("set_value() called"); }
+    template <typename... Ts>
+    void set_value(Ts...) {
+        FAIL("set_value() called");
+    }
     void set_done() noexcept { FAIL("set_done() called"); }
     void set_error(std::exception_ptr) noexcept { *called = true; }
 };
 
 struct test_done_receiver {
     bool* called;
-    void set_value() { FAIL("set_value() called"); }
+    template <typename... Ts>
+    void set_value(Ts...) {
+        FAIL("set_value() called");
+    }
     void set_done() noexcept { *called = true; }
     void set_error(std::exception_ptr) noexcept { FAIL("set_error() called"); }
 };
@@ -208,7 +217,7 @@ TEST_CASE("just_task can run with a throwing executor, calling set_done()", "[co
     REQUIRE_FALSE(executed);
 }
 
-TEST_CASE("transform with void(void) functor", "[computation") {
+TEST_CASE("transform with void(void) functor", "[computation]") {
     bool executed{false};
     auto f = [&executed] { executed = true; };
 
@@ -222,7 +231,7 @@ TEST_CASE("transform with void(void) functor", "[computation") {
     REQUIRE(executed);
 }
 
-TEST_CASE("transform with void(int) functor", "[computation") {
+TEST_CASE("transform with void(int) functor", "[computation]") {
     bool executed{false};
     auto f = [&executed](int x) {
         REQUIRE(x == 10);
@@ -239,7 +248,7 @@ TEST_CASE("transform with void(int) functor", "[computation") {
     REQUIRE(executed);
 }
 
-TEST_CASE("transform with int(void) functor", "[computation") {
+TEST_CASE("transform with int(void) functor", "[computation]") {
     bool executed{false};
     auto f = [&executed]() -> int {
         executed = true;
@@ -256,7 +265,7 @@ TEST_CASE("transform with int(void) functor", "[computation") {
     REQUIRE(executed);
 }
 
-TEST_CASE("transform with int(int) functor", "[computation") {
+TEST_CASE("transform with int(int) functor", "[computation]") {
     bool executed{false};
     auto f = [&executed](int x) -> int {
         executed = true;
@@ -273,7 +282,7 @@ TEST_CASE("transform with int(int) functor", "[computation") {
     REQUIRE(executed);
 }
 
-TEST_CASE("transform on a thread_pool", "[computation") {
+TEST_CASE("transform on a thread_pool", "[computation]") {
     concore::static_thread_pool pool{1};
 
     auto c0 = concore::computation::from_task(concore::task{[] {}}, pool.executor());
@@ -287,7 +296,7 @@ TEST_CASE("transform on a thread_pool", "[computation") {
     REQUIRE(res == 10);
 }
 
-TEST_CASE("transform calls set_error if the functor throws", "[computation") {
+TEST_CASE("transform calls set_error if the functor throws", "[computation]") {
     bool executed{false};
     auto f = [&executed](int x) {
         executed = true;
@@ -304,7 +313,7 @@ TEST_CASE("transform calls set_error if the functor throws", "[computation") {
     REQUIRE(executed);
 }
 
-TEST_CASE("transform forwards errors", "[computation") {
+TEST_CASE("transform forwards errors", "[computation]") {
     bool executed{false};
     auto f = [&executed]() { executed = true; };
 
@@ -318,7 +327,7 @@ TEST_CASE("transform forwards errors", "[computation") {
     REQUIRE_FALSE(executed);
 }
 
-TEST_CASE("transform forwards cancellation", "[computation") {
+TEST_CASE("transform forwards cancellation", "[computation]") {
     bool executed{false};
     auto f = [&executed]() { executed = true; };
 
@@ -333,4 +342,182 @@ TEST_CASE("transform forwards cancellation", "[computation") {
     concore::computation::run_with(c, test_done_receiver{&recv_called});
     REQUIRE(recv_called);
     REQUIRE_FALSE(executed);
+}
+
+template <typename PrevComp, typename F>
+auto transform_with_bind(PrevComp c, F f) {
+    using interim_type = typename PrevComp::value_type;
+    auto chainFun = [f](interim_type val) { return concore::computation::just_value(f(val)); };
+    return concore::computation::bind(std::move(c), std::move(chainFun));
+}
+
+TEST_CASE("bind simulating an int transform", "[computation]") {
+    auto f = [](int x) -> int { return x * x; };
+
+    auto c0 = concore::computation::just_value(10);
+    auto c = transform_with_bind(c0, std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    CHECK(res == 100);
+}
+
+TEST_CASE("bind that chains a comp returning int with one returning void", "[computation]") {
+    auto c0 = concore::computation::just_value(10);
+    auto f = [](int x) {
+        CHECK(x == 10);
+        return concore::computation::just_void();
+    };
+    auto c = concore::computation::bind(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_void_receiver{&recv_caled});
+    CHECK(recv_caled);
+}
+
+TEST_CASE("bind doesn't call ftor in case of error", "[computation]") {
+    auto f = [] {
+        FAIL_CHECK("ftor was not expected to be called");
+        return just_void();
+    };
+
+    auto c0 = just_void();
+    auto c1 = transform(c0, [] { throw std::logic_error("err"); });
+    auto c = bind(c1, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_caled});
+    CHECK(recv_caled);
+}
+
+TEST_CASE("bind doesn't call ftor in case of cancellation", "[computation]") {
+    auto f = [] {
+        FAIL_CHECK("ftor was not expected to be called");
+        return just_void();
+    };
+
+    auto grp = concore::task_group::create();
+    grp.cancel();
+    auto t = concore::task{[] {}, grp};
+
+    auto c0 = from_task(std::move(t));
+    auto c = bind(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_done_receiver{&recv_caled});
+    CHECK(recv_caled);
+}
+
+TEST_CASE("bind calls set_error if the ftor throws", "[computation]") {
+    auto f = [] {
+        throw std::logic_error("err");
+        return just_void();
+    };
+
+    auto c0 = just_void();
+    auto c = bind(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_caled});
+    CHECK(recv_caled);
+}
+
+TEST_CASE("bind_error calls the ftor when the prev computation reports error", "[computation]") {
+    bool ftor_called{false};
+    auto f = [&ftor_called](std::exception_ptr) {
+        ftor_called = true;
+        return just_void();
+    };
+
+    auto c0 = just_void();
+    auto c1 = transform(c0, [] { throw std::logic_error("err"); });
+    auto c = bind_error(c1, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_void_receiver{&recv_caled});
+    CHECK(recv_caled);
+    CHECK(ftor_called);
+}
+
+TEST_CASE("bind_error with error, returning ints", "[computation]") {
+    bool ftor_called{false};
+    auto f = [&ftor_called](std::exception_ptr) {
+        ftor_called = true;
+        return just_value(10);
+    };
+
+    auto c0 = just_void();
+    auto c1 = transform(c0, [] {
+        throw std::logic_error("err");
+        return 3;
+    });
+    auto c = bind_error(c1, std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    CHECK(res == 10);
+}
+
+TEST_CASE("bind_error doesn't call the ftor when the prev computation succeeds", "[computation]") {
+    bool ftor_called{false};
+    auto f = [&ftor_called](std::exception_ptr) {
+        ftor_called = true;
+        return just_value(10);
+    };
+
+    auto c = bind_error(just_value(3), std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    CHECK(res == 3);
+}
+
+TEST_CASE("bind_error doesn't call the ftor when the prev computation was cancelled",
+        "[computation]") {
+    bool ftor_called{false};
+    auto f = [&ftor_called](std::exception_ptr) {
+        ftor_called = true;
+        return just_value(10);
+    };
+
+    auto grp = concore::task_group::create();
+    grp.cancel();
+    concore::task t{[] {}, std::move(grp)};
+
+    auto c0 = from_task(std::move(t));
+    auto c1 = transform(std::move(c0), [] { return 3; });
+    auto c = bind_error(c1, std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_done_receiver{&recv_caled});
+    CHECK(recv_caled);
+    CHECK_FALSE(ftor_called);
+}
+
+TEST_CASE("bind_error calls set_error if the ftor throws", "[computation]") {
+    bool ftor_called{false};
+    auto f = [&ftor_called](std::exception_ptr) {
+        ftor_called = true;
+        throw std::logic_error("err1");
+        return just_void();
+    };
+
+    auto c0 = just_void();
+    auto c1 = transform(c0, [] { throw std::logic_error("err2"); });
+    auto c = bind_error(c1, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_caled{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_caled});
+    CHECK(recv_caled);
+    CHECK(ftor_called);
 }
