@@ -2,6 +2,7 @@
 
 #include <concore/computation/computation.hpp>
 #include <concore/computation/just_value.hpp>
+#include <concore/computation/from_function.hpp>
 #include <concore/computation/from_task.hpp>
 #include <concore/computation/transform.hpp>
 #include <concore/computation/bind.hpp>
@@ -62,7 +63,7 @@ TEST_CASE("just_value(int) is a computation that yields the specified value", "[
 
     int res{0};
     concore::computation::run_with(c, test_value_receiver<int>{&res});
-    REQUIRE(res == 10);
+    CHECK(res == 10);
 }
 
 TEST_CASE("just_value(string) is a computation that yields the specified value", "[computation]") {
@@ -71,7 +72,7 @@ TEST_CASE("just_value(string) is a computation that yields the specified value",
 
     std::string res;
     concore::computation::run_with(c, test_value_receiver<std::string>{&res});
-    REQUIRE(res == "Hello, world!");
+    CHECK(res == "Hello, world!");
 }
 
 TEST_CASE("just_value() is a computation that yields nothing", "[computation]") {
@@ -80,7 +81,7 @@ TEST_CASE("just_value() is a computation that yields nothing", "[computation]") 
 
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
-    REQUIRE(called);
+    CHECK(called);
 }
 
 TEST_CASE("just_void() is a computation that yields nothing", "[computation]") {
@@ -89,10 +90,39 @@ TEST_CASE("just_void() is a computation that yields nothing", "[computation]") {
 
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
-    REQUIRE(called);
+    CHECK(called);
 }
 
-TEST_CASE("just_task with a no-error task will call set_value", "[computation]") {
+TEST_CASE("from_function with a function returning a value", "[computation]") {
+    auto c = from_function([] { return 3; });
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    CHECK(res == 3);
+}
+
+TEST_CASE("from_function with a function returning void", "[computation]") {
+    bool ftor_called{false};
+    auto c = from_function([&ftor_called] { ftor_called = true; });
+    ensure_computation<decltype(c), void>();
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_void_receiver{&recv_called});
+    CHECK(recv_called);
+    CHECK(ftor_called);
+}
+
+TEST_CASE("from_function with a throwing function reports an error", "[computation]") {
+    auto c = from_function([] { throw std::logic_error("err"); });
+    ensure_computation<decltype(c), void>();
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_called});
+    CHECK(recv_called);
+}
+
+TEST_CASE("from_task with a no-error task will call set_value", "[computation]") {
     concore::task t{[] {}};
 
     auto c = concore::computation::from_task(std::move(t));
@@ -100,10 +130,10 @@ TEST_CASE("just_task with a no-error task will call set_value", "[computation]")
 
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
-    REQUIRE(called);
+    CHECK(called);
 }
 
-TEST_CASE("just_task with a task returning an error will call set_error", "[computation]") {
+TEST_CASE("from_task with a task returning an error will call set_error", "[computation]") {
     concore::task t{[] { throw std::logic_error("error"); }};
 
     auto c = concore::computation::from_task(std::move(t));
@@ -111,10 +141,10 @@ TEST_CASE("just_task with a task returning an error will call set_error", "[comp
 
     bool called{false};
     concore::computation::run_with(c, test_error_receiver{&called});
-    REQUIRE(called);
+    CHECK(called);
 }
 
-TEST_CASE("just_task with a task on a cancelled group will call set_done", "[computation]") {
+TEST_CASE("from_task with a task on a cancelled group will call set_done", "[computation]") {
     auto grp = concore::task_group::create();
     grp.cancel();
     concore::task t{[] {}, std::move(grp)};
@@ -124,19 +154,19 @@ TEST_CASE("just_task with a task on a cancelled group will call set_done", "[com
 
     bool called{false};
     concore::computation::run_with(c, test_done_receiver{&called});
-    REQUIRE(called);
+    CHECK(called);
 }
 
-TEST_CASE("just_task on a task with continuation will ensure the task continuation is called "
+TEST_CASE("from_task on a task with continuation will ensure the task continuation is called "
           "before the receiver",
         "[computation]") {
     std::atomic<int> counter{0};
-    auto f = [&counter] { REQUIRE(counter++ == 0); };
+    auto f = [&counter] { CHECK(counter++ == 0); };
     auto cont = [&counter](std::exception_ptr ex) {
-        REQUIRE(!ex);
-        REQUIRE(counter++ == 1);
+        CHECK(!ex);
+        CHECK(counter++ == 1);
     };
-    auto recv_fun = [&counter] { REQUIRE(counter++ == 2); };
+    auto recv_fun = [&counter] { CHECK(counter++ == 2); };
 
     concore::task t{std::move(f), {}, std::move(cont)};
 
@@ -145,10 +175,10 @@ TEST_CASE("just_task on a task with continuation will ensure the task continuati
 
     auto recv = concore::as_receiver<decltype(recv_fun)>(std::move(recv_fun));
     concore::computation::run_with(c, recv);
-    REQUIRE(counter.load() == 3);
+    CHECK(counter.load() == 3);
 }
 
-TEST_CASE("just_task can run with inline_executor", "[computation]") {
+TEST_CASE("from_task can run with inline_executor", "[computation]") {
     bool executed{false};
     auto f = [&executed] { executed = true; };
     concore::task t{std::move(f)};
@@ -158,17 +188,17 @@ TEST_CASE("just_task can run with inline_executor", "[computation]") {
 
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
-    REQUIRE(called);
-    REQUIRE(executed);
+    CHECK(called);
+    CHECK(executed);
 }
 
-TEST_CASE("just_task can run with thread_pool executor", "[computation]") {
+TEST_CASE("from_task can run with thread_pool executor", "[computation]") {
     concore::static_thread_pool pool{1};
     auto ex = pool.executor();
 
     bool executed{false};
     auto f = [&executed, &ex] {
-        REQUIRE(ex.running_in_this_thread());
+        CHECK(ex.running_in_this_thread());
         executed = true;
     };
     concore::task t{std::move(f)};
@@ -179,11 +209,11 @@ TEST_CASE("just_task can run with thread_pool executor", "[computation]") {
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
     pool.wait();
-    REQUIRE(called);
-    REQUIRE(executed);
+    CHECK(called);
+    CHECK(executed);
 }
 
-TEST_CASE("just_task can run with a stopped thread_pool executor, calling set_done()",
+TEST_CASE("from_task can run with a stopped thread_pool executor, calling set_done()",
         "[computation]") {
     concore::static_thread_pool pool{1};
     auto ex = pool.executor();
@@ -199,11 +229,11 @@ TEST_CASE("just_task can run with a stopped thread_pool executor, calling set_do
     bool called{false};
     concore::computation::run_with(c, test_done_receiver{&called});
     pool.wait();
-    REQUIRE(called);
-    REQUIRE_FALSE(executed);
+    CHECK(called);
+    CHECK_FALSE(executed);
 }
 
-TEST_CASE("just_task can run with a throwing executor, calling set_done()", "[computation]") {
+TEST_CASE("from_task can run with a throwing executor, calling set_done()", "[computation]") {
     bool executed{false};
     auto f = [&executed] { executed = true; };
     concore::task t{std::move(f)};
@@ -213,8 +243,8 @@ TEST_CASE("just_task can run with a throwing executor, calling set_done()", "[co
 
     bool called{false};
     concore::computation::run_with(c, test_error_receiver{&called});
-    REQUIRE(called);
-    REQUIRE_FALSE(executed);
+    CHECK(called);
+    CHECK_FALSE(executed);
 }
 
 TEST_CASE("transform with void(void) functor", "[computation]") {
@@ -227,14 +257,14 @@ TEST_CASE("transform with void(void) functor", "[computation]") {
 
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
-    REQUIRE(called);
-    REQUIRE(executed);
+    CHECK(called);
+    CHECK(executed);
 }
 
 TEST_CASE("transform with void(int) functor", "[computation]") {
     bool executed{false};
     auto f = [&executed](int x) {
-        REQUIRE(x == 10);
+        CHECK(x == 10);
         executed = true;
     };
 
@@ -244,8 +274,8 @@ TEST_CASE("transform with void(int) functor", "[computation]") {
 
     bool called{false};
     concore::computation::run_with(c, test_void_receiver{&called});
-    REQUIRE(called);
-    REQUIRE(executed);
+    CHECK(called);
+    CHECK(executed);
 }
 
 TEST_CASE("transform with int(void) functor", "[computation]") {
@@ -261,8 +291,8 @@ TEST_CASE("transform with int(void) functor", "[computation]") {
 
     int res{0};
     concore::computation::run_with(c, test_value_receiver<int>{&res});
-    REQUIRE(res == 10);
-    REQUIRE(executed);
+    CHECK(res == 10);
+    CHECK(executed);
 }
 
 TEST_CASE("transform with int(int) functor", "[computation]") {
@@ -278,8 +308,8 @@ TEST_CASE("transform with int(int) functor", "[computation]") {
 
     int res{0};
     concore::computation::run_with(c, test_value_receiver<int>{&res});
-    REQUIRE(res == 100);
-    REQUIRE(executed);
+    CHECK(res == 100);
+    CHECK(executed);
 }
 
 TEST_CASE("transform on a thread_pool", "[computation]") {
@@ -293,7 +323,7 @@ TEST_CASE("transform on a thread_pool", "[computation]") {
     int res{0};
     concore::computation::run_with(c, test_value_receiver<int>{&res});
     pool.wait();
-    REQUIRE(res == 10);
+    CHECK(res == 10);
 }
 
 TEST_CASE("transform calls set_error if the functor throws", "[computation]") {
@@ -309,8 +339,8 @@ TEST_CASE("transform calls set_error if the functor throws", "[computation]") {
 
     bool recv_called{false};
     concore::computation::run_with(c, test_error_receiver{&recv_called});
-    REQUIRE(recv_called);
-    REQUIRE(executed);
+    CHECK(recv_called);
+    CHECK(executed);
 }
 
 TEST_CASE("transform forwards errors", "[computation]") {
@@ -323,8 +353,8 @@ TEST_CASE("transform forwards errors", "[computation]") {
 
     bool recv_called{false};
     concore::computation::run_with(c, test_error_receiver{&recv_called});
-    REQUIRE(recv_called);
-    REQUIRE_FALSE(executed);
+    CHECK(recv_called);
+    CHECK_FALSE(executed);
 }
 
 TEST_CASE("transform forwards cancellation", "[computation]") {
@@ -340,8 +370,8 @@ TEST_CASE("transform forwards cancellation", "[computation]") {
 
     bool recv_called{false};
     concore::computation::run_with(c, test_done_receiver{&recv_called});
-    REQUIRE(recv_called);
-    REQUIRE_FALSE(executed);
+    CHECK(recv_called);
+    CHECK_FALSE(executed);
 }
 
 template <typename PrevComp, typename F>
