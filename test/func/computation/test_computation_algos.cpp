@@ -3,6 +3,7 @@
 #include <concore/computation/computation.hpp>
 #include <concore/computation/just_value.hpp>
 #include <concore/computation/from_task.hpp>
+#include <concore/computation/transform.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/inline_executor.hpp>
 #include <concore/thread_pool.hpp>
@@ -204,5 +205,132 @@ TEST_CASE("just_task can run with a throwing executor, calling set_done()", "[co
     bool called{false};
     concore::computation::run_with(c, test_error_receiver{&called});
     REQUIRE(called);
+    REQUIRE_FALSE(executed);
+}
+
+TEST_CASE("transform with void(void) functor", "[computation") {
+    bool executed{false};
+    auto f = [&executed] { executed = true; };
+
+    auto c0 = concore::computation::just_void();
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool called{false};
+    concore::computation::run_with(c, test_void_receiver{&called});
+    REQUIRE(called);
+    REQUIRE(executed);
+}
+
+TEST_CASE("transform with void(int) functor", "[computation") {
+    bool executed{false};
+    auto f = [&executed](int x) {
+        REQUIRE(x == 10);
+        executed = true;
+    };
+
+    auto c0 = concore::computation::just_value(10);
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool called{false};
+    concore::computation::run_with(c, test_void_receiver{&called});
+    REQUIRE(called);
+    REQUIRE(executed);
+}
+
+TEST_CASE("transform with int(void) functor", "[computation") {
+    bool executed{false};
+    auto f = [&executed]() -> int {
+        executed = true;
+        return 10;
+    };
+
+    auto c0 = concore::computation::just_void();
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    REQUIRE(res == 10);
+    REQUIRE(executed);
+}
+
+TEST_CASE("transform with int(int) functor", "[computation") {
+    bool executed{false};
+    auto f = [&executed](int x) -> int {
+        executed = true;
+        return x * x;
+    };
+
+    auto c0 = concore::computation::just_value(10);
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    REQUIRE(res == 100);
+    REQUIRE(executed);
+}
+
+TEST_CASE("transform on a thread_pool", "[computation") {
+    concore::static_thread_pool pool{1};
+
+    auto c0 = concore::computation::from_task(concore::task{[] {}}, pool.executor());
+    auto f = []() -> int { return 10; };
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), int>();
+
+    int res{0};
+    concore::computation::run_with(c, test_value_receiver<int>{&res});
+    pool.wait();
+    REQUIRE(res == 10);
+}
+
+TEST_CASE("transform calls set_error if the functor throws", "[computation") {
+    bool executed{false};
+    auto f = [&executed](int x) {
+        executed = true;
+        throw std::logic_error("error");
+    };
+
+    auto c0 = concore::computation::just_value(10);
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_called});
+    REQUIRE(recv_called);
+    REQUIRE(executed);
+}
+
+TEST_CASE("transform forwards errors", "[computation") {
+    bool executed{false};
+    auto f = [&executed]() { executed = true; };
+
+    auto c0 = concore::computation::from_task(concore::task{[] { throw std::logic_error("err"); }});
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_called});
+    REQUIRE(recv_called);
+    REQUIRE_FALSE(executed);
+}
+
+TEST_CASE("transform forwards cancellation", "[computation") {
+    bool executed{false};
+    auto f = [&executed]() { executed = true; };
+
+    auto grp = concore::task_group::create();
+    grp.cancel();
+
+    auto c0 = concore::computation::from_task(concore::task{[] {}, grp});
+    auto c = concore::computation::transform(c0, std::move(f));
+    ensure_computation<decltype(c), void>();
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_done_receiver{&recv_called});
+    REQUIRE(recv_called);
     REQUIRE_FALSE(executed);
 }
