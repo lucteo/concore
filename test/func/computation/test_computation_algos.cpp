@@ -7,8 +7,10 @@
 #include <concore/computation/transform.hpp>
 #include <concore/computation/bind.hpp>
 #include <concore/computation/on.hpp>
+#include <concore/computation/wait.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/inline_executor.hpp>
+#include <concore/spawn.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/throwing_executor.hpp>
 
@@ -631,4 +633,59 @@ TEST_CASE("on with a cancelled executor that yields the cancellation", "[computa
     concore::computation::run_with(c, test_done_receiver{&recv_called});
     pool.wait();
     CHECK(recv_called);
+}
+
+TEST_CASE("wait will properly return the value type of a computation", "[computation]") {
+    auto c = transform(just_value(16), [](int x) { return x * x; });
+
+    auto res = wait(c);
+    CHECK(res == 256);
+}
+
+TEST_CASE("wait will properly return the value computed on a different thread", "[computation]") {
+    auto c0 = on(just_value(16), concore::spawn_executor{});
+    auto c = transform(c0, [](int x) { return x * x; });
+
+    auto res = wait(c);
+    CHECK(res == 256);
+}
+
+TEST_CASE("wait will ensure that void computation is finished", "[computation]") {
+    bool executed{false};
+    auto c0 = on(just_void(), concore::spawn_executor{});
+    auto c = transform(c0, [&] { executed = true; });
+
+    wait(c);
+    CHECK(executed);
+}
+
+TEST_CASE("wait will throw error if the computation yields an error", "[computation]") {
+    auto c0 = on(just_void(), concore::spawn_executor{});
+    auto c = transform(c0, [&] { throw std::logic_error("err"); });
+
+    try {
+        wait(c);
+        FAIL_CHECK("exception should have been thrown");
+    } catch (const std::logic_error&) {
+        SUCCEED();
+    } catch (...) {
+        FAIL_CHECK("invalid type of exception caught");
+    }
+}
+
+TEST_CASE("wait will throw task_cancelled if the computation is cancelled", "[computation]") {
+    concore::static_thread_pool pool{1};
+    auto ex = pool.executor();
+    pool.stop();
+
+    auto c = on(just_void(), ex);
+
+    try {
+        wait(c);
+        FAIL_CHECK("exception should have been thrown");
+    } catch (const concore::task_cancelled&) {
+        SUCCEED();
+    } catch (...) {
+        FAIL_CHECK("invalid type of exception caught");
+    }
 }
