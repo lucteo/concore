@@ -6,6 +6,7 @@
 #include <concore/computation/from_task.hpp>
 #include <concore/computation/transform.hpp>
 #include <concore/computation/bind.hpp>
+#include <concore/computation/on.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/inline_executor.hpp>
 #include <concore/thread_pool.hpp>
@@ -550,4 +551,84 @@ TEST_CASE("bind_error calls set_error if the ftor throws", "[computation]") {
     concore::computation::run_with(c, test_error_receiver{&recv_caled});
     CHECK(recv_caled);
     CHECK(ftor_called);
+}
+
+TEST_CASE("on can change the thread", "[computation]") {
+    concore::static_thread_pool pool{1};
+    auto ex = pool.executor();
+
+    auto c = on(just_value(10), ex);
+
+    bool ftor_called{false};
+    auto c_after = transform(c, [&ftor_called, &ex](int x) {
+        ftor_called = true;
+        CHECK(x == 10);
+        CHECK(ex.running_in_this_thread());
+        return x * x;
+    });
+    int res{0};
+    concore::computation::run_with(c_after, test_value_receiver<int>{&res});
+    pool.wait();
+    CHECK(res == 100);
+    CHECK(ftor_called);
+}
+
+TEST_CASE("on changing a thread with a void computation", "[computation]") {
+    concore::static_thread_pool pool{1};
+    auto ex = pool.executor();
+
+    auto c = on(just_void(), ex);
+
+    bool ftor_called{false};
+    auto c_after = transform(c, [&ftor_called, &ex]() {
+        ftor_called = true;
+        CHECK(ex.running_in_this_thread());
+    });
+    bool recv_called{false};
+    concore::computation::run_with(c_after, test_void_receiver{&recv_called});
+    pool.wait();
+    CHECK(recv_called);
+    CHECK(ftor_called);
+}
+
+TEST_CASE("on applied to a computation that yields error will forward the error", "[computation]") {
+    auto c0 = from_function([] { throw std::logic_error("err"); });
+    auto c = on(c0, concore::inline_executor{});
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_called});
+    CHECK(recv_called);
+}
+
+TEST_CASE("on applied to a computation that is cancelled  will forward the cancellation",
+        "[computation]") {
+    auto grp = concore::task_group::create();
+    grp.cancel();
+    auto c0 = from_task(concore::task{[] {}, grp});
+    auto c = on(c0, concore::inline_executor{});
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_done_receiver{&recv_called});
+    CHECK(recv_called);
+}
+
+TEST_CASE("on with an executor that yields an error", "[computation]") {
+    auto c = on(just_void(), throwing_executor{});
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_error_receiver{&recv_called});
+    CHECK(recv_called);
+}
+
+TEST_CASE("on with a cancelled executor that yields the cancellation", "[computation]") {
+    concore::static_thread_pool pool{1};
+    auto ex = pool.executor();
+    pool.stop();
+
+    auto c = on(just_void(), ex);
+
+    bool recv_called{false};
+    concore::computation::run_with(c, test_done_receiver{&recv_called});
+    pool.wait();
+    CHECK(recv_called);
 }

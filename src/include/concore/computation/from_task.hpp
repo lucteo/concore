@@ -3,46 +3,22 @@
 #pragma once
 
 #include <concore/task.hpp>
-#include <concore/_cpo/_cpo_set_value.hpp>
-#include <concore/_cpo/_cpo_set_error.hpp>
-#include <concore/_cpo/_cpo_set_done.hpp>
 #include <concore/_cpo/_cpo_execute.hpp>
 #include <concore/_concepts/_concepts_receiver.hpp>
-#include <concore/task_cancelled.hpp>
-
-#include <exception>
+#include <concore/detail/call_recv_continuation.hpp>
 
 namespace concore {
 namespace computation {
 namespace detail {
 
 template <typename Recv>
-void call_recv_from_cont(Recv&& r, std::exception_ptr ex) {
-    if (ex) {
-        try {
-            std::rethrow_exception(ex);
-        } catch (const task_cancelled&) {
-            concore::set_done((Recv &&) r);
-        } catch (...) {
-            concore::set_error((Recv &&) r, std::move(ex));
-        }
-    } else
-        concore::set_value((Recv &&) r);
-}
-
-template <typename Recv>
 void set_recv_continuation(task& t, Recv&& r) {
     auto inner_cont = t.get_continuation();
     if (inner_cont) {
-        auto cont = [inner_cont, r = (Recv &&) r](std::exception_ptr ex) {
-            inner_cont(ex);
-            call_recv_from_cont((Recv &&) r, ex);
-        };
-        t.set_continuation(std::move(cont));
+        t.set_continuation(concore::detail::call_prev_and_recv_continuation<Recv, void>{
+                std::move(inner_cont), (Recv &&) r});
     } else {
-        auto cont = [r = (Recv &&) r](
-                            std::exception_ptr ex) { call_recv_from_cont((Recv &&) r, ex); };
-        t.set_continuation(std::move(cont));
+        t.set_continuation(concore::detail::call_recv_continuation<Recv, void>{(Recv &&) r});
     }
 }
 
