@@ -175,7 +175,7 @@ inline namespace v1 {
  * @see     transform(), bind_error()
  */
 template <typename PrevComp, typename F>
-detail::bind_computation<PrevComp, F> bind(PrevComp prevComp, F chainFun) {
+inline detail::bind_computation<PrevComp, F> bind(PrevComp prevComp, F chainFun) {
     return {(PrevComp &&) prevComp, (F &&) chainFun};
 }
 
@@ -218,7 +218,7 @@ detail::bind_computation<PrevComp, F> bind(PrevComp prevComp, F chainFun) {
  * @see     bind(), transform()
  */
 template <typename PrevComp, typename F>
-detail::bind_error_computation<PrevComp, F> bind_error(PrevComp prevComp, F chainFun) {
+inline detail::bind_error_computation<PrevComp, F> bind_error(PrevComp prevComp, F chainFun) {
     return {(PrevComp &&) prevComp, (F &&) chainFun};
 }
 

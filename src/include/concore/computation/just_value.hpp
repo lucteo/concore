@@ -55,12 +55,12 @@ inline namespace v1 {
  * @see     just_void()
  */
 template <typename T>
-detail::just_value_computation<T> just_value(T val) {
+inline detail::just_value_computation<T> just_value(T val) {
     return detail::just_value_computation<T>{(T &&) val};
 }
 
 //! @overload
-detail::just_value_computation<void> just_value() { return {}; }
+inline detail::just_value_computation<void> just_value() { return {}; }
 
 /**
  * @brief   Returns a computation that just yields nothing
@@ -72,7 +72,7 @@ detail::just_value_computation<void> just_value() { return {}; }
  *
  * @see just_value()
  */
-detail::just_value_computation<void> just_void() { return {}; }
+inline detail::just_value_computation<void> just_void() { return {}; }
 
 } // namespace v1
 } // namespace computation

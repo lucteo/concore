@@ -12,7 +12,7 @@ namespace computation {
 namespace detail {
 
 template <typename Recv>
-void set_recv_continuation(task& t, Recv&& r) {
+inline void set_recv_continuation(task& t, Recv&& r) {
     auto inner_cont = t.get_continuation();
     if (inner_cont) {
         t.set_continuation(concore::detail::call_prev_and_recv_continuation<Recv, void>{
@@ -25,7 +25,7 @@ void set_recv_continuation(task& t, Recv&& r) {
 struct from_task_computation {
     using value_type = void;
 
-    explicit from_task_computation(task t)
+    from_task_computation(task t)
         : task_(std::move(t)) {}
 
     template <typename Recv>
@@ -89,13 +89,11 @@ inline namespace v1 {
  * @see     task
  */
 template <typename E>
-detail::from_task_computation_exec<E> from_task(task t, E exec) {
-    return detail::from_task_computation_exec<E>{std::move(t), (E &&) exec};
+inline detail::from_task_computation_exec<E> from_task(task t, E exec) {
+    return {std::move(t), (E &&) exec};
 }
 
-detail::from_task_computation from_task(task t) {
-    return detail::from_task_computation{std::move(t)};
-}
+inline detail::from_task_computation from_task(task t) { return {std::move(t)}; }
 
 } // namespace v1
 } // namespace computation

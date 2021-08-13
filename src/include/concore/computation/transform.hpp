@@ -103,7 +103,7 @@ inline namespace v1 {
  * @see     bind(), bind_error()
  */
 template <typename PrevComp, typename F>
-detail::transform_computation<PrevComp, F> transform(PrevComp prevComp, F trFun) {
+inline detail::transform_computation<PrevComp, F> transform(PrevComp prevComp, F trFun) {
     return {(PrevComp &&) prevComp, (F &&) trFun};
 }
 

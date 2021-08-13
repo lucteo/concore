@@ -80,7 +80,7 @@ inline namespace v1 {
  * @see     transform(), bind_error()
  */
 template <typename PrevComp, typename E>
-detail::on_computation<PrevComp, E> on(PrevComp prevComp, E exec) {
+inline detail::on_computation<PrevComp, E> on(PrevComp prevComp, E exec) {
     return {(PrevComp &&) prevComp, (E &&) exec};
 }
 

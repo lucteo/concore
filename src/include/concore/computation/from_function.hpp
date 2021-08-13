@@ -62,7 +62,7 @@ inline namespace v1 {
  * @see     from_task(), just_value()
  */
 template <typename F>
-detail::from_function_computation<F> from_function(F fun) {
+inline detail::from_function_computation<F> from_function(F fun) {
     return {(F &&) fun};
 }
 
