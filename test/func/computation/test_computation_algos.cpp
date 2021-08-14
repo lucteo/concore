@@ -9,6 +9,7 @@
 #include <concore/computation/on.hpp>
 #include <concore/computation/wait.hpp>
 #include <concore/computation/to_task.hpp>
+#include <concore/computation/run.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/inline_executor.hpp>
 #include <concore/spawn.hpp>
@@ -767,4 +768,62 @@ TEST_CASE("to_task calls given continuation if computation cancelled", "[computa
     concore::task t = to_task(c, {}, cont_fun);
     t();
     CHECK(cont_called);
+}
+
+TEST_CASE("run behaves as run_with", "[computation]") {
+    int res{0};
+    concore::computation::run(just_value(10), test_value_receiver<int>{&res});
+    CHECK(res == 10);
+}
+
+TEST_CASE("run can take no receiver", "[computation]") {
+    bool ftor_called{false};
+    auto c = from_function([&] { ftor_called = true; });
+
+    concore::computation::run(c);
+    CHECK(ftor_called);
+}
+
+TEST_CASE("run_on will run the computation on the given executor (w/ recv)", "[computation]") {
+    concore::static_thread_pool pool{1};
+    auto ex = pool.executor();
+
+    bool ftor_called{false};
+    auto c = from_function([&] {
+        ftor_called = true;
+        CHECK(ex.running_in_this_thread());
+    });
+
+    bool recv_called{false};
+    concore::computation::run_on(ex, c, test_void_receiver{&recv_called});
+    pool.wait();
+    CHECK(recv_called);
+    CHECK(ftor_called);
+}
+
+TEST_CASE("run_on will run the computation on the given executor (w/o recv)", "[computation]") {
+    concore::static_thread_pool pool{1};
+    auto ex = pool.executor();
+
+    bool ftor_called{false};
+    auto c = from_function([&] {
+        ftor_called = true;
+        CHECK(ex.running_in_this_thread());
+    });
+
+    concore::computation::run_on(ex, c);
+    pool.wait();
+    CHECK(ftor_called);
+}
+
+TEST_CASE("run_on will forward executor exception", "[computation]") {
+    bool ftor_called{false};
+    auto c = from_function([&] { ftor_called = true; });
+
+    try {
+        concore::computation::run_on(throwing_executor{}, c);
+        FAIL_CHECK("exception not thrown");
+    } catch (...) {
+    }
+    CHECK_FALSE(ftor_called);
 }

@@ -3,17 +3,11 @@
 #include <concore/computation/computation.hpp>
 #include <concore/task.hpp>
 #include <concore/task_cancelled.hpp>
+#include <concore/computation/detail/empty_receiver.hpp>
 
 namespace concore {
 namespace computation {
 namespace detail {
-
-struct empty_recv {
-    template <typename... Val>
-    void set_value(Val...) {}
-    void set_done() noexcept {}
-    void set_error(std::exception_ptr) noexcept {}
-};
 
 struct to_task_recv {
     task_continuation_function cont_;
@@ -79,7 +73,7 @@ inline task to_task(Comp comp, task_group grp = {}, task_continuation_function c
         return {std::move(task_fun), std::move(grp)};
     } else {
         auto task_fun = [comp = (Comp &&) comp]() mutable {
-            run_with((Comp &&) comp, detail::empty_recv{});
+            run_with((Comp &&) comp, detail::empty_receiver{});
         };
         return {std::move(task_fun), std::move(grp)};
     }
