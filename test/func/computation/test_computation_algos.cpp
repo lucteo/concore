@@ -8,6 +8,7 @@
 #include <concore/computation/bind.hpp>
 #include <concore/computation/on.hpp>
 #include <concore/computation/wait.hpp>
+#include <concore/computation/to_task.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/inline_executor.hpp>
 #include <concore/spawn.hpp>
@@ -688,4 +689,82 @@ TEST_CASE("wait will throw task_cancelled if the computation is cancelled", "[co
     } catch (...) {
         FAIL_CHECK("invalid type of exception caught");
     }
+}
+
+TEST_CASE("to_task transforms a simple computation into a task", "[computation]") {
+    bool executed{false};
+    auto c = from_function([&] { executed = true; });
+    concore::task t = to_task(c);
+    t();
+    CHECK(executed);
+}
+
+TEST_CASE("to_task transforms a simple computation yielding int into a task", "[computation]") {
+    bool executed{false};
+    auto c = from_function([&] {
+        executed = true;
+        return 10;
+    });
+    concore::task t = to_task(c);
+    t();
+    CHECK(executed);
+}
+
+TEST_CASE("to_task creates task with the given group", "[computation]") {
+    auto grp = concore::task_group::create();
+    grp.cancel();
+    bool executed{false};
+    auto c = from_function([&] { executed = true; });
+    concore::task t = to_task(c, grp);
+    t();
+    CHECK_FALSE(executed);
+}
+
+TEST_CASE("to_task calls given continuation on success", "[computation]") {
+    bool cont_called{false};
+    auto cont_fun = [&](std::exception_ptr ex) {
+        cont_called = true;
+        CHECK_FALSE(ex);
+    };
+    bool executed{false};
+    auto c = from_function([&] { executed = true; });
+    concore::task t = to_task(c, {}, cont_fun);
+    t();
+    CHECK(executed);
+    CHECK(cont_called);
+}
+
+TEST_CASE("to_task calls given continuation on error", "[computation]") {
+    bool cont_called{false};
+    auto cont_fun = [&](std::exception_ptr ex) {
+        cont_called = true;
+        CHECK(ex);
+    };
+    auto c = from_function([&] { throw std::logic_error("err"); });
+    concore::task t = to_task(c, {}, cont_fun);
+    t();
+    CHECK(cont_called);
+}
+
+TEST_CASE("to_task calls given continuation if computation cancelled", "[computation]") {
+    auto grp = concore::task_group::create();
+    auto t0 = concore::task{[] {}, grp};
+    auto c = from_task(std::move(t0));
+    grp.cancel();
+
+    bool cont_called{false};
+    auto cont_fun = [&](std::exception_ptr ex) {
+        cont_called = true;
+        CHECK(ex);
+        try {
+            std::rethrow_exception(ex);
+        } catch (const concore::task_cancelled&) {
+            SUCCEED("ok");
+        } catch (...) {
+            FAIL_CHECK("invalid exception");
+        }
+    };
+    concore::task t = to_task(c, {}, cont_fun);
+    t();
+    CHECK(cont_called);
 }
