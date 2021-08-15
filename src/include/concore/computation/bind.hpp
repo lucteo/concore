@@ -120,6 +120,19 @@ private:
     F chainFun_;
 };
 
+struct create_bind_computation {
+    template <CONCORE_CONCEPT_OR_TYPENAME(computation) Comp, typename F>
+    auto operator()(Comp&& c, F&& f) {
+        return bind_computation<concore::detail::remove_cvref_t<Comp>, F>{(Comp &&) c, (F &&) f};
+    }
+};
+struct create_bind_error_computation {
+    template <CONCORE_CONCEPT_OR_TYPENAME(computation) Comp, typename F>
+    auto operator()(Comp&& c, F&& f) {
+        return bind_error_computation<concore::detail::remove_cvref_t<Comp>, F>{
+                (Comp &&) c, (F &&) f};
+    }
+};
 } // namespace detail
 
 inline namespace v1 {
@@ -163,6 +176,9 @@ inline namespace v1 {
  *      }
  * @endcode
  *
+ * The previous computation parameter might be missing and in this case this will return a wrapper
+ * that can be used to pipe computation algorithms.
+ *
  * Post-conditions:
  * - the returned type models the `computation` concept
  * - the previous computation is always run
@@ -174,9 +190,15 @@ inline namespace v1 {
  *
  * @see     transform(), bind_error()
  */
-template <typename PrevComp, typename F>
+template <CONCORE_CONCEPT_OR_TYPENAME(computation) PrevComp, typename F>
 inline detail::bind_computation<PrevComp, F> bind(PrevComp prevComp, F chainFun) {
-    return {(PrevComp &&) prevComp, (F &&) chainFun};
+    return detail::create_bind_computation{}((PrevComp &&) prevComp, (F &&) chainFun);
+}
+
+//! @overload
+template <typename F>
+inline auto bind(F&& f) {
+    return detail::make_algo_wrapper(detail::create_bind_computation{}, (F &&) f);
 }
 
 /**
@@ -204,6 +226,8 @@ inline detail::bind_computation<PrevComp, F> bind(PrevComp prevComp, F chainFun)
  * If the previous computation is cancelled, or succeeds, then the transform functor will not be
  * called. The cancellation and and the success value from the previous computation is forwarded.
  *
+ * The previous computation parameter might be missing and in this case this will return a wrapper
+ * that can be used to pipe computation algorithms.
  *
  * Post-conditions:
  * - the returned type models the `computation` concept
@@ -217,12 +241,16 @@ inline detail::bind_computation<PrevComp, F> bind(PrevComp prevComp, F chainFun)
  *
  * @see     bind(), transform()
  */
-template <typename PrevComp, typename F>
-inline detail::bind_error_computation<PrevComp, F> bind_error(PrevComp prevComp, F chainFun) {
-    return {(PrevComp &&) prevComp, (F &&) chainFun};
+template <CONCORE_CONCEPT_OR_TYPENAME(computation) PrevComp, typename F>
+inline auto bind_error(PrevComp prevComp, F chainFun) {
+    return detail::create_bind_error_computation{}((PrevComp &&) prevComp, (F &&) chainFun);
 }
 
-// TODO: pipe operator
+//! @overload
+template <typename F>
+inline auto bind_error(F&& f) {
+    return detail::make_algo_wrapper(detail::create_bind_error_computation{}, (F &&) f);
+}
 
 } // namespace v1
 } // namespace computation

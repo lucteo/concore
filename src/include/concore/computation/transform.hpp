@@ -6,6 +6,8 @@
 
 #include <exception>
 #include <functional>
+#include <concore/detail/extra_type_traits.hpp>
+#include <concore/computation/detail/algo_wrapper.hpp>
 
 namespace concore {
 namespace computation {
@@ -64,6 +66,14 @@ private:
     F trFun_;
 };
 
+struct create_transform_computation {
+    template <CONCORE_CONCEPT_OR_TYPENAME(computation) Comp, typename F>
+    auto operator()(Comp&& c, F&& f) {
+        return transform_computation<concore::detail::remove_cvref_t<Comp>, F>{
+                (Comp &&) c, (F &&) f};
+    }
+};
+
 } // namespace detail
 
 inline namespace v1 {
@@ -89,6 +99,9 @@ inline namespace v1 {
  * If the previous computation is cancelled, or has an error, then the transform functor will not be
  * called, and the done/error state will be just forwarded.
  *
+ * The previous computation parameter might be missing and in this case this will return a wrapper
+ * that can be used to pipe computation algorithms.
+ *
  * Post-conditions:
  * - the returned type models the `computation` concept
  * - the previous computation is always run
@@ -102,12 +115,16 @@ inline namespace v1 {
  *
  * @see     bind(), bind_error()
  */
-template <typename PrevComp, typename F>
+template <CONCORE_CONCEPT_OR_TYPENAME(computation) PrevComp, typename F>
 inline detail::transform_computation<PrevComp, F> transform(PrevComp prevComp, F trFun) {
-    return {(PrevComp &&) prevComp, (F &&) trFun};
+    return detail::create_transform_computation{}((PrevComp &&) prevComp, (F &&) trFun);
 }
 
-// TODO: pipe operator
+//! @overload
+template <typename F>
+inline auto transform(F&& f) {
+    return detail::make_algo_wrapper(detail::create_transform_computation{}, (F &&) f);
+}
 
 } // namespace v1
 } // namespace computation

@@ -827,3 +827,31 @@ TEST_CASE("run_on will forward executor exception", "[computation]") {
     }
     CHECK_FALSE(ftor_called);
 }
+
+TEST_CASE("transform can be piped", "[computation]") {
+    auto c = just_value(10) | transform([](int x) { return x * x; });
+    int res = wait(c);
+    CHECK(res == 100);
+}
+
+TEST_CASE("bind can be piped", "[computation]") {
+    auto c = just_value(10) | bind([](int x) { return just_value(x * x); });
+    int res = wait(c);
+    CHECK(res == 100);
+}
+
+TEST_CASE("bind_error can be piped", "[computation]") {
+    auto f = [] {
+        throw std::logic_error("err");
+        return 3;
+    };
+    auto c = from_function(f) | bind_error([](std::exception_ptr) { return just_value(12); });
+    int res = wait(c);
+    CHECK(res == 12);
+}
+
+TEST_CASE("on can be piped", "[computation]") {
+    auto c = just_value(10) | on(concore::spawn_executor{});
+    int res = wait(c);
+    CHECK(res == 10);
+}

@@ -45,6 +45,13 @@ private:
     E exec_;
 };
 
+struct create_on_computation {
+    template <CONCORE_CONCEPT_OR_TYPENAME(computation) Comp, typename E>
+    auto operator()(Comp&& c, E&& e) {
+        return on_computation<concore::detail::remove_cvref_t<Comp>, E>{(Comp &&) c, (E &&) e};
+    }
+};
+
 } // namespace detail
 
 inline namespace v1 {
@@ -65,6 +72,9 @@ inline namespace v1 {
  * or if the computation is cancelled, then those notifications may not be moved to the given
  * executor.
  *
+ * The previous computation parameter might be missing and in this case this will return a wrapper
+ * that can be used to pipe computation algorithms.
+ *
  * Post-conditions:
  * - the returned type models the `computation` concept
  * - the previous computation is always run
@@ -80,11 +90,15 @@ inline namespace v1 {
  * @see     transform(), bind_error()
  */
 template <typename PrevComp, typename E>
-inline detail::on_computation<PrevComp, E> on(PrevComp prevComp, E exec) {
-    return {(PrevComp &&) prevComp, (E &&) exec};
+inline auto on(PrevComp prevComp, E exec) {
+    return detail::create_on_computation{}((PrevComp &&) prevComp, (E &&) exec);
 }
 
-// TODO: pipe operator
+//! @overload
+template <typename E>
+inline auto on(E exec) {
+    return detail::make_algo_wrapper(detail::create_on_computation{}, (E &&) exec);
+}
 
 } // namespace v1
 } // namespace computation
