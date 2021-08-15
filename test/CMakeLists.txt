@@ -40,6 +40,8 @@ set(func_sourceFiles
     "func/computation/test_computation.cpp"
     "func/computation/test_computation_algos.cpp"
 
+    "func/rxs/test_stream.cpp"
+
     "func/profiling_helper_test.cpp" # Must be last
 )
 
