@@ -12,7 +12,7 @@ thread_local task* g_current_task{nullptr};
 
 inline namespace v1 {
 
-void task::operator()() {
+void task::operator()() noexcept {
     // Mark this as the currently executing task
     detail::g_current_task = this;
 

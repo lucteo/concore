@@ -253,7 +253,7 @@ public:
      * This does not invalidate the task object, by itself. Theoretically, this can be called
      * multiple times in a row.
      */
-    void operator()();
+    void operator()() noexcept;
 
     /**
      * @brief Gets the continuation function stored in this task (may be empty)
