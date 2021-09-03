@@ -27,13 +27,6 @@ CONCORE_DEF_REQUIRES(meets_outer_fun,              //
 template <typename Tag, typename S>
 CONCORE_CONCEPT_OR_BOOL(has_tag_invoke) = meets_tag_invoke<Tag, S>;
 
-template <typename Tag, typename S>
-CONCORE_CONCEPT_OR_BOOL(has_inner_fun) = !has_tag_invoke<Tag, S> && meets_inner_fun<S>;
-
-template <typename Tag, typename S>
-CONCORE_CONCEPT_OR_BOOL(has_outer_fun) = !has_tag_invoke<Tag, S> &&
-                                         !has_inner_fun<Tag, S> && meets_outer_fun<S>;
-
 inline const struct schedule_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S), (has_tag_invoke<schedule_t, S>))
     auto operator()(S&& s) const                              //
@@ -43,27 +36,10 @@ inline const struct schedule_t final {
                                         "model the sender concept");
         return tag_invoke(schedule_t{}, (S &&) s);
     }
-    CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S), (has_inner_fun<schedule_t, S>))
-    auto operator()(S&& s) const                        //
-            noexcept(noexcept(((S &&) s).schedule())) { //
-        using res_type = decltype(((S &&) s).schedule());
-        static_assert(sender<res_type>, "Result type of the custom-defined schedule operation must "
-                                        "model the sender concept");
-        return ((S &&) s).schedule();
-    }
-    CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S), (has_outer_fun<schedule_t, S>))
-    auto operator()(S&& s) const                     //
-            noexcept(noexcept(schedule((S &&) s))) { //
-        using res_type = decltype(schedule((S &&) s));
-        static_assert(sender<res_type>, "Result type of the custom-defined schedule operation must "
-                                        "model the sender concept");
-        return schedule((S &&) s);
-    }
 } schedule{};
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL(
-        has_schedule) = meets_tag_invoke<schedule_t, S> || meets_inner_fun<S> || meets_outer_fun<S>;
+CONCORE_CONCEPT_OR_BOOL(has_schedule) = meets_tag_invoke<schedule_t, S>;
 
 } // namespace cpo_schedule
 } // namespace detail

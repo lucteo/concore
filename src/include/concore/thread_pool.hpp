@@ -14,6 +14,7 @@
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_done.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
+#include <concore/_cpo/_cpo_schedule.hpp>
 #include <concore/task.hpp>
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/task_cancelled.hpp>
@@ -143,7 +144,9 @@ public:
      *
      * The sender object can be used to send work on the thread pool.
      */
-    thread_pool_sender schedule() noexcept { return thread_pool_sender(impl_); }
+    friend thread_pool_sender tag_invoke(schedule_t, thread_pool_scheduler sched) noexcept {
+        return thread_pool_sender(sched.impl_);
+    }
 
 private:
     //! The implementation data; use pimpl idiom.

@@ -7,6 +7,7 @@
 #pragma once
 
 #include <concore/as_sender.hpp>
+#include <concore/_cpo/_cpo_schedule.hpp>
 
 namespace concore {
 inline namespace v1 {
@@ -44,6 +45,10 @@ struct as_scheduler {
 private:
     //! The wrapped executor
     E ex_;
+
+    friend auto tag_invoke(schedule_t, const as_scheduler<E>& sched) {
+        return concore::as_sender<E>{sched.ex_};
+    }
 };
 
 } // namespace v1

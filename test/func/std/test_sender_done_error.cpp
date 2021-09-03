@@ -42,7 +42,7 @@ auto int_throwing_sender() {
 }
 
 struct throwing_scheduler {
-    concore::as_sender<throwing_executor> schedule() noexcept {
+    friend auto tag_invoke(concore::schedule_t, throwing_scheduler) noexcept {
         return concore::as_sender<throwing_executor>{{}};
     }
 
@@ -55,7 +55,7 @@ TEST_CASE("Thread pool's sender calls set_done when the pool was stopped", "[sen
     auto scheduler = my_pool.scheduler();
 
     bool executed = false;
-    auto op = scheduler.schedule().connect(expect_done_receiver{&executed});
+    auto op = concore::schedule(scheduler).connect(expect_done_receiver{&executed});
 
     // Stop the pool, so that the new operations are cancelled
     my_pool.stop();
@@ -110,7 +110,7 @@ TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") 
     concore::static_thread_pool my_pool{1};
 
     bool executed{false};
-    auto sender1 = concore::on(my_pool.scheduler().schedule(), throwing_scheduler{});
+    auto sender1 = concore::on(concore::schedule(my_pool.scheduler()), throwing_scheduler{});
     concore::submit(std::move(sender1), expect_error_receiver{&executed});
     my_pool.wait();
     REQUIRE(executed);
@@ -133,7 +133,7 @@ TEST_CASE("on calls set_done when base sender cancelled execution", "[sender_alg
     my_pool.stop();
 
     bool executed{false};
-    auto sender1 = concore::on(my_pool.scheduler().schedule(), my_pool2.scheduler());
+    auto sender1 = concore::on(concore::schedule(my_pool.scheduler()), my_pool2.scheduler());
     concore::submit(std::move(sender1), expect_done_receiver{&executed});
     my_pool.wait();
     my_pool2.wait();
@@ -146,7 +146,7 @@ TEST_CASE("on calls set_done when scheduler cancelled execution", "[sender_algo]
     my_pool2.stop();
 
     bool executed{false};
-    auto sender1 = concore::on(my_pool.scheduler().schedule(), my_pool2.scheduler());
+    auto sender1 = concore::on(concore::schedule(my_pool.scheduler()), my_pool2.scheduler());
     concore::submit(std::move(sender1), expect_done_receiver{&executed});
     my_pool.wait();
     my_pool2.wait();
@@ -180,7 +180,7 @@ TEST_CASE("transform propagates set_done", "[sender_algo]") {
     my_pool.stop();
 
     bool fun_executed{false};
-    auto sender = concore::transform(scheduler.schedule(), [&]() { fun_executed = true; });
+    auto sender = concore::transform(concore::schedule(scheduler), [&]() { fun_executed = true; });
 
     bool executed{false};
     concore::submit(std::move(sender), expect_done_receiver{&executed});
@@ -194,7 +194,7 @@ TEST_CASE("transform calls set_error if the function throws", "[sender_algo]") {
     auto scheduler = my_pool.scheduler();
 
     auto f = []() { throw std::logic_error("error"); };
-    auto sender = concore::transform(scheduler.schedule(), std::move(f));
+    auto sender = concore::transform(concore::schedule(scheduler), std::move(f));
 
     bool executed{false};
     concore::submit(std::move(sender), expect_error_receiver{&executed});

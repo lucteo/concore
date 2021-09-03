@@ -1,6 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
+#include <concore/execution.hpp>
 
 TEST_CASE("thread_pool executor models the executor concept", "[execution][concepts]") {
     auto pool = concore::static_thread_pool(2);
@@ -184,7 +185,7 @@ struct my_scheduler {
     friend inline bool operator==(my_scheduler, my_scheduler) { return false; }
     friend inline bool operator!=(my_scheduler, my_scheduler) { return true; }
 
-    my_sender0 schedule() noexcept { return {}; }
+    friend my_sender0 tag_invoke(concore::schedule_t, my_scheduler) noexcept { return {}; }
 };
 } // namespace test_models
 
@@ -269,7 +270,7 @@ TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts
     using namespace test_models;
 
     REQUIRE(scheduler<my_scheduler>);
-    auto snd = my_scheduler{}.schedule();
+    auto snd = concore::schedule(my_scheduler{});
     REQUIRE(sender<decltype(snd)>);
     static_cast<void>(snd);
 }
