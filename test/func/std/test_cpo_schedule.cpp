@@ -2,9 +2,6 @@
 #include <concore/execution.hpp>
 
 struct my_sender {
-    friend inline bool operator==(my_sender, my_sender) { return false; }
-    friend inline bool operator!=(my_sender, my_sender) { return true; }
-
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
     template <template <class...> class Variant>

@@ -123,49 +123,31 @@ using concore::set_error_t;
 using concore::set_value_t;
 
 struct my_receiver0 {
-    friend inline bool operator==(my_receiver0, my_receiver0) { return false; }
-    friend inline bool operator!=(my_receiver0, my_receiver0) { return true; }
-
     friend void tag_invoke(set_value_t, my_receiver0&&) {}
     friend void tag_invoke(set_done_t, my_receiver0&&) noexcept {}
     friend void tag_invoke(set_error_t, my_receiver0&&, std::exception_ptr) noexcept {}
 };
 struct my_receiver_int {
-    friend inline bool operator==(my_receiver_int, my_receiver_int) { return false; }
-    friend inline bool operator!=(my_receiver_int, my_receiver_int) { return true; }
-
     friend void tag_invoke(set_value_t, my_receiver_int&&, int) {}
     friend void tag_invoke(set_done_t, my_receiver_int&&) noexcept {}
     friend void tag_invoke(set_error_t, my_receiver_int&&, std::exception_ptr) noexcept {}
 };
 
 struct my_receiver0_ec {
-    friend inline bool operator==(my_receiver0_ec, my_receiver0_ec) { return false; }
-    friend inline bool operator!=(my_receiver0_ec, my_receiver0_ec) { return true; }
-
     friend void tag_invoke(set_value_t, my_receiver0_ec&&) {}
     friend void tag_invoke(set_done_t, my_receiver0_ec&&) noexcept {}
     friend void tag_invoke(set_error_t, my_receiver0_ec&&, std::error_code) noexcept {}
 };
 struct my_receiver_int_ec {
-    friend inline bool operator==(my_receiver_int_ec, my_receiver_int_ec) { return false; }
-    friend inline bool operator!=(my_receiver_int_ec, my_receiver_int_ec) { return true; }
-
     friend void tag_invoke(set_value_t, my_receiver_int_ec&&, int) {}
     friend void tag_invoke(set_done_t, my_receiver_int_ec&&) noexcept {}
     friend void tag_invoke(set_error_t, my_receiver_int_ec&&, std::error_code) noexcept {}
 };
 
 struct my_operation {
-    friend inline bool operator==(my_operation, my_operation) { return false; }
-    friend inline bool operator!=(my_operation, my_operation) { return true; }
-
     void start() noexcept {}
 };
 struct my_sender0 {
-    friend inline bool operator==(my_sender0, my_sender0) { return false; }
-    friend inline bool operator!=(my_sender0, my_sender0) { return true; }
-
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
     template <template <class...> class Variant>
@@ -175,9 +157,6 @@ struct my_sender0 {
     my_operation connect(my_receiver0&& r) { return my_operation{}; }
 };
 struct my_sender_int {
-    friend inline bool operator==(my_sender_int, my_sender_int) { return false; }
-    friend inline bool operator!=(my_sender_int, my_sender_int) { return true; }
-
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<int>>;
     template <template <class...> class Variant>

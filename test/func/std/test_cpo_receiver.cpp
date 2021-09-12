@@ -38,9 +38,6 @@ void test_receiver2(R&& r) {
 
 namespace NS3 {
 struct my_receiver {
-    friend inline bool operator==(my_receiver, my_receiver) { return false; }
-    friend inline bool operator!=(my_receiver, my_receiver) { return true; }
-
     int state_{-1};
     int val1_{0};
     double val2_{0.0};

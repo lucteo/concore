@@ -9,9 +9,6 @@ using concore::set_error_t;
 using concore::set_value_t;
 
 struct my_receiver {
-    friend inline bool operator==(my_receiver, my_receiver) { return false; }
-    friend inline bool operator!=(my_receiver, my_receiver) { return true; }
-
     friend void tag_invoke(set_value_t, my_receiver& self, int x) { self.value_ = x; }
     friend void tag_invoke(set_done_t, my_receiver& self) noexcept { self.value_ = -1; }
     friend void tag_invoke(set_error_t, my_receiver& self, std::error_code) noexcept {
@@ -37,9 +34,6 @@ struct op_state {
 };
 
 struct my_sender_in {
-    friend inline bool operator==(my_sender_in, my_sender_in) { return false; }
-    friend inline bool operator!=(my_sender_in, my_sender_in) { return true; }
-
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
     template <template <class...> class Variant>
@@ -54,9 +48,6 @@ struct my_sender_in {
 };
 
 struct my_sender_ext {
-    friend inline bool operator==(my_sender_ext, my_sender_ext) { return false; }
-    friend inline bool operator!=(my_sender_ext, my_sender_ext) { return true; }
-
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
     template <template <class...> class Variant>
@@ -71,9 +62,6 @@ struct my_sender_ext {
 };
 
 struct my_sender_tag_invoke {
-    friend inline bool operator==(my_sender_tag_invoke, my_sender_tag_invoke) { return false; }
-    friend inline bool operator!=(my_sender_tag_invoke, my_sender_tag_invoke) { return true; }
-
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
     template <template <class...> class Variant>
