@@ -4,13 +4,25 @@
 
 #include <functional>
 
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
+
 struct my_receiver {
     friend inline bool operator==(my_receiver, my_receiver) { return false; }
     friend inline bool operator!=(my_receiver, my_receiver) { return true; }
 
-    void set_value(int x) { value_ = x; }
-    void set_done() noexcept { value_ = -1; }
-    void set_error(std::error_code) noexcept { value_ = -2; }
+    friend void tag_invoke(set_value_t, my_receiver& self, int x) { self.value_ = x; }
+    friend void tag_invoke(set_done_t, my_receiver& self) noexcept { self.value_ = -1; }
+    friend void tag_invoke(set_error_t, my_receiver& self, std::error_code) noexcept {
+        self.value_ = -2;
+    }
+
+    friend void tag_invoke(set_value_t, my_receiver&& self, int x) { self.value_ = x; }
+    friend void tag_invoke(set_done_t, my_receiver&& self) noexcept { self.value_ = -1; }
+    friend void tag_invoke(set_error_t, my_receiver&& self, std::error_code) noexcept {
+        self.value_ = -2;
+    }
 
     int value_{0};
 };
@@ -37,7 +49,7 @@ struct my_sender_in {
     int value_{0};
     op_state connect(my_receiver& r) {
         int val = value_;
-        return op_state([val, &r] { r.set_value(val); });
+        return op_state([val, &r] { concore::set_value(r, val); });
     }
 };
 
@@ -54,7 +66,7 @@ struct my_sender_ext {
     int value_{0};
     friend op_state connect(my_sender_ext& s, my_receiver& r) {
         int val = s.value_;
-        return op_state([val, &r] { r.set_value(val); });
+        return op_state([val, &r] { concore::set_value(r, val); });
     }
 };
 
@@ -73,7 +85,7 @@ struct my_sender_tag_invoke {
 
 op_state tag_invoke(concore::connect_t, my_sender_tag_invoke& s, my_receiver& r) {
     int val = s.value_;
-    return op_state([val, &r] { r.set_value(val); });
+    return op_state([val, &r] { concore::set_value(r, val); });
 }
 
 template <typename S>

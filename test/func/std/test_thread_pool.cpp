@@ -292,15 +292,21 @@ TEST_CASE(
     REQUIRE(num_executed.load() == num_tasks);
 }
 
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
+
+struct my_receiver {
+    bool* executed_;
+
+    friend void tag_invoke(set_value_t, my_receiver&& self) noexcept { *self.executed_ = true; }
+    friend void tag_invoke(set_done_t, my_receiver&&) noexcept { REQUIRE(false); }
+    friend void tag_invoke(set_error_t, my_receiver&&, std::exception_ptr) noexcept {
+        REQUIRE(false);
+    }
+};
+
 TEST_CASE("static_thread_pool scheduler can schedule work", "[execution]") {
-    struct my_receiver {
-        bool* executed_;
-
-        void set_value() noexcept { *executed_ = true; }
-        void set_done() noexcept { REQUIRE(false); }
-        void set_error(std::exception_ptr) noexcept { REQUIRE(false); }
-    };
-
     static_thread_pool my_pool{1};
     auto scheduler = my_pool.scheduler();
 

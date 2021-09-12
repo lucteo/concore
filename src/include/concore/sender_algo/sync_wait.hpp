@@ -49,19 +49,20 @@ struct sync_wait_receiver {
     explicit sync_wait_receiver(data_t* d)
         : data_(d) {}
 
-    void set_value(Res res) noexcept {
+    friend void tag_invoke(set_value_t, sync_wait_receiver&& self, Res res) noexcept {
         try {
-            data_->res_ = (Res &&) res;
-            data_->notify(1);
+            self.data_->res_ = (Res &&) res;
+            self.data_->notify(1);
         } catch (...) {
-            data_->eptr_ = std::current_exception(); // NOLINT
-            data_->notify(2);
+            self.data_->eptr_ = std::current_exception(); // NOLINT
+            self.data_->notify(2);
         }
     }
-    void set_done() noexcept { std::terminate(); }
-    void set_error(std::exception_ptr eptr) noexcept {
-        data_->eptr_ = eptr;
-        data_->notify(2);
+    friend void tag_invoke(set_done_t, sync_wait_receiver&& self) noexcept { std::terminate(); }
+    friend void tag_invoke(
+            set_error_t, sync_wait_receiver&& self, std::exception_ptr eptr) noexcept {
+        self.data_->eptr_ = eptr;
+        self.data_->notify(2);
     }
 };
 

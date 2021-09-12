@@ -52,29 +52,32 @@ struct let_value_sender_oper_state {
             , f_((F &&) f) {}
 
         template <typename... Ts>
-        void set_value(Ts... vals) noexcept {
+        friend void tag_invoke(set_value_t, prev_receiver&& self, Ts... vals) noexcept {
             try {
                 // Create an oper_state wrapper that will pack the base oper_state and our needed
                 // storage
-                using base_op_t = decltype(
-                        concore::connect(CONCORE_DECLVAL(ResSender), (Receiver &&) receiver_));
+                using base_op_t = decltype( //
+                        concore::connect(CONCORE_DECLVAL(ResSender), (Receiver &&) self.receiver_));
                 oper_state_with_storage<base_op_t, Storage> oper_wrapper{(Ts &&) vals...};
 
                 // Call the given functor and generate the base operation we need to execute
-                auto res_sender = ((F &&) f_)(oper_wrapper.storage_);
+                auto res_sender = ((F &&) self.f_)(oper_wrapper.storage_);
                 oper_wrapper.base_oper_.emplace(
-                        concore::connect(std::move(res_sender), (Receiver &&) receiver_));
+                        concore::connect(std::move(res_sender), (Receiver &&) self.receiver_));
 
                 // Start the wrapped operation
                 // The storage will be kept alive for the whole duration of the operation
                 concore::start(std::move(oper_wrapper));
             } catch (...) {
-                concore::set_error((Receiver &&) receiver_, std::current_exception());
+                concore::set_error((Receiver &&) self.receiver_, std::current_exception());
             }
         }
-        void set_done() noexcept { concore::set_done((Receiver &&) receiver_); }
-        void set_error(std::exception_ptr eptr) noexcept {
-            concore::set_error((Receiver &&) receiver_, eptr);
+        friend void tag_invoke(set_done_t, prev_receiver&& self) noexcept {
+            concore::set_done((Receiver &&) self.receiver_);
+        }
+        friend void tag_invoke(
+                set_error_t, prev_receiver&& self, std::exception_ptr eptr) noexcept {
+            concore::set_error((Receiver &&) self.receiver_, eptr);
         }
     };
 

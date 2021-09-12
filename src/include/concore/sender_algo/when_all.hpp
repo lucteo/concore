@@ -63,14 +63,18 @@ private:
             , cur_val_(cur_val) {}
 
         template <typename T>
-        void set_value(T&& val) noexcept {
+        friend void tag_invoke(set_value_t, one_receiver&& self, T&& val) noexcept {
             //! Store the given value
-            cur_val_->emplace((T &&) val);
-            //! Tell the parent that we set tje value
-            parent_->on_set_value();
+            self.cur_val_->emplace((T &&) val);
+            //! Tell the parent that we set the value
+            self.parent_->on_set_value();
         }
-        void set_done() noexcept { parent_->on_set_done(); }
-        void set_error(std::exception_ptr eptr) noexcept { parent_->on_set_error(eptr); }
+        friend void tag_invoke(set_done_t, one_receiver&& self) noexcept {
+            self.parent_->on_set_done();
+        }
+        friend void tag_invoke(set_error_t, one_receiver&& self, std::exception_ptr eptr) noexcept {
+            self.parent_->on_set_error(eptr);
+        }
     };
 
     //! The value that would be sent by the current sender to our receiver
@@ -190,10 +194,11 @@ struct when_all_sender {
     template <typename R>
     when_all_sender_oper_state<R, Ss...> connect(R&& r) && {
         static_assert(receiver<R>, "Given object is not a receiver");
-        auto f = [&](Ss && ... ss) -> when_all_sender_oper_state<R, Ss...> {
+        // clang-format off
+        auto f = [&](Ss&&... ss) -> when_all_sender_oper_state<R, Ss...> {
             return {(R &&) r, (Ss &&) ss...};
-            ;
         };
+        // clang-format on
         return apply_on_tuple(std::move(f), std::move(incomingSenders_));
     }
 

@@ -34,21 +34,24 @@ struct transform_sender_oper_state {
             , f_((F &&) f) {}
 
         template <typename... Ts>
-        void set_value(Ts... vals) noexcept {
+        friend void tag_invoke(set_value_t, prev_receiver&& self, Ts... vals) noexcept {
             try {
                 using result_type = std::invoke_result_t<F, Ts...>;
                 if constexpr (std::is_void_v<result_type>) {
-                    f_((Ts &&) vals...);
-                    concore::set_value((Receiver &&) receiver_);
+                    self.f_((Ts &&) vals...);
+                    concore::set_value((Receiver &&) self.receiver_);
                 } else
-                    concore::set_value((Receiver &&) receiver_, f_((Ts &&) vals...));
+                    concore::set_value((Receiver &&) self.receiver_, self.f_((Ts &&) vals...));
             } catch (...) {
-                concore::set_error((Receiver &&) receiver_, std::current_exception());
+                concore::set_error((Receiver &&) self.receiver_, std::current_exception());
             }
         }
-        void set_done() noexcept { concore::set_done((Receiver &&) receiver_); }
-        void set_error(std::exception_ptr eptr) noexcept {
-            concore::set_error((Receiver &&) receiver_, eptr);
+        friend void tag_invoke(set_done_t, prev_receiver&& self) noexcept {
+            concore::set_done((Receiver &&) self.receiver_);
+        }
+        friend void tag_invoke(
+                set_error_t, prev_receiver&& self, std::exception_ptr eptr) noexcept {
+            concore::set_error((Receiver &&) self.receiver_, eptr);
         }
     };
 

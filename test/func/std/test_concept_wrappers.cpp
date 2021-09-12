@@ -6,6 +6,10 @@
 #include <concore/as_scheduler.hpp>
 #include <concore/execution.hpp>
 
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
+
 namespace test_models {
 
 struct my_executor {
@@ -21,34 +25,34 @@ struct my_receiver0 {
     friend inline bool operator==(my_receiver0, my_receiver0) { return false; }
     friend inline bool operator!=(my_receiver0, my_receiver0) { return true; }
 
-    void set_value() {}
-    void set_done() noexcept {}
-    void set_error(std::exception_ptr) noexcept {}
+    friend void tag_invoke(set_value_t, my_receiver0&&) {}
+    friend void tag_invoke(set_done_t, my_receiver0&&) noexcept {}
+    friend void tag_invoke(set_error_t, my_receiver0&&, std::exception_ptr) noexcept {}
 };
 struct my_receiver_int {
     friend inline bool operator==(my_receiver_int, my_receiver_int) { return false; }
     friend inline bool operator!=(my_receiver_int, my_receiver_int) { return true; }
 
-    void set_value(int) {}
-    void set_done() noexcept {}
-    void set_error(std::exception_ptr) noexcept {}
+    friend void tag_invoke(set_value_t, my_receiver_int&&, int) {}
+    friend void tag_invoke(set_done_t, my_receiver_int&&) noexcept {}
+    friend void tag_invoke(set_error_t, my_receiver_int&&, std::exception_ptr) noexcept {}
 };
 
 struct my_receiver0_ec {
     friend inline bool operator==(my_receiver0_ec, my_receiver0_ec) { return false; }
     friend inline bool operator!=(my_receiver0_ec, my_receiver0_ec) { return true; }
 
-    void set_value() {}
-    void set_done() noexcept {}
-    void set_error(std::error_code) noexcept {}
+    friend void tag_invoke(set_value_t, my_receiver0_ec&&) {}
+    friend void tag_invoke(set_done_t, my_receiver0_ec&&) noexcept {}
+    friend void tag_invoke(set_error_t, my_receiver0_ec&&, std::error_code) noexcept {}
 };
 struct my_receiver_int_ec {
     friend inline bool operator==(my_receiver_int_ec, my_receiver_int_ec) { return false; }
     friend inline bool operator!=(my_receiver_int_ec, my_receiver_int_ec) { return true; }
 
-    void set_value(int) {}
-    void set_done() noexcept {}
-    void set_error(std::error_code) noexcept {}
+    friend void tag_invoke(set_value_t, my_receiver_int_ec&&, int) {}
+    friend void tag_invoke(set_done_t, my_receiver_int_ec&&) noexcept {}
+    friend void tag_invoke(set_error_t, my_receiver_int_ec&&, std::error_code) noexcept {}
 };
 
 struct my_operation {
@@ -105,16 +109,16 @@ struct signal_sender {
 
     template <typename R>
     calling_op connect(R& r) {
-        auto f = [&r] { r.set_value(); };
+        auto f = [&r] { concore::set_value(r); };
         return calling_op{std::move(f)};
     }
 };
 
 struct test_receiver {
     bool& called_;
-    void set_value() { called_ = true; }
-    void set_done() noexcept {}
-    void set_error(std::exception_ptr) noexcept {}
+    friend void tag_invoke(set_value_t, test_receiver&& self) { self.called_ = true; }
+    friend void tag_invoke(set_done_t, test_receiver&&) noexcept {}
+    friend void tag_invoke(set_error_t, test_receiver&&, std::exception_ptr) noexcept {}
 };
 
 } // namespace test_models
@@ -153,22 +157,24 @@ TEST_CASE("as_invocable transforms a receiver into a functor", "[execution][conc
 }
 #endif
 
+struct logging_receiver {
+    int* state_;
+    bool should_throw_{false};
+    friend void tag_invoke(set_value_t, logging_receiver&& self) {
+        if (self.should_throw_)
+            throw std::logic_error("test");
+        *self.state_ = 0;
+    }
+    friend void tag_invoke(set_done_t, logging_receiver&& self) noexcept { *self.state_ = 1; }
+    friend void tag_invoke(set_error_t, logging_receiver&& self, std::exception_ptr) noexcept {
+        *self.state_ = 2;
+    }
+};
+
 TEST_CASE("as_invocable properly calls the right methods in the receiver",
         "[execution][concept_wrappers]") {
     using namespace concore;
     using namespace test_models;
-
-    struct logging_receiver {
-        int* state_;
-        bool should_throw_{false};
-        void set_value() {
-            if (should_throw_)
-                throw std::logic_error("test");
-            *state_ = 0;
-        }
-        void set_done() noexcept { *state_ = 1; }
-        void set_error(std::exception_ptr) noexcept { *state_ = 2; }
-    };
 
     int state1 = -1;
     int state2 = -1;

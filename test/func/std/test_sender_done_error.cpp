@@ -12,26 +12,40 @@
 #include <concore/thread_pool.hpp>
 #include <test_common/throwing_executor.hpp>
 
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
+
 struct expect_done_receiver {
     bool* executed_;
 
     template <typename... Ts>
-    void set_value(Ts...) noexcept {
+    friend void tag_invoke(set_value_t, expect_done_receiver&&, Ts...) noexcept {
         REQUIRE(false);
     }
-    void set_done() noexcept { *executed_ = true; }
-    void set_error(std::exception_ptr) noexcept { REQUIRE(false); }
+    friend void tag_invoke(set_done_t, expect_done_receiver&& self) noexcept {
+        *self.executed_ = true;
+    }
+    friend void tag_invoke(set_error_t, expect_done_receiver&&, std::exception_ptr) noexcept {
+        REQUIRE(false);
+    }
 };
+
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
 
 struct expect_error_receiver {
     bool* executed_;
 
     template <typename... Ts>
-    void set_value(Ts...) noexcept {
+    friend void tag_invoke(set_value_t, expect_error_receiver&&, Ts...) noexcept {
         REQUIRE(false);
     }
-    void set_done() noexcept { REQUIRE(false); }
-    void set_error(std::exception_ptr) noexcept { *executed_ = true; }
+    friend void tag_invoke(set_done_t, expect_error_receiver&&) noexcept { REQUIRE(false); }
+    friend void tag_invoke(set_error_t, expect_error_receiver&& self, std::exception_ptr) noexcept {
+        *self.executed_ = true;
+    }
 };
 
 auto void_throwing_sender() { return concore::as_sender<throwing_executor>{{}}; }

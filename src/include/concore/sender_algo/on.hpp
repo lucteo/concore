@@ -41,16 +41,19 @@ struct on_sender_oper_state {
             : receiver_((Receiver &&) receiver)
             , sender_((Sender &&) sender) {}
 
-        void set_value() noexcept {
+        friend void tag_invoke(set_value_t, sched_receiver&& self) noexcept {
             try {
-                concore::submit((Sender &&) sender_, (Receiver &&) receiver_);
+                concore::submit((Sender &&) self.sender_, (Receiver &&) self.receiver_);
             } catch (...) {
-                concore::set_error((Receiver &&) receiver_, std::current_exception());
+                concore::set_error((Receiver &&) self.receiver_, std::current_exception());
             }
         }
-        void set_done() noexcept { concore::set_done((Receiver &&) receiver_); }
-        void set_error(std::exception_ptr eptr) noexcept {
-            concore::set_error((Receiver &&) receiver_, eptr);
+        friend void tag_invoke(set_done_t, sched_receiver&& self) noexcept {
+            concore::set_done((Receiver &&) self.receiver_);
+        }
+        friend void tag_invoke(
+                set_error_t, sched_receiver&& self, std::exception_ptr eptr) noexcept {
+            concore::set_error((Receiver &&) self.receiver_, eptr);
         }
     };
 

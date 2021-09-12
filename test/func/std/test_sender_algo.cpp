@@ -11,43 +11,54 @@
 #include <concore/thread_pool.hpp>
 #include <test_common/task_utils.hpp>
 
-struct expect_receiver_base {
-    void set_done() noexcept { FAIL("Done called"); }
-    void set_error(std::exception_ptr eptr) noexcept {
-        try {
-            if (eptr)
-                std::rethrow_exception(eptr);
-            FAIL("Empty exception thrown");
-        } catch (const std::exception& e) {
-            FAIL("Exception thrown: " << e.what());
-        }
-    }
-};
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
 
 template <typename T>
-struct expect_receiver : expect_receiver_base {
+struct expect_receiver {
     T val_;
 
     expect_receiver(T val)
         : val_(std::move(val)) {}
-
-    //! Called whenever the sender completed the work with success
-    void set_value(const T& val) { REQUIRE(val == val_); }
 };
 
+template <typename T>
+void tag_invoke(set_value_t, expect_receiver<T>&& self, const T& val) {
+    REQUIRE(val == self.val_);
+}
+
 template <typename F>
-struct fun_receiver : expect_receiver_base {
+struct fun_receiver {
     F f_;
 
     explicit fun_receiver(F f)
         : f_((F &&) f) {}
-
-    //! Called whenever the sender completed the work with success
-    template <typename... Ts>
-    void set_value(Ts... vals) {
-        f_((Ts &&) vals...);
-    }
 };
+
+template <typename F, typename... Ts>
+void tag_invoke(set_value_t, fun_receiver<F>&& self, Ts... vals) {
+    std::move(self.f_)((Ts &&) vals...);
+}
+template <typename F, typename... Ts>
+void tag_invoke(set_value_t, const fun_receiver<F>& self, Ts... vals) {
+    self.f_((Ts &&) vals...);
+}
+
+template <typename Recv>
+void tag_invoke(set_done_t, Recv&&) noexcept {
+    FAIL("Done called");
+}
+template <typename Recv>
+void tag_invoke(set_error_t, Recv&&, std::exception_ptr eptr) noexcept {
+    try {
+        if (eptr)
+            std::rethrow_exception(eptr);
+        FAIL("Empty exception thrown");
+    } catch (const std::exception& e) {
+        FAIL("Exception thrown: " << e.what());
+    }
+}
 
 template <typename T>
 expect_receiver<T> make_expect_receiver(T val) {

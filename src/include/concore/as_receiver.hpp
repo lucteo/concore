@@ -7,6 +7,9 @@
 #pragma once
 
 #include <concore/detail/concept_macros.hpp>
+#include <concore/_cpo/_cpo_set_value.hpp>
+#include <concore/_cpo/_cpo_set_done.hpp>
+#include <concore/_cpo/_cpo_set_error.hpp>
 #include <exception>
 
 namespace concore {
@@ -33,19 +36,22 @@ struct as_receiver {
     explicit as_receiver(F&& f) noexcept
         : f_((F &&) f) {}
 
-    //! Called whenever the sender completed the work with success
-    void set_value() noexcept(noexcept(f_())) { f_(); }
-    //! Called whenever the work was canceled
-    void set_done() noexcept {}
-    //! Called whenever there was an error while performing the work in the sender.
-    template <typename E>
-    [[noreturn]] void set_error(E) noexcept {
-        std::terminate();
-    }
-
 private:
     //! The functor to be called when the sender finishes the work
     F f_;
+
+    friend void tag_invoke(set_value_t, const as_receiver& self) noexcept(noexcept(self.f_())) {
+        self.f_();
+    }
+    friend void tag_invoke(set_value_t, as_receiver&& self) noexcept(
+            noexcept(std::move(self).f_())) {
+        std::move(self).f_();
+    }
+    friend void tag_invoke(set_done_t, const as_receiver& self) noexcept {}
+    [[noreturn]] friend void tag_invoke(
+            set_error_t, const as_receiver& self, std::exception_ptr e) noexcept {
+        std::terminate();
+    }
 };
 
 } // namespace v1
