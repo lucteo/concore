@@ -137,11 +137,13 @@ struct my_receiver0_ec {
     friend void tag_invoke(set_value_t, my_receiver0_ec&&) {}
     friend void tag_invoke(set_done_t, my_receiver0_ec&&) noexcept {}
     friend void tag_invoke(set_error_t, my_receiver0_ec&&, std::error_code) noexcept {}
+    friend void tag_invoke(set_error_t, my_receiver0_ec&&, std::exception_ptr) noexcept {}
 };
 struct my_receiver_int_ec {
     friend void tag_invoke(set_value_t, my_receiver_int_ec&&, int) {}
     friend void tag_invoke(set_done_t, my_receiver_int_ec&&) noexcept {}
     friend void tag_invoke(set_error_t, my_receiver_int_ec&&, std::error_code) noexcept {}
+    friend void tag_invoke(set_error_t, my_receiver_int_ec&&, std::exception_ptr) noexcept {}
 };
 
 struct my_operation {
@@ -186,10 +188,10 @@ TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
     REQUIRE_FALSE(receiver<my_executor>);
     REQUIRE_FALSE(receiver_of<my_executor>);
     REQUIRE_FALSE(operation_state<my_executor>);
-    // REQUIRE_FALSE(sender<my_executor>);
-    // REQUIRE_FALSE(sender_to<my_executor, test_models::my_receiver0>);
-    // REQUIRE_FALSE(typed_sender<my_executor>);
-    // REQUIRE_FALSE(scheduler<my_executor>);
+    REQUIRE_FALSE(sender<my_executor>);
+    REQUIRE_FALSE(sender_to<my_executor, test_models::my_receiver0>);
+    REQUIRE_FALSE(typed_sender<my_executor>);
+    REQUIRE_FALSE(scheduler<my_executor>);
 }
 
 TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]") {
@@ -198,6 +200,8 @@ TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]"
 
     REQUIRE(receiver<my_receiver0>);
     REQUIRE(receiver<my_receiver_int>);
+    REQUIRE(receiver<my_receiver0_ec>);
+    REQUIRE(receiver<my_receiver_int_ec>);
     REQUIRE(receiver<my_receiver0_ec, std::error_code>);
     REQUIRE(receiver<my_receiver_int_ec, std::error_code>);
 }
@@ -208,8 +212,8 @@ TEST_CASE("receiver types satisfy the receiver_of concept", "[execution][concept
 
     REQUIRE(receiver_of<my_receiver0>);
     REQUIRE(receiver_of<my_receiver_int, int>);
-    // REQUIRE(receiver_of<my_receiver0_ec>);
-    // REQUIRE(receiver_of<my_receiver_int_ec, int>);
+    REQUIRE(receiver_of<my_receiver0_ec>);
+    REQUIRE(receiver_of<my_receiver_int_ec, int>);
 }
 
 TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
