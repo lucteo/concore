@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
-#include <concore/execution.hpp>
+#include <test_common/receivers.hpp>
 
 TEST_CASE("thread_pool executor models the executor concept", "[execution][concepts]") {
     auto pool = concore::static_thread_pool(2);
@@ -118,34 +118,6 @@ struct my_executor {
     }
 };
 
-using concore::set_done_t;
-using concore::set_error_t;
-using concore::set_value_t;
-
-struct my_receiver0 {
-    friend void tag_invoke(set_value_t, my_receiver0&&) {}
-    friend void tag_invoke(set_done_t, my_receiver0&&) noexcept {}
-    friend void tag_invoke(set_error_t, my_receiver0&&, std::exception_ptr) noexcept {}
-};
-struct my_receiver_int {
-    friend void tag_invoke(set_value_t, my_receiver_int&&, int) {}
-    friend void tag_invoke(set_done_t, my_receiver_int&&) noexcept {}
-    friend void tag_invoke(set_error_t, my_receiver_int&&, std::exception_ptr) noexcept {}
-};
-
-struct my_receiver0_ec {
-    friend void tag_invoke(set_value_t, my_receiver0_ec&&) {}
-    friend void tag_invoke(set_done_t, my_receiver0_ec&&) noexcept {}
-    friend void tag_invoke(set_error_t, my_receiver0_ec&&, std::error_code) noexcept {}
-    friend void tag_invoke(set_error_t, my_receiver0_ec&&, std::exception_ptr) noexcept {}
-};
-struct my_receiver_int_ec {
-    friend void tag_invoke(set_value_t, my_receiver_int_ec&&, int) {}
-    friend void tag_invoke(set_done_t, my_receiver_int_ec&&) noexcept {}
-    friend void tag_invoke(set_error_t, my_receiver_int_ec&&, std::error_code) noexcept {}
-    friend void tag_invoke(set_error_t, my_receiver_int_ec&&, std::exception_ptr) noexcept {}
-};
-
 struct my_operation {
     void start() noexcept {}
 };
@@ -156,7 +128,7 @@ struct my_sender0 {
     using error_types = Variant<std::exception_ptr>;
     static constexpr bool sends_done = true;
 
-    my_operation connect(my_receiver0&& r) { return my_operation{}; }
+    my_operation connect(empty_recv::recv0&& r) { return my_operation{}; }
 };
 struct my_sender_int {
     template <template <class...> class Tuple, template <class...> class Variant>
@@ -165,7 +137,7 @@ struct my_sender_int {
     using error_types = Variant<std::exception_ptr>;
     static constexpr bool sends_done = true;
 
-    my_operation connect(my_receiver_int&& r) { return my_operation{}; }
+    my_operation connect(empty_recv::recv_int&& r) { return my_operation{}; }
 };
 struct my_scheduler {
     friend inline bool operator==(my_scheduler, my_scheduler) { return false; }
@@ -189,31 +161,31 @@ TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
     REQUIRE_FALSE(receiver_of<my_executor>);
     REQUIRE_FALSE(operation_state<my_executor>);
     REQUIRE_FALSE(sender<my_executor>);
-    REQUIRE_FALSE(sender_to<my_executor, test_models::my_receiver0>);
+    REQUIRE_FALSE(sender_to<my_executor, empty_recv::recv0>);
     REQUIRE_FALSE(typed_sender<my_executor>);
     REQUIRE_FALSE(scheduler<my_executor>);
 }
 
 TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]") {
     using namespace concore;
-    using namespace test_models;
+    using namespace empty_recv;
 
-    REQUIRE(receiver<my_receiver0>);
-    REQUIRE(receiver<my_receiver_int>);
-    REQUIRE(receiver<my_receiver0_ec>);
-    REQUIRE(receiver<my_receiver_int_ec>);
-    REQUIRE(receiver<my_receiver0_ec, std::error_code>);
-    REQUIRE(receiver<my_receiver_int_ec, std::error_code>);
+    REQUIRE(receiver<recv0>);
+    REQUIRE(receiver<recv_int>);
+    REQUIRE(receiver<recv0_ec>);
+    REQUIRE(receiver<recv_int_ec>);
+    REQUIRE(receiver<recv0_ec, std::error_code>);
+    REQUIRE(receiver<recv_int_ec, std::error_code>);
 }
 
 TEST_CASE("receiver types satisfy the receiver_of concept", "[execution][concepts]") {
     using namespace concore;
-    using namespace test_models;
+    using namespace empty_recv;
 
-    REQUIRE(receiver_of<my_receiver0>);
-    REQUIRE(receiver_of<my_receiver_int, int>);
-    REQUIRE(receiver_of<my_receiver0_ec>);
-    REQUIRE(receiver_of<my_receiver_int_ec, int>);
+    REQUIRE(receiver_of<recv0>);
+    REQUIRE(receiver_of<recv_int, int>);
+    REQUIRE(receiver_of<recv0_ec>);
+    REQUIRE(receiver_of<recv_int_ec, int>);
 }
 
 TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
@@ -234,23 +206,25 @@ TEST_CASE("sender types satisfy the typed_sender concept", "[execution][concepts
 
 TEST_CASE("sender & receiver types satisfy the sender_to concept", "[execution][concepts]") {
     using namespace concore;
+    using namespace empty_recv;
     using namespace test_models;
 
-    REQUIRE(sender_to<my_sender0, my_receiver0>);
-    REQUIRE(sender_to<my_sender_int, my_receiver_int>);
+    REQUIRE(sender_to<my_sender0, recv0>);
+    REQUIRE(sender_to<my_sender_int, recv_int>);
 }
 
 TEST_CASE("not all combinations of senders & receivers satisfy the sender_to concept",
         "[execution][concepts]") {
     using namespace concore;
+    using namespace empty_recv;
     using namespace test_models;
 
-    REQUIRE_FALSE(sender_to<my_sender0, my_receiver_int>);
-    REQUIRE_FALSE(sender_to<my_sender0, my_receiver0_ec>);
-    REQUIRE_FALSE(sender_to<my_sender0, my_receiver_int_ec>);
-    REQUIRE_FALSE(sender_to<my_sender_int, my_receiver0>);
-    REQUIRE_FALSE(sender_to<my_sender_int, my_receiver0_ec>);
-    REQUIRE_FALSE(sender_to<my_sender_int, my_receiver_int_ec>);
+    REQUIRE_FALSE(sender_to<my_sender0, recv_int>);
+    REQUIRE_FALSE(sender_to<my_sender0, recv0_ec>);
+    REQUIRE_FALSE(sender_to<my_sender0, recv_int_ec>);
+    REQUIRE_FALSE(sender_to<my_sender_int, recv0>);
+    REQUIRE_FALSE(sender_to<my_sender_int, recv0_ec>);
+    REQUIRE_FALSE(sender_to<my_sender_int, recv_int_ec>);
 }
 
 TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts]") {
@@ -269,7 +243,7 @@ TEST_CASE("other types don't satisfy the scheduler concept", "[execution][concep
 
     REQUIRE_FALSE(scheduler<my_executor>);
     REQUIRE_FALSE(scheduler<my_sender0>);
-    REQUIRE_FALSE(scheduler<my_receiver0>);
+    REQUIRE_FALSE(scheduler<empty_recv::recv0>);
     REQUIRE_FALSE(scheduler<my_operation>);
 }
 

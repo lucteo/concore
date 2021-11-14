@@ -1,76 +1,30 @@
 #include <catch2/catch.hpp>
 #include <concore/execution.hpp>
-#include <concore/thread_pool.hpp>
+#include <test_common/receivers.hpp>
 
-using namespace concore::detail::cpo_set_error;
-
-template <typename R> // requires meets_outer_fun<R, std::bad_alloc>
-void test_receiver_done_and_error(R&& r) {
-    concore::set_done(r);
-    CHECK(r.state_ == 1);
-    concore::set_error(r, std::bad_alloc{});
-    CHECK(r.state_ == 2);
+TEST_CASE("can call set_value on a void receiver", "[execution][cpo_receiver]") {
+    concore::set_value(expect_void_receiver{});
 }
 
-template <typename R>
-void test_receiver0(R&& r) {
-    test_receiver_done_and_error(r);
-    concore::set_value(r);
-    CHECK(r.state_ == 0);
+TEST_CASE("can call set_done on a receiver", "[execution][cpo_receiver]") {
+    concore::set_done(expect_done_receiver{});
 }
 
-template <typename R>
-void test_receiver1(R&& r) {
-    test_receiver_done_and_error(r);
-    concore::set_value(r, 10);
-    CHECK(r.state_ == 0);
-    CHECK(r.val1_ == 10);
+TEST_CASE("can call set_error on a receiver", "[execution][cpo_receiver]") {
+    std::exception_ptr ex;
+    try {
+        throw std::bad_alloc{};
+    } catch (...) {
+        ex = std::current_exception();
+    }
+    concore::set_error(expect_error_receiver{}, ex);
 }
 
-template <typename R>
-void test_receiver2(R&& r) {
-    test_receiver_done_and_error(r);
-    concore::set_value(r, 10, 3.14);
-    CHECK(r.state_ == 0);
-    CHECK(r.val1_ == 10);
-    CHECK(r.val2_ == 3.14);
+TEST_CASE("can call set_error with an error code on a receiver", "[execution][cpo_receiver]") {
+    std::error_code errCode{100, std::generic_category()};
+    concore::set_error(expect_error_receiver{}, errCode);
 }
 
-namespace NS3 {
-struct my_receiver {
-    int state_{-1};
-    int val1_{0};
-    double val2_{0.0};
-};
-
-using concore::set_done_t;
-using concore::set_error_t;
-using concore::set_value_t;
-
-void tag_invoke(set_value_t, my_receiver& r) { r.state_ = 0; }
-
-void tag_invoke(set_value_t, my_receiver& r, int x) {
-    r.state_ = 0;
-    r.val1_ = x;
-}
-
-void tag_invoke(set_value_t, my_receiver& r, int x, double y) {
-    r.state_ = 0;
-    r.val1_ = x;
-    r.val2_ = y;
-}
-
-void tag_invoke(set_done_t, my_receiver& r) noexcept { r.state_ = 1; }
-
-template <typename E>
-void tag_invoke(set_error_t, my_receiver& r, E) noexcept {
-    r.state_ = 2;
-}
-
-} // namespace NS3
-
-TEST_CASE("receiver object with tag_invoke specialization", "[execution][cpo_receiver]") {
-    test_receiver0(NS3::my_receiver{});
-    test_receiver1(NS3::my_receiver{});
-    test_receiver2(NS3::my_receiver{});
+TEST_CASE("set_value with a value passes the value to the receiver", "[execution][cpo_receiver]") {
+    concore::set_value(expect_value_receiver<int>{10}, 10);
 }
