@@ -6,10 +6,8 @@
 #include <concore/sender_algo/transform.hpp>
 #include <concore/sender_algo/let_value.hpp>
 #include <concore/sender_algo/when_all.hpp>
-#include <concore/as_operation.hpp>
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/thread_pool.hpp>
-#include <test_common/throwing_executor.hpp>
 #include <test_common/receivers.hpp>
 
 auto int_throwing_sender() {
@@ -46,25 +44,6 @@ TEST_CASE("Thread pool's sender calls set_done when the pool was stopped", "[sen
     concore::start(op);
 
     // Ensure that the receiver is called
-    my_pool.wait();
-    REQUIRE(executed);
-}
-
-TEST_CASE("as_operation calls set_error when executor throws", "[sender_algo]") {
-    bool executed{false};
-    concore::as_operation<throwing_executor, expect_error_receiver_ex> op{{}, {&executed}};
-    op.start();
-    REQUIRE(executed);
-}
-
-TEST_CASE("as_operation calls set_done when executor cancelled execution", "[sender_algo]") {
-    concore::static_thread_pool my_pool{1};
-    auto ex = my_pool.executor();
-    my_pool.stop();
-
-    bool executed{false};
-    concore::as_operation<decltype(ex), expect_done_receiver_ex> op{ex, {&executed}};
-    op.start();
     my_pool.wait();
     REQUIRE(executed);
 }

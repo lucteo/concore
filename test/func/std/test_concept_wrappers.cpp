@@ -1,7 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/as_receiver.hpp>
 #include <concore/as_invocable.hpp>
-#include <concore/as_operation.hpp>
 #include <concore/execution.hpp>
 #include <test_common/receivers.hpp>
 
@@ -125,25 +124,4 @@ TEST_CASE("as_invocable properly calls the right methods in the receiver",
     CHECK(state1 == 0); // set_value() called
     CHECK(state2 == 1); // set_done() called
     CHECK(state3 == 2); // set_error() called
-}
-
-TEST_CASE("as_operation transforms an executor and a receiver into an operation_state",
-        "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-    static_assert(operation_state<as_operation<my_executor, empty_recv::recv0>>);
-}
-
-TEST_CASE("as_operation produces a good operation", "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-
-    auto op = as_operation<my_executor, expect_void_receiver>(my_executor{}, {});
-    concore::start(op);
-
-    int state{-1};
-    auto op2 = as_operation<my_executor, logging_receiver>(my_executor{}, logging_receiver{&state});
-    CHECK(state == -1);
-    concore::start(op2);
-    CHECK(state == 0);
 }
