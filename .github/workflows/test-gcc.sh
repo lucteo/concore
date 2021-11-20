@@ -19,6 +19,6 @@ docker run ${DOCKER_RUN_PARAMS} \
     -e INPUT_CONANFLAGS="-e CONAN_RUN_TESTS=1" \
     -e INPUT_MAKEFLAGS='-j 4' \
     -e INPUT_CC='gcc' \
-    -e INPUT_CHECKS='build test install warnings' action-cxx-toolkit
+    -e INPUT_CHECKS='build test install warnings' $IMAGENAME
 status=$?
 printStatus $status

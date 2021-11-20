@@ -18,6 +18,6 @@ docker run ${DOCKER_RUN_PARAMS} \
     -e INPUT_PREBUILD_COMMAND="conan config set storage.path=/github/workspace/${BUILDDIR}/.conan" \
     -e INPUT_CONANFLAGS="-e CONAN_RUN_TESTS=1" \
     -e INPUT_MAKEFLAGS='-j 4' \
-    -e INPUT_CHECKS='coverage=codecov' $ci_env action-cxx-toolkit
+    -e INPUT_CHECKS='coverage=codecov' $ci_env $IMAGENAME
 status=$?
 printStatus $status

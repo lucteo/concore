@@ -6,6 +6,8 @@ _realpath() {
 _CURDIR=$(_realpath $(dirname "$0"))
 ROOTDIR="${_CURDIR}/../../"
 
+IMAGENAME=lucteo/action-cxx-toolkit:latest
+
 # Export the general params that need to be added do 'docker run'
 DOCKER_RUN_PARAMS="--rm -it --workdir /github/workspace -v ${ROOTDIR}:/github/workspace"
 

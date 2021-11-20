@@ -20,6 +20,6 @@ docker run ${DOCKER_RUN_PARAMS} \
     -e INPUT_MAKEFLAGS='-j 4' \
     -e INPUT_CC='clang-7' -e INPUT_CONANFLAGS='-s compiler.libcxx=libstdc++11' \
     -e INPUT_CXXFLAGS='-std=c++14' \
-    -e INPUT_CHECKS='build test' action-cxx-toolkit
+    -e INPUT_CHECKS='build test' $IMAGENAME
 status=$?
 printStatus $status

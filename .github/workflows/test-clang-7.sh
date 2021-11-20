@@ -19,6 +19,6 @@ docker run ${DOCKER_RUN_PARAMS} \
     -e INPUT_CONANFLAGS="-e CONAN_RUN_TESTS=1 -s compiler.libcxx=libstdc++11" \
     -e INPUT_MAKEFLAGS='-j 4' \
     -e INPUT_CC='clang-7' \
-    -e INPUT_CHECKS='build test install' action-cxx-toolkit
+    -e INPUT_CHECKS='build test install' $IMAGENAME
 status=$?
 printStatus $status
