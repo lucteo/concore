@@ -1,6 +1,5 @@
 #include <catch2/catch.hpp>
 #include <concore/as_receiver.hpp>
-#include <concore/as_invocable.hpp>
 #include <concore/execution.hpp>
 #include <test_common/receivers.hpp>
 
@@ -88,40 +87,4 @@ TEST_CASE("as_receiver passed to a sender will call the given ftor",
     auto void_fun = [] {};
     void_fun();
     static_assert(receiver_of<as_receiver<decltype(void_fun)>>);
-}
-
-#if CONCORE_CPP_VERSION >= 17
-TEST_CASE("as_invocable transforms a receiver into a functor", "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-    using invocalbe_t = as_invocable<empty_recv::recv0>;
-    static_assert(std::is_invocable<invocalbe_t>::value, "invalid as_invocable");
-}
-#endif
-
-TEST_CASE("as_invocable properly calls the right methods in the receiver",
-        "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-
-    int state1 = -1;
-    int state2 = -1;
-    int state3 = -1;
-    logging_receiver l1{&state1};
-    logging_receiver l2{&state2};
-    logging_receiver l3{&state3, true};
-
-    {
-        auto f1 = as_invocable<logging_receiver>{l1};
-        auto f2 = as_invocable<logging_receiver>{l2};
-        auto f3 = as_invocable<logging_receiver>{l3};
-
-        f1();
-        // f2();       // don't call
-        f3();
-    }
-
-    CHECK(state1 == 0); // set_value() called
-    CHECK(state2 == 1); // set_done() called
-    CHECK(state3 == 2); // set_error() called
 }
