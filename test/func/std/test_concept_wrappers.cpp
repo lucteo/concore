@@ -3,7 +3,6 @@
 #include <concore/as_invocable.hpp>
 #include <concore/as_operation.hpp>
 #include <concore/as_sender.hpp>
-#include <concore/as_scheduler.hpp>
 #include <concore/execution.hpp>
 #include <test_common/receivers.hpp>
 
@@ -162,13 +161,4 @@ TEST_CASE("as_sender produces a good sender", "[execution][concept_wrappers]") {
 
     auto snd = as_sender<my_executor>(my_executor{});
     concore::submit(snd, expect_void_receiver{});
-}
-
-TEST_CASE("as_scheduler produces a good scheduler", "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-
-    auto sched = as_scheduler<my_executor>(my_executor{});
-    concore::submit(sched.schedule(), expect_void_receiver{});
-    static_assert(concore::scheduler<typeof(sched)>, "Type is not a scheduler");
 }
