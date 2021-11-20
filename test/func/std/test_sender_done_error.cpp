@@ -7,20 +7,25 @@
 #include <concore/sender_algo/let_value.hpp>
 #include <concore/sender_algo/when_all.hpp>
 #include <concore/as_operation.hpp>
-#include <concore/as_sender.hpp>
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/throwing_executor.hpp>
 #include <test_common/receivers.hpp>
 
 auto int_throwing_sender() {
-    concore::as_sender<throwing_executor> sender1{{}};
-    return concore::transform(sender1, []() { return 3; });
+    return concore::transform(concore::just(3), [](int x) {
+        throw std::logic_error("err");
+        return x;
+    });
+}
+
+auto void_throwing_sender() {
+    return concore::transform(concore::just(3), [](int x) { throw std::logic_error("err"); });
 }
 
 struct throwing_scheduler {
     friend auto tag_invoke(concore::schedule_t, throwing_scheduler) noexcept {
-        return concore::as_sender<throwing_executor>{{}};
+        return void_throwing_sender();
     }
 
     friend inline bool operator==(throwing_scheduler, throwing_scheduler) { return true; }
@@ -64,25 +69,6 @@ TEST_CASE("as_operation calls set_done when executor cancelled execution", "[sen
     REQUIRE(executed);
 }
 
-TEST_CASE("as_sender calls set_error when executor throws", "[sender_algo]") {
-    bool executed{false};
-    concore::as_sender<throwing_executor> sender{{}};
-    concore::submit(sender, expect_error_receiver_ex{&executed});
-    REQUIRE(executed);
-}
-
-TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender_algo]") {
-    concore::static_thread_pool my_pool{1};
-    auto ex = my_pool.executor();
-    my_pool.stop();
-
-    bool executed{false};
-    concore::as_sender<decltype((ex))> sender{ex};
-    concore::submit(sender, expect_done_receiver_ex{&executed});
-    my_pool.wait();
-    REQUIRE(executed);
-}
-
 TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") {
     concore::static_thread_pool my_pool{1};
 
@@ -97,8 +83,7 @@ TEST_CASE("on calls set_error when scheduler reports error", "[sender_algo]") {
     concore::static_thread_pool my_pool{1};
 
     bool executed{false};
-    concore::as_sender<throwing_executor> sender{{}};
-    auto sender1 = on(sender, my_pool.scheduler());
+    auto sender1 = concore::on(void_throwing_sender(), my_pool.scheduler());
     concore::submit(std::move(sender1), expect_error_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
@@ -131,7 +116,6 @@ TEST_CASE("on calls set_done when scheduler cancelled execution", "[sender_algo]
 }
 
 TEST_CASE("sync_wait raises exception if set_error is called", "[sender_algo]") {
-    concore::as_sender<throwing_executor> sender_void{{}};
     bool exception_caught{false};
     try {
         int res = concore::sync_wait(int_throwing_sender());

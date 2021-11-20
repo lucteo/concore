@@ -2,7 +2,6 @@
 #include <concore/as_receiver.hpp>
 #include <concore/as_invocable.hpp>
 #include <concore/as_operation.hpp>
-#include <concore/as_sender.hpp>
 #include <concore/execution.hpp>
 #include <test_common/receivers.hpp>
 
@@ -147,18 +146,4 @@ TEST_CASE("as_operation produces a good operation", "[execution][concept_wrapper
     CHECK(state == -1);
     concore::start(op2);
     CHECK(state == 0);
-}
-
-TEST_CASE("as_sender transforms an executor into a sender", "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-    static_assert(sender_to<as_sender<my_executor>, empty_recv::recv0>);
-}
-
-TEST_CASE("as_sender produces a good sender", "[execution][concept_wrappers]") {
-    using namespace concore;
-    using namespace test_models;
-
-    auto snd = as_sender<my_executor>(my_executor{});
-    concore::submit(snd, expect_void_receiver{});
 }

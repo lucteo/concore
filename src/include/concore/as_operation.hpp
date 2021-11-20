@@ -30,7 +30,7 @@ inline namespace v1 {
  *
  * This types models the @ref operation_state concept
  *
- * @see operation_state, executor, receiver, as_invocable, as_sender
+ * @see operation_state, executor, receiver, as_invocable
  */
 template <typename E, typename R>
 struct as_operation {
