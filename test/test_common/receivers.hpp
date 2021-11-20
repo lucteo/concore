@@ -139,6 +139,22 @@ public:
     }
 };
 
+struct expect_done_receiver_ex {
+    bool* executed_;
+
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, expect_done_receiver_ex&&, Ts...) noexcept {
+        FAIL_CHECK("set_value called on expect_done_receiver_ex");
+    }
+    friend void tag_invoke(concore::set_done_t, expect_done_receiver_ex&& self) noexcept {
+        *self.executed_ = true;
+    }
+    friend void tag_invoke(
+            concore::set_error_t, expect_done_receiver_ex&&, std::exception_ptr) noexcept {
+        FAIL_CHECK("set_error called on expect_done_receiver_ex");
+    }
+};
+
 class expect_error_receiver {
     bool called_{false};
 
@@ -170,6 +186,22 @@ public:
     template <typename E>
     friend void tag_invoke(concore::set_error_t, expect_error_receiver&& self, E) noexcept {
         self.called_ = true;
+    }
+};
+
+struct expect_error_receiver_ex {
+    bool* executed_;
+
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, expect_error_receiver_ex&&, Ts...) noexcept {
+        FAIL_CHECK("set_value called on expect_error_receiver_ex");
+    }
+    friend void tag_invoke(concore::set_done_t, expect_error_receiver_ex&&) noexcept {
+        FAIL_CHECK("set_done called on expect_error_receiver_ex");
+    }
+    friend void tag_invoke(
+            concore::set_error_t, expect_error_receiver_ex&& self, std::exception_ptr) noexcept {
+        *self.executed_ = true;
     }
 };
 

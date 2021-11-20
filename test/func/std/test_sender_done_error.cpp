@@ -11,44 +11,7 @@
 #include <concore/detail/sender_helpers.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/throwing_executor.hpp>
-
-using concore::set_done_t;
-using concore::set_error_t;
-using concore::set_value_t;
-
-struct expect_done_receiver {
-    bool* executed_;
-
-    template <typename... Ts>
-    friend void tag_invoke(set_value_t, expect_done_receiver&&, Ts...) noexcept {
-        REQUIRE(false);
-    }
-    friend void tag_invoke(set_done_t, expect_done_receiver&& self) noexcept {
-        *self.executed_ = true;
-    }
-    friend void tag_invoke(set_error_t, expect_done_receiver&&, std::exception_ptr) noexcept {
-        REQUIRE(false);
-    }
-};
-
-using concore::set_done_t;
-using concore::set_error_t;
-using concore::set_value_t;
-
-struct expect_error_receiver {
-    bool* executed_;
-
-    template <typename... Ts>
-    friend void tag_invoke(set_value_t, expect_error_receiver&&, Ts...) noexcept {
-        REQUIRE(false);
-    }
-    friend void tag_invoke(set_done_t, expect_error_receiver&&) noexcept { REQUIRE(false); }
-    friend void tag_invoke(set_error_t, expect_error_receiver&& self, std::exception_ptr) noexcept {
-        *self.executed_ = true;
-    }
-};
-
-auto void_throwing_sender() { return concore::as_sender<throwing_executor>{{}}; }
+#include <test_common/receivers.hpp>
 
 auto int_throwing_sender() {
     concore::as_sender<throwing_executor> sender1{{}};
@@ -69,7 +32,7 @@ TEST_CASE("Thread pool's sender calls set_done when the pool was stopped", "[sen
     auto scheduler = my_pool.scheduler();
 
     bool executed = false;
-    auto op = concore::schedule(scheduler).connect(expect_done_receiver{&executed});
+    auto op = concore::schedule(scheduler).connect(expect_done_receiver_ex{&executed});
 
     // Stop the pool, so that the new operations are cancelled
     my_pool.stop();
@@ -84,7 +47,7 @@ TEST_CASE("Thread pool's sender calls set_done when the pool was stopped", "[sen
 
 TEST_CASE("as_operation calls set_error when executor throws", "[sender_algo]") {
     bool executed{false};
-    concore::as_operation<throwing_executor, expect_error_receiver> op{{}, {&executed}};
+    concore::as_operation<throwing_executor, expect_error_receiver_ex> op{{}, {&executed}};
     op.start();
     REQUIRE(executed);
 }
@@ -95,7 +58,7 @@ TEST_CASE("as_operation calls set_done when executor cancelled execution", "[sen
     my_pool.stop();
 
     bool executed{false};
-    concore::as_operation<decltype(ex), expect_done_receiver> op{ex, {&executed}};
+    concore::as_operation<decltype(ex), expect_done_receiver_ex> op{ex, {&executed}};
     op.start();
     my_pool.wait();
     REQUIRE(executed);
@@ -104,7 +67,7 @@ TEST_CASE("as_operation calls set_done when executor cancelled execution", "[sen
 TEST_CASE("as_sender calls set_error when executor throws", "[sender_algo]") {
     bool executed{false};
     concore::as_sender<throwing_executor> sender{{}};
-    concore::submit(sender, expect_error_receiver{&executed});
+    concore::submit(sender, expect_error_receiver_ex{&executed});
     REQUIRE(executed);
 }
 
@@ -115,7 +78,7 @@ TEST_CASE("as_sender calls set_done when executor cancelled execution", "[sender
 
     bool executed{false};
     concore::as_sender<decltype((ex))> sender{ex};
-    concore::submit(sender, expect_done_receiver{&executed});
+    concore::submit(sender, expect_done_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
@@ -125,7 +88,7 @@ TEST_CASE("on calls set_error when base sender reports error", "[sender_algo]") 
 
     bool executed{false};
     auto sender1 = concore::on(concore::schedule(my_pool.scheduler()), throwing_scheduler{});
-    concore::submit(std::move(sender1), expect_error_receiver{&executed});
+    concore::submit(std::move(sender1), expect_error_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
@@ -136,7 +99,7 @@ TEST_CASE("on calls set_error when scheduler reports error", "[sender_algo]") {
     bool executed{false};
     concore::as_sender<throwing_executor> sender{{}};
     auto sender1 = on(sender, my_pool.scheduler());
-    concore::submit(std::move(sender1), expect_error_receiver{&executed});
+    concore::submit(std::move(sender1), expect_error_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
@@ -148,7 +111,7 @@ TEST_CASE("on calls set_done when base sender cancelled execution", "[sender_alg
 
     bool executed{false};
     auto sender1 = concore::on(concore::schedule(my_pool.scheduler()), my_pool2.scheduler());
-    concore::submit(std::move(sender1), expect_done_receiver{&executed});
+    concore::submit(std::move(sender1), expect_done_receiver_ex{&executed});
     my_pool.wait();
     my_pool2.wait();
     REQUIRE(executed);
@@ -161,7 +124,7 @@ TEST_CASE("on calls set_done when scheduler cancelled execution", "[sender_algo]
 
     bool executed{false};
     auto sender1 = concore::on(concore::schedule(my_pool.scheduler()), my_pool2.scheduler());
-    concore::submit(std::move(sender1), expect_done_receiver{&executed});
+    concore::submit(std::move(sender1), expect_done_receiver_ex{&executed});
     my_pool.wait();
     my_pool2.wait();
     REQUIRE(executed);
@@ -184,7 +147,7 @@ TEST_CASE("transform propagates set_error", "[sender_algo]") {
     auto sender = concore::transform(int_throwing_sender(), [](int x) { return x * x; });
 
     bool executed{false};
-    concore::submit(sender, expect_error_receiver{&executed});
+    concore::submit(sender, expect_error_receiver_ex{&executed});
     REQUIRE(executed);
 }
 
@@ -197,7 +160,7 @@ TEST_CASE("transform propagates set_done", "[sender_algo]") {
     auto sender = concore::transform(concore::schedule(scheduler), [&]() { fun_executed = true; });
 
     bool executed{false};
-    concore::submit(std::move(sender), expect_done_receiver{&executed});
+    concore::submit(std::move(sender), expect_done_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
     REQUIRE_FALSE(fun_executed);
@@ -211,7 +174,7 @@ TEST_CASE("transform calls set_error if the function throws", "[sender_algo]") {
     auto sender = concore::transform(concore::schedule(scheduler), std::move(f));
 
     bool executed{false};
-    concore::submit(std::move(sender), expect_error_receiver{&executed});
+    concore::submit(std::move(sender), expect_error_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
@@ -223,7 +186,7 @@ TEST_CASE("let_value propagates set_error", "[sender_algo]") {
     auto s = concore::let_value(int_throwing_sender(), std::move(let_value_fun));
 
     bool executed{false};
-    concore::submit(s, expect_error_receiver{&executed});
+    concore::submit(s, expect_error_receiver_ex{&executed});
     REQUIRE(executed);
 }
 
@@ -240,7 +203,7 @@ TEST_CASE("let_value propagates set_done", "[sender_algo]") {
     auto s = concore::let_value(std::move(sender0), std::move(let_value_fun));
 
     bool executed{false};
-    concore::submit(std::move(s), expect_done_receiver{&executed});
+    concore::submit(std::move(s), expect_done_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
     REQUIRE_FALSE(fun_executed);
@@ -257,7 +220,7 @@ TEST_CASE("let_value calls set_error if the function throws", "[sender_algo]") {
     auto s = concore::let_value(std::move(sender0), std::move(let_value_fun));
 
     bool executed{false};
-    concore::submit(std::move(s), expect_error_receiver{&executed});
+    concore::submit(std::move(s), expect_error_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
@@ -266,7 +229,7 @@ TEST_CASE("when_all propagates set_error", "[sender_algo]") {
     auto s = concore::when_all(concore::just(2), int_throwing_sender());
 
     bool executed{false};
-    concore::submit(std::move(s), expect_error_receiver{&executed});
+    concore::submit(std::move(s), expect_error_receiver_ex{&executed});
     REQUIRE(executed);
 }
 
@@ -278,7 +241,7 @@ TEST_CASE("when_all propagates set_done", "[sender_algo]") {
     auto s = concore::when_all(concore::just(2), concore::just_on(scheduler, 3));
 
     bool executed{false};
-    concore::submit(std::move(s), expect_done_receiver{&executed});
+    concore::submit(std::move(s), expect_done_receiver_ex{&executed});
     my_pool.wait();
     REQUIRE(executed);
 }
