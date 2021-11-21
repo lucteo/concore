@@ -30,9 +30,13 @@ struct type_identity {
 #endif
 
 #if CONCORE_CXX_HAS_CONCEPTS
+// clang-format off
 template <typename T>
-concept moveable_value = std::is_move_constructible<remove_cvref_t<T>>::value &&
-        std::is_constructible_v<remove_cvref_t<T>, T>;
+concept moveable_value
+    =  std::is_move_constructible<remove_cvref_t<T>>::value
+    && std::is_constructible_v<remove_cvref_t<T>, T>
+    ;
+// clang-format on
 #endif
 
 // Ensure that we have std::invoke_result and std::invoke_result_t from C++17
