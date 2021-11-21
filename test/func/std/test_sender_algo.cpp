@@ -7,26 +7,13 @@
 #include <concore/sender_algo/let_value.hpp>
 #include <concore/sender_algo/when_all.hpp>
 #include <concore/detail/sender_helpers.hpp>
-#include <concore/execution.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/task_utils.hpp>
+#include <test_common/receivers.hpp>
 
 using concore::set_done_t;
 using concore::set_error_t;
 using concore::set_value_t;
-
-template <typename T>
-struct expect_receiver {
-    T val_;
-
-    expect_receiver(T val)
-        : val_(std::move(val)) {}
-};
-
-template <typename T>
-void tag_invoke(set_value_t, expect_receiver<T>&& self, const T& val) {
-    REQUIRE(val == self.val_);
-}
 
 template <typename F>
 struct fun_receiver {
@@ -60,29 +47,24 @@ void tag_invoke(set_error_t, Recv&&, std::exception_ptr eptr) noexcept {
     }
 }
 
-template <typename T>
-expect_receiver<T> make_expect_receiver(T val) {
-    return expect_receiver<T>{std::move(val)};
-}
-
 template <typename F>
 fun_receiver<F> make_fun_receiver(F f) {
     return fun_receiver<F>{std::forward<F>(f)};
 }
 
 TEST_CASE("Simple test for just", "[sender_algo]") {
-    auto o1 = concore::connect(concore::just(1), make_expect_receiver(1));
+    auto o1 = concore::connect(concore::just(1), expect_value_receiver(1));
     concore::start(o1);
-    auto o2 = concore::connect(concore::just(2), make_expect_receiver(2));
+    auto o2 = concore::connect(concore::just(2), expect_value_receiver(2));
     concore::start(o2);
-    auto o3 = concore::connect(concore::just(3), make_expect_receiver(3));
+    auto o3 = concore::connect(concore::just(3), expect_value_receiver(3));
     concore::start(o3);
 
     auto o4 = concore::connect(
-            concore::just(std::string("this")), make_expect_receiver(std::string("this")));
+            concore::just(std::string("this")), expect_value_receiver(std::string("this")));
     concore::start(o4);
     auto o5 = concore::connect(
-            concore::just(std::string("that")), make_expect_receiver(std::string("that")));
+            concore::just(std::string("that")), expect_value_receiver(std::string("that")));
     concore::start(o5);
 }
 

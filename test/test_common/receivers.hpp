@@ -70,6 +70,22 @@ public:
     }
 };
 
+struct expect_void_receiver_ex {
+    bool* executed_;
+
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, expect_void_receiver_ex&& self, Ts...) noexcept {
+        *self.executed_ = true;
+    }
+    friend void tag_invoke(concore::set_done_t, expect_void_receiver_ex&&) noexcept {
+        FAIL_CHECK("set_done called on expect_void_receiver_ex");
+    }
+    friend void tag_invoke(
+            concore::set_error_t, expect_void_receiver_ex&&, std::exception_ptr) noexcept {
+        FAIL_CHECK("set_error called on expect_void_receiver_ex");
+    }
+};
+
 template <typename T>
 class expect_value_receiver {
     bool called_{false};
@@ -81,10 +97,12 @@ public:
     ~expect_value_receiver() { CHECK(called_); }
 
     expect_value_receiver(expect_value_receiver&& other)
-        : called_(other.called_) {
+        : called_(other.called_)
+        , value_(std::move(other.value_)) {
         other.called_ = true;
     }
     expect_value_receiver& operator=(expect_value_receiver&& other) {
+        value_ = std::move(other.value_);
         called_ = other.called_;
         other.called_ = true;
         return *this;
