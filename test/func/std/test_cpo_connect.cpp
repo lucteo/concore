@@ -30,7 +30,7 @@ struct op_state {
     op_state(std::function<void()> f)
         : fun_(std::move(f)) {}
 
-    void start() noexcept { fun_(); }
+    friend void tag_invoke(concore::start_t, op_state& self) noexcept { self.fun_(); }
 };
 
 struct my_sender_in {
@@ -82,7 +82,7 @@ void test_connect() {
     S snd{10};
     auto op = concore::connect(snd, recv);
     CHECK(recv.value_ == 0);
-    op.start();
+    concore::start(op);
     CHECK(recv.value_ == 10);
 }
 

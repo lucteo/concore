@@ -71,12 +71,17 @@ fun_receiver<F> make_fun_receiver(F f) {
 }
 
 TEST_CASE("Simple test for just", "[sender_algo]") {
-    concore::just(1).connect(make_expect_receiver(1)).start();
-    concore::just(2).connect(make_expect_receiver(2)).start();
-    concore::just(3).connect(make_expect_receiver(3)).start();
+    auto o1 = concore::just(1).connect(make_expect_receiver(1));
+    concore::start(o1);
+    auto o2 = concore::just(2).connect(make_expect_receiver(2));
+    concore::start(o2);
+    auto o3 = concore::just(3).connect(make_expect_receiver(3));
+    concore::start(o3);
 
-    concore::just(std::string("this")).connect(make_expect_receiver(std::string("this"))).start();
-    concore::just(std::string("that")).connect(make_expect_receiver(std::string("that"))).start();
+    auto o4 = concore::just(std::string("this")).connect(make_expect_receiver(std::string("this")));
+    concore::start(o4);
+    auto o5 = concore::just(std::string("that")).connect(make_expect_receiver(std::string("that")));
+    concore::start(o5);
 }
 
 TEST_CASE("just returns a sender", "[sender_algo]") {
@@ -114,7 +119,8 @@ TEST_CASE("just can handle multiple values", "[sender_algo]") {
         CHECK(d == 0.14);
         executed = true;
     };
-    concore::just(3, 0.14).connect(make_fun_receiver(std::move(f))).start();
+    auto op = concore::just(3, 0.14).connect(make_fun_receiver(std::move(f)));
+    concore::start(op);
     CHECK(executed);
 }
 

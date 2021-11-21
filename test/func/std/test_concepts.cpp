@@ -119,8 +119,9 @@ struct my_executor {
 };
 
 struct my_operation {
-    void start() noexcept {}
+    friend void tag_invoke(concore::start_t, my_operation&) {}
 };
+
 struct my_sender0 {
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;

@@ -9,6 +9,7 @@
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
+#include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_concepts/_concepts_receiver.hpp>
 #include <concore/detail/sender_helpers.hpp>
 
@@ -24,14 +25,14 @@ struct just_oper {
     R receiver_;
     std::tuple<Values...> values_;
 
-    void start() noexcept {
+    friend void tag_invoke(start_t, just_oper& self) noexcept {
         try {
             auto set_value_wrapper = [&](Values&&... vals) {
-                concore::set_value((R &&) receiver_, (Values &&) vals...);
+                concore::set_value((R &&) self.receiver_, (Values &&) vals...);
             };
-            std::apply(std::move(set_value_wrapper), std::move(values_));
+            std::apply(std::move(set_value_wrapper), std::move(self.values_));
         } catch (...) {
-            concore::set_error((R &&) receiver_, std::current_exception());
+            concore::set_error((R &&) self.receiver_, std::current_exception());
         }
     }
 };

@@ -67,7 +67,9 @@ struct on_sender_oper_state {
 
     //! Called by the scheduler (hopefully on the scheduler thread) to send value from the given
     //! sender to the given receiver
-    void start() noexcept { concore::start(std::move(schedOpState_)); }
+    friend void tag_invoke(start_t, on_sender_oper_state& self) noexcept {
+        concore::start(self.schedOpState_);
+    }
 };
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender,

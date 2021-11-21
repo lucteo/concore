@@ -34,7 +34,9 @@ struct oper_state_with_storage {
     explicit oper_state_with_storage(Ts... vals)
         : storage_((Ts &&) vals...) {}
 
-    void start() noexcept { concore::start(std::move(base_oper_.value())); }
+    friend void tag_invoke(start_t, oper_state_with_storage& self) noexcept {
+        concore::start(self.base_oper_.value());
+    }
 };
 
 template <typename PrevSender, typename Receiver, typename F, typename ResSender, typename Storage>
@@ -67,7 +69,7 @@ struct let_value_sender_oper_state {
 
                 // Start the wrapped operation
                 // The storage will be kept alive for the whole duration of the operation
-                concore::start(std::move(oper_wrapper));
+                concore::start(oper_wrapper);
             } catch (...) {
                 concore::set_error((Receiver &&) self.receiver_, std::current_exception());
             }
@@ -88,7 +90,9 @@ struct let_value_sender_oper_state {
         : entryOpState_(concore::connect(
                   (PrevSender &&) sender, prev_receiver{(Receiver &&) receiver, (F &&) f})) {}
 
-    void start() noexcept { concore::start(std::move(entryOpState_)); }
+    friend void tag_invoke(start_t, let_value_sender_oper_state& self) noexcept {
+        concore::start(self.entryOpState_);
+    }
 };
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender, typename F, typename ResSender,

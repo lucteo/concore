@@ -62,7 +62,9 @@ struct transform_sender_oper_state {
         : entryOpState_(concore::connect(
                   (PrevSender &&) sender, prev_receiver{(Receiver &&) receiver, (F &&) f})) {}
 
-    void start() noexcept { concore::start(std::move(entryOpState_)); }
+    friend void tag_invoke(start_t, transform_sender_oper_state& self) noexcept {
+        concore::start(self.entryOpState_);
+    }
 };
 
 template <CONCORE_CONCEPT_OR_TYPENAME(sender) Sender, typename F, typename Res>

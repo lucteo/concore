@@ -15,6 +15,7 @@
 #include <concore/_cpo/_cpo_set_done.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/_cpo/_cpo_schedule.hpp>
+#include <concore/_cpo/_cpo_start.hpp>
 #include <concore/task.hpp>
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/task_cancelled.hpp>
@@ -55,7 +56,7 @@ struct pool_sender_op {
         : pool_(pool)
         , receiver_(std::move(r)) {}
 
-    void start() noexcept {
+    friend void tag_invoke(concore::start_t, pool_sender_op& self) noexcept {
         struct task_obj {
             Receiver receiver_;
 
@@ -65,10 +66,10 @@ struct pool_sender_op {
             void operator()() { concore::set_value(std::move(receiver_)); }
         };
         try {
-            if (!pool_enqueue_check_cancel(*pool_, task_obj{std::move(receiver_)}))
-                concore::set_done(std::move(receiver_));
+            if (!pool_enqueue_check_cancel(*self.pool_, task_obj{std::move(self.receiver_)}))
+                concore::set_done(std::move(self.receiver_));
         } catch (...) {
-            concore::set_error(std::move(receiver_), std::current_exception());
+            concore::set_error(std::move(self.receiver_), std::current_exception());
         }
     }
 

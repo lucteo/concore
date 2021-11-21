@@ -92,7 +92,7 @@ public:
 
     //! Start all the operations for all the incoming senders
     void start() noexcept {
-        concore::start(std::move(op_));
+        concore::start(op_);
         base_t::start();
     }
 
@@ -123,9 +123,9 @@ struct when_all_sender_oper_state {
         : incoming_opers_(this, (Ss &&) ss...)
         , finalReceiver_((Receiver &&) r) {}
 
-    void start() noexcept {
-        ref_count_ = sizeof...(Ss);
-        incoming_opers_.start();
+    friend void tag_invoke(start_t, when_all_sender_oper_state& self) noexcept {
+        self.ref_count_ = sizeof...(Ss);
+        self.incoming_opers_.start();
     }
 
     void on_set_value() noexcept { on_incoming_complete(); }
