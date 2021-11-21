@@ -17,7 +17,7 @@ inline const struct set_error_t final {
 } set_error{};
 
 template <typename R, typename E>
-CONCORE_CONCEPT_OR_BOOL(has_set_error) = tag_invocable<set_error_t, R, E>;
+CONCORE_CONCEPT_OR_BOOL has_set_error = tag_invocable<set_error_t, R, E>;
 
 } // namespace cpo_set_error
 } // namespace detail

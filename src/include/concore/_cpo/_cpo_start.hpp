@@ -17,7 +17,7 @@ inline const struct start_t final {
 } start{};
 
 template <typename O>
-CONCORE_CONCEPT_OR_BOOL(has_start) = tag_invocable<start_t, O&>;
+CONCORE_CONCEPT_OR_BOOL has_start = tag_invocable<start_t, O&>;
 
 } // namespace cpo_start
 } // namespace detail

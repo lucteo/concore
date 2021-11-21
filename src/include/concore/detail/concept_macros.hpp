@@ -17,7 +17,8 @@ namespace detail {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 //! Defines a concept, or, if not available, a constexpr bool variable
-#define CONCORE_CONCEPT_OR_BOOL(name) concept name
+//! Concept name expected after this macro
+#define CONCORE_CONCEPT_OR_BOOL concept
 
 //! Defines a concept-constrained typename, or, if not available, a simple typename
 #define CONCORE_CONCEPT_OR_TYPENAME(name) name
@@ -36,7 +37,7 @@ namespace detail {
 
 #else
 
-#define CONCORE_CONCEPT_OR_BOOL(name) inline constexpr bool name
+#define CONCORE_CONCEPT_OR_BOOL inline constexpr bool
 
 #define CONCORE_CONCEPT_OR_TYPENAME(name) typename
 
@@ -48,7 +49,7 @@ namespace detail {
     char tester_##varName(stag_##varName<tnames>*);                                                \
     double tester_##varName(...);                                                                  \
     template <tparams>                                                                             \
-    CONCORE_CONCEPT_OR_BOOL(varName) =                                                             \
+    CONCORE_CONCEPT_OR_BOOL varName =                                                              \
             sizeof(tester_##varName(static_cast<stag_##varName<tnames>*>(nullptr))) == 1;
 
 #define CONCORE_TEMPLATE_COND(tparams, cond) template <tparams, std::enable_if_t<cond, int> = 0>

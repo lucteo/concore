@@ -29,7 +29,7 @@ concept scheduler =                                          //
 #else
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL(scheduler) =                                              //
+CONCORE_CONCEPT_OR_BOOL scheduler =                                               //
         std::is_nothrow_move_constructible<detail::remove_cvref_t<S>>::value      //
         && (std::is_nothrow_copy_constructible<detail::remove_cvref_t<S>>::value) //
         /*std::equality_comparable*/                                              //

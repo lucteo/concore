@@ -17,7 +17,7 @@ inline const struct set_done_t final {
 } set_done{};
 
 template <typename R>
-CONCORE_CONCEPT_OR_BOOL(has_set_done) = tag_invocable<set_done_t, R>;
+CONCORE_CONCEPT_OR_BOOL has_set_done = tag_invocable<set_done_t, R>;
 
 } // namespace cpo_set_done
 } // namespace detail

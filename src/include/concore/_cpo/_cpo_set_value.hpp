@@ -17,7 +17,7 @@ inline const struct set_value_t final {
 } set_value{};
 
 template <typename R, typename... Vs>
-CONCORE_CONCEPT_OR_BOOL(has_set_value) = tag_invocable<set_value_t, R, Vs...>;
+CONCORE_CONCEPT_OR_BOOL has_set_value = tag_invocable<set_value_t, R, Vs...>;
 
 } // namespace cpo_set_value
 } // namespace detail

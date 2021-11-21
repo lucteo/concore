@@ -60,19 +60,20 @@ concept receiver_of =                                         //
 
 // TODO: remove
 template <typename T>
-CONCORE_CONCEPT_OR_BOOL(receiver_partial) = std::is_move_constructible<
-        detail::remove_cvref_t<T>>::value&& std::is_constructible<detail::remove_cvref_t<T>,
-        T>::value&& detail::has_set_done<detail::remove_cvref_t<T>>;
+CONCORE_CONCEPT_OR_BOOL receiver_partial =
+        std::is_move_constructible<detail::remove_cvref_t<T>>::value&&
+                std::is_constructible<detail::remove_cvref_t<T>, T>::value&&
+                        detail::has_set_done<detail::remove_cvref_t<T>>;
 
 template <typename T, typename E = std::exception_ptr>
-CONCORE_CONCEPT_OR_BOOL(receiver) =                                     //
+CONCORE_CONCEPT_OR_BOOL receiver =                                      //
         (std::is_move_constructible<detail::remove_cvref_t<T>>::value)  //
         && (std::is_constructible<detail::remove_cvref_t<T>, T>::value) //
         && (detail::has_set_done<detail::remove_cvref_t<T>>)            //
         &&(detail::has_set_error<detail::remove_cvref_t<T>, E>);
 
 template <typename T, typename... Vs>
-CONCORE_CONCEPT_OR_BOOL(receiver_of) =    //
+CONCORE_CONCEPT_OR_BOOL receiver_of =     //
         (receiver<T, std::exception_ptr>) //
         &&(detail::has_set_value<detail::remove_cvref_t<T>, Vs...>);
 

@@ -64,7 +64,7 @@ using sender_traits_impl =
         std::conditional<has_sender_types<S>, typed_sender_traits<S>, no_sender_traits<S>>;
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL(is_sender) = has_sender_types<S>;
+CONCORE_CONCEPT_OR_BOOL is_sender = has_sender_types<S>;
 
 } // namespace detail
 
@@ -75,24 +75,31 @@ struct sender_traits : detail::sender_traits_impl<S>::type {};
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
+// clang-format off
 template <typename S>
-concept sender =
-        std::move_constructible<std::remove_cvref_t<S>>&& detail::is_sender<std::remove_cvref_t<S>>;
+concept sender
+    =  std::move_constructible<std::remove_cvref_t<S>>
+    && detail::is_sender<std::remove_cvref_t<S>>
+    ;
 
 template <typename S>
-concept typed_sender = sender<S>&& detail::has_sender_types<std::remove_cvref_t<S>>;
+concept typed_sender
+    =  sender<S>
+    && detail::has_sender_types<std::remove_cvref_t<S>>
+    ;
+// clang-format on
 
 #else
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL(sender) =
-        std::is_move_constructible<concore::detail::remove_cvref_t<S>>::value&& detail::is_sender<
-                concore::detail::remove_cvref_t<S>>;
+CONCORE_CONCEPT_OR_BOOL sender =
+        std::is_move_constructible<concore::detail::remove_cvref_t<S>>::value&&
+                detail::is_sender<concore::detail::remove_cvref_t<S>>;
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL(
-        typed_sender) = std::is_move_constructible<concore::detail::remove_cvref_t<S>>::
-        value&& detail::has_sender_types<concore::detail::remove_cvref_t<S>>;
+CONCORE_CONCEPT_OR_BOOL typed_sender =
+        std::is_move_constructible<concore::detail::remove_cvref_t<S>>::value&&
+                detail::has_sender_types<concore::detail::remove_cvref_t<S>>;
 
 #endif
 

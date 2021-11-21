@@ -24,14 +24,16 @@ CONCORE_DEF_REQUIRES(meets_outer_fun,                                   //
 );
 
 template <typename Tag, typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_tag_invoke) = meets_tag_invoke<Tag, E, F>;
+CONCORE_CONCEPT_OR_BOOL has_tag_invoke = meets_tag_invoke<Tag, E, F>;
 
 template <typename Tag, typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_inner_fun) = !has_tag_invoke<Tag, E, F> && meets_inner_fun<E, F>;
+CONCORE_CONCEPT_OR_BOOL has_inner_fun = !has_tag_invoke<Tag, E, F> && meets_inner_fun<E, F>;
 
+// clang-format off
 template <typename Tag, typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_outer_fun) = !has_tag_invoke<Tag, E, F> &&
-                                         !has_inner_fun<Tag, E, F> && meets_outer_fun<E, F>;
+CONCORE_CONCEPT_OR_BOOL has_outer_fun =
+        !has_tag_invoke<Tag, E, F> && !has_inner_fun<Tag, E, F> && meets_outer_fun<E, F>;
+// clang-format on
 
 inline const struct execute_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename E, typename F), (has_tag_invoke<execute_t, E, F>))
@@ -52,7 +54,7 @@ inline const struct execute_t final {
 } execute{};
 
 template <typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(has_execute) =
+CONCORE_CONCEPT_OR_BOOL has_execute =
         meets_tag_invoke<execute_t, E, F> || meets_inner_fun<E, F> || meets_outer_fun<E, F>;
 
 } // namespace cpo_execute

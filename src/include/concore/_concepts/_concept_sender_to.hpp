@@ -10,16 +10,21 @@ inline namespace v1 {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
+// clang-format off
 template <typename S, typename R>
-concept sender_to = sender<S>&& receiver_partial<R>&& requires(S&& s, R&& r) {
-    concore::connect((S &&) s, (R &&) r);
-};
+concept sender_to
+    =  sender<S>
+    && receiver_partial<R>
+    && requires(S&& s, R&& r) {
+        concore::connect((S &&) s, (R &&) r);
+    };
+    // clang-format on
 
 #else
 
 template <typename S, typename R>
-CONCORE_CONCEPT_OR_BOOL(
-        sender_to) = sender<S>&& receiver_partial<R>&& detail::cpo_connect::has_connect<S, R>;
+CONCORE_CONCEPT_OR_BOOL sender_to =
+        sender<S>&& receiver_partial<R>&& detail::cpo_connect::has_connect<S, R>;
 
 #endif
 

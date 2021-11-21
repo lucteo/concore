@@ -56,15 +56,15 @@ inline namespace v1 {
 using detail::invocable_archetype;
 
 template <typename E>
-CONCORE_CONCEPT_OR_BOOL(executor) = detail::executor_of_impl<E, detail::invocable_archetype>;
+CONCORE_CONCEPT_OR_BOOL executor = detail::executor_of_impl<E, detail::invocable_archetype>;
 
 template <typename E, typename F>
-CONCORE_CONCEPT_OR_BOOL(executor_of) = executor<E>&& detail::executor_of_impl<E, F>;
+CONCORE_CONCEPT_OR_BOOL executor_of = executor<E>&& detail::executor_of_impl<E, F>;
 
 template <typename E>
-CONCORE_CONCEPT_OR_BOOL(task_executor) =           //
-        detail::executor_of_impl<E, concore::task> //
-                && noexcept(concore::execute(CONCORE_DECLVAL(E), CONCORE_DECLVAL(concore::task)));
+CONCORE_CONCEPT_OR_BOOL task_executor =              //
+        (detail::executor_of_impl<E, concore::task>) //
+        &&(noexcept(concore::execute(CONCORE_DECLVAL(E), CONCORE_DECLVAL(concore::task))));
 
 } // namespace v1
 

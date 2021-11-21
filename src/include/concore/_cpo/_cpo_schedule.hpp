@@ -21,7 +21,7 @@ inline const struct schedule_t final {
 } schedule{};
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL(has_schedule) = tag_invocable<schedule_t, S>;
+CONCORE_CONCEPT_OR_BOOL has_schedule = tag_invocable<schedule_t, S>;
 
 } // namespace cpo_schedule
 } // namespace detail

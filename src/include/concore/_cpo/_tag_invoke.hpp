@@ -19,8 +19,8 @@ CONCORE_DEF_REQUIRES(tag_invocable,                                             
 
 //! Concept that checks if some operation is tag_invocable, and the operation doesn't throw
 template <typename Tag, typename... Args>
-CONCORE_CONCEPT_OR_BOOL(nothrow_tag_invocable) = //
-        tag_invocable<Tag, Args...>              //
+CONCORE_CONCEPT_OR_BOOL nothrow_tag_invocable = //
+        tag_invocable<Tag, Args...>             //
         && (noexcept(tag_invoke(Tag{}, CONCORE_DECLVAL(Args)...)));
 
 //! Helper to get the result of a tag_invoke operation, wrapped
