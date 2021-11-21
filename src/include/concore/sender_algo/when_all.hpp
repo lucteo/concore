@@ -11,8 +11,8 @@
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/_cpo/_cpo_set_done.hpp>
-#include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_cpo/_cpo_connect.hpp>
+#include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_concepts/_concepts_sender.hpp>
 #include <concore/detail/sender_helpers.hpp>
 
@@ -192,24 +192,25 @@ struct when_all_sender {
 
     //! The connect CPO that returns an operation state object
     template <typename R>
-    when_all_sender_oper_state<R, Ss...> connect(R&& r) && {
+    friend when_all_sender_oper_state<R, Ss...> tag_invoke(connect_t, when_all_sender&& s, R&& r) {
         static_assert(receiver<R>, "Given object is not a receiver");
         // clang-format off
         auto f = [&](Ss&&... ss) -> when_all_sender_oper_state<R, Ss...> {
             return {(R &&) r, (Ss &&) ss...};
         };
         // clang-format on
-        return apply_on_tuple(std::move(f), std::move(incomingSenders_));
+        return apply_on_tuple(std::move(f), std::move(s.incomingSenders_));
     }
-
     //! @overload
     template <typename R>
-    when_all_sender_oper_state<R, Ss...> connect(R&& r) const& {
+    friend when_all_sender_oper_state<R, Ss...> tag_invoke(connect_t, when_all_sender& s, R&& r) {
         static_assert(receiver<R>, "Given object is not a receiver");
-        auto f = [&](const Ss&... ss) -> when_all_sender_oper_state<R, Ss...> {
+        // clang-format off
+        auto f = [&](Ss&&... ss) -> when_all_sender_oper_state<R, Ss...> {
             return {(R &&) r, (Ss &&) ss...};
         };
-        return apply_on_tuple(std::move(f), incomingSenders_);
+        // clang-format on
+        return apply_on_tuple(std::move(f), std::move(s.incomingSenders_));
     }
 
 private:

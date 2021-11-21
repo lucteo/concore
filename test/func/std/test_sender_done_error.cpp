@@ -35,7 +35,7 @@ TEST_CASE("Thread pool's sender calls set_done when the pool was stopped", "[sen
     auto scheduler = my_pool.scheduler();
 
     bool executed = false;
-    auto op = concore::schedule(scheduler).connect(expect_done_receiver_ex{&executed});
+    auto op = concore::connect(concore::schedule(scheduler), expect_done_receiver_ex{&executed});
 
     // Stop the pool, so that the new operations are cancelled
     my_pool.stop();
@@ -114,7 +114,7 @@ TEST_CASE("transform propagates set_error", "[sender_algo]") {
     auto sender = concore::transform(int_throwing_sender(), [](int x) { return x * x; });
 
     bool executed{false};
-    auto op = concore::connect(sender, expect_error_receiver_ex{&executed});
+    auto op = concore::connect(std::move(sender), expect_error_receiver_ex{&executed});
     concore::start(op);
     REQUIRE(executed);
 }
@@ -156,7 +156,7 @@ TEST_CASE("let_value propagates set_error", "[sender_algo]") {
     auto s = concore::let_value(int_throwing_sender(), std::move(let_value_fun));
 
     bool executed{false};
-    auto op = concore::connect(s, expect_error_receiver_ex{&executed});
+    auto op = concore::connect(std::move(s), expect_error_receiver_ex{&executed});
     concore::start(op);
     REQUIRE(executed);
 }

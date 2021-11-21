@@ -123,7 +123,9 @@ struct my_sender0 {
     using error_types = Variant<std::exception_ptr>;
     static constexpr bool sends_done = true;
 
-    my_operation connect(empty_recv::recv0&& r) { return my_operation{}; }
+    friend my_operation tag_invoke(concore::connect_t, my_sender0, empty_recv::recv0&& r) {
+        return my_operation{};
+    }
 };
 struct my_sender_int {
     template <template <class...> class Tuple, template <class...> class Variant>
@@ -132,7 +134,9 @@ struct my_sender_int {
     using error_types = Variant<std::exception_ptr>;
     static constexpr bool sends_done = true;
 
-    my_operation connect(empty_recv::recv_int&& r) { return my_operation{}; }
+    friend my_operation tag_invoke(concore::connect_t, my_sender_int, empty_recv::recv_int&& r) {
+        return my_operation{};
+    }
 };
 struct my_scheduler {
     friend inline bool operator==(my_scheduler, my_scheduler) { return false; }

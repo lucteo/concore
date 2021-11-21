@@ -13,16 +13,6 @@ CONCORE_DEF_REQUIRES(meets_tag_invoke,                                //
         (requires(S&& s) { tag_invoke(Tag{}, (S &&) s); }),           // concepts
         tag_invoke(Tag{}, CONCORE_DECLVAL(S))                         // pre-concepts
 );
-CONCORE_DEF_REQUIRES(meets_inner_fun,              //
-        CONCORE_LIST(typename S), CONCORE_LIST(S), //
-        (requires(S&& s) { s.schedule(); }),       // concepts
-        CONCORE_DECLVAL(S).schedule()              // pre-concepts
-);
-CONCORE_DEF_REQUIRES(meets_outer_fun,              //
-        CONCORE_LIST(typename S), CONCORE_LIST(S), //
-        (requires(S&& s) { schedule((S &&) s); }), // concepts
-        schedule(CONCORE_DECLVAL(S))               // pre-concepts
-);
 
 template <typename Tag, typename S>
 CONCORE_CONCEPT_OR_BOOL(has_tag_invoke) = meets_tag_invoke<Tag, S>;

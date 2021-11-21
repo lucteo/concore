@@ -303,7 +303,7 @@ TEST_CASE("static_thread_pool scheduler can schedule work", "[execution]") {
     auto scheduler = my_pool.scheduler();
 
     bool executed = false;
-    auto op = concore::schedule(scheduler).connect(my_receiver{&executed});
+    auto op = concore::connect(concore::schedule(scheduler), my_receiver{&executed});
     concore::start(op);
 
     // Ensure that the receiver is called

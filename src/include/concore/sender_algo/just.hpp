@@ -9,6 +9,7 @@
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
+#include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_concepts/_concepts_receiver.hpp>
 #include <concore/detail/sender_helpers.hpp>
@@ -44,16 +45,15 @@ struct just_sender : sender_types_base<false, Ts...> {
 
     //! The connect CPO that returns an operation state object
     template <typename R>
-    just_oper<R, Ts...> connect(R&& r) && {
+    friend just_oper<R, Ts...> tag_invoke(connect_t, just_sender&& s, R&& r) {
         static_assert(receiver<R>, "Type needs to match receiver_of concept");
-        return just_oper<R, Ts...>{(R &&) r, std::move(values_)};
+        return just_oper<R, Ts...>{(R &&) r, std::move(s.values_)};
     }
-
     //! @overload
     template <typename R>
-    just_oper<R, Ts...> connect(R&& r) const& {
+    friend just_oper<R, Ts...> tag_invoke(connect_t, const just_sender& s, R&& r) {
         static_assert(receiver<R>, "Type needs to match receiver_of concept");
-        return just_oper<R, Ts...>{(R &&) r, values_};
+        return just_oper<R, Ts...>{(R &&) r, s.values_};
     }
 
 private:

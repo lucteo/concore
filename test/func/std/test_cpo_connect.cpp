@@ -33,34 +33,6 @@ struct op_state {
     friend void tag_invoke(concore::start_t, op_state& self) noexcept { self.fun_(); }
 };
 
-struct my_sender_in {
-    template <template <class...> class Tuple, template <class...> class Variant>
-    using value_types = Variant<Tuple<>>;
-    template <template <class...> class Variant>
-    using error_types = Variant<std::exception_ptr>;
-    static constexpr bool sends_done = true;
-
-    int value_{0};
-    op_state connect(my_receiver& r) {
-        int val = value_;
-        return op_state([val, &r] { concore::set_value(r, val); });
-    }
-};
-
-struct my_sender_ext {
-    template <template <class...> class Tuple, template <class...> class Variant>
-    using value_types = Variant<Tuple<>>;
-    template <template <class...> class Variant>
-    using error_types = Variant<std::exception_ptr>;
-    static constexpr bool sends_done = true;
-
-    int value_{0};
-    friend op_state connect(my_sender_ext& s, my_receiver& r) {
-        int val = s.value_;
-        return op_state([val, &r] { concore::set_value(r, val); });
-    }
-};
-
 struct my_sender_tag_invoke {
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
@@ -71,7 +43,7 @@ struct my_sender_tag_invoke {
     int value_{0};
 };
 
-op_state tag_invoke(concore::connect_t, my_sender_tag_invoke& s, my_receiver& r) {
+op_state tag_invoke(concore::connect_t, my_sender_tag_invoke&& s, my_receiver&& r) {
     int val = s.value_;
     return op_state([val, &r] { concore::set_value(r, val); });
 }
@@ -80,18 +52,10 @@ template <typename S>
 void test_connect() {
     my_receiver recv;
     S snd{10};
-    auto op = concore::connect(snd, recv);
+    auto op = concore::connect(std::move(snd), std::move(recv));
     CHECK(recv.value_ == 0);
     concore::start(op);
     CHECK(recv.value_ == 10);
-}
-
-TEST_CASE("sender object with inner method fulfills connect CPO", "[execution][cpo_connect]") {
-    test_connect<my_sender_in>();
-}
-
-TEST_CASE("sender object with external function fulfills connect CPO", "[execution][cpo_connect]") {
-    test_connect<my_sender_ext>();
 }
 
 TEST_CASE(

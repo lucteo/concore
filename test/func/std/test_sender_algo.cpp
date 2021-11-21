@@ -71,16 +71,18 @@ fun_receiver<F> make_fun_receiver(F f) {
 }
 
 TEST_CASE("Simple test for just", "[sender_algo]") {
-    auto o1 = concore::just(1).connect(make_expect_receiver(1));
+    auto o1 = concore::connect(concore::just(1), make_expect_receiver(1));
     concore::start(o1);
-    auto o2 = concore::just(2).connect(make_expect_receiver(2));
+    auto o2 = concore::connect(concore::just(2), make_expect_receiver(2));
     concore::start(o2);
-    auto o3 = concore::just(3).connect(make_expect_receiver(3));
+    auto o3 = concore::connect(concore::just(3), make_expect_receiver(3));
     concore::start(o3);
 
-    auto o4 = concore::just(std::string("this")).connect(make_expect_receiver(std::string("this")));
+    auto o4 = concore::connect(
+            concore::just(std::string("this")), make_expect_receiver(std::string("this")));
     concore::start(o4);
-    auto o5 = concore::just(std::string("that")).connect(make_expect_receiver(std::string("that")));
+    auto o5 = concore::connect(
+            concore::just(std::string("that")), make_expect_receiver(std::string("that")));
     concore::start(o5);
 }
 
@@ -119,7 +121,7 @@ TEST_CASE("just can handle multiple values", "[sender_algo]") {
         CHECK(d == 0.14);
         executed = true;
     };
-    auto op = concore::just(3, 0.14).connect(make_fun_receiver(std::move(f)));
+    auto op = concore::connect(concore::just(3, 0.14), make_fun_receiver(std::move(f)));
     concore::start(op);
     CHECK(executed);
 }
@@ -167,7 +169,7 @@ TEST_CASE("on sender algo calls receiver on the specified scheduler", "[sender_a
             executed = true;
         });
         static_assert(concore::receiver<decltype(recv)>, "invalid receiver");
-        auto op = concore::connect(s2, recv);
+        auto op = concore::connect(std::move(s2), recv);
         concore::start(op);
 
         // Wait for the task to be executed
@@ -212,7 +214,7 @@ TEST_CASE("just_on sender algo calls receiver on the specified scheduler", "[sen
             executed = true;
         });
         static_assert(concore::receiver<decltype(recv)>, "invalid receiver");
-        auto op = concore::connect(s, recv);
+        auto op = concore::connect(std::move(s), recv);
         concore::start(op);
 
         // Wait for the task to be executed

@@ -15,6 +15,7 @@
 #include <concore/_cpo/_cpo_set_done.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/_cpo/_cpo_schedule.hpp>
+#include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
 #include <concore/task.hpp>
 #include <concore/detail/extra_type_traits.hpp>
@@ -103,8 +104,13 @@ public:
     static constexpr bool sends_done = true;
 
     template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
-    pool_sender_op<remove_cvref_t<R>> connect(R&& r) const {
-        return {impl_, (R &&) r};
+    friend pool_sender_op<remove_cvref_t<R>> tag_invoke(connect_t, thread_pool_sender&& s, R&& r) {
+        return {s.impl_, (R &&) r};
+    }
+    template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
+    friend pool_sender_op<remove_cvref_t<R>> tag_invoke(
+            connect_t, const thread_pool_sender& s, R&& r) {
+        return {s.impl_, (R &&) r};
     }
 
 private:

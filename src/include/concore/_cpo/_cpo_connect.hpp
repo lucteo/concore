@@ -15,29 +15,10 @@ CONCORE_DEF_REQUIRES(meets_tag_invoke,                                          
         (requires(S&& s, R&& r) { tag_invoke(Tag{}, (S &&) s, (R &&) r); }),         // concepts
         tag_invoke(Tag{}, CONCORE_DECLVAL(S), CONCORE_DECLVAL(R))                    // pre-concepts
 );
-CONCORE_DEF_REQUIRES(meets_inner_fun,                             //
-        CONCORE_LIST(typename S, typename R), CONCORE_LIST(S, R), //
-        (requires(S&& s, R&& r) { s.connect((R &&) r); }),        // concepts
-        CONCORE_DECLVAL(S).connect(CONCORE_DECLVAL(R))            // pre-concepts
-);
-CONCORE_DEF_REQUIRES(meets_outer_fun,                              //
-        CONCORE_LIST(typename S, typename R), CONCORE_LIST(S, R),  //
-        (requires(S&& s, R&& r) { connect((S &&) s, (R &&) r); }), // concepts
-        connect(CONCORE_DECLVAL(S), CONCORE_DECLVAL(R))            // pre-concepts
-);
 
 template <typename Tag, typename S, typename R>
 CONCORE_CONCEPT_OR_BOOL(
         has_tag_invoke) = receiver_partial<R>&& sender<S>&& meets_tag_invoke<Tag, S, R>;
-
-template <typename Tag, typename S, typename R>
-CONCORE_CONCEPT_OR_BOOL(has_inner_fun) = receiver_partial<R>&& sender<S> &&
-                                         !has_tag_invoke<Tag, S, R> && meets_inner_fun<S, R>;
-
-template <typename Tag, typename S, typename R>
-CONCORE_CONCEPT_OR_BOOL(has_outer_fun) = receiver_partial<R>&& sender<S> &&
-                                         !has_tag_invoke<Tag, S, R> &&
-                                         !has_inner_fun<Tag, S, R> && meets_outer_fun<S, R>;
 
 inline const struct connect_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S, typename R), (has_tag_invoke<connect_t, S, R>))
@@ -48,24 +29,6 @@ inline const struct connect_t final {
                 "Result type of the custom-defined connect operation must "
                 "model the operation_state concept");
         return tag_invoke(connect_t{}, (S &&) s, (R &&) r);
-    }
-    CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S, typename R), (has_inner_fun<connect_t, S, R>))
-    auto operator()(S&& s, R&& r) const                        //
-            noexcept(noexcept(((S &&) s).connect((R &&) r))) { //
-        using res_type = decltype(((S &&) s).connect((R &&) r));
-        static_assert(operation_state<res_type>,
-                "Result type of the custom-defined connect operation must "
-                "model the operation_state concept");
-        return ((S &&) s).connect((R &&) r);
-    }
-    CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S, typename R), (has_outer_fun<connect_t, S, R>))
-    auto operator()(S&& s, R&& r) const                       //
-            noexcept(noexcept(connect((S &&) s, (R &&) r))) { //
-        using res_type = decltype(connect((S &&) s, (R &&) r));
-        static_assert(operation_state<res_type>,
-                "Result type of the custom-defined connect operation must "
-                "model the operation_state concept");
-        return connect((S &&) s, (R &&) r);
     }
 } connect{};
 

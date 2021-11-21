@@ -9,6 +9,7 @@
 #include <concore/detail/extra_type_traits.hpp>
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
+#include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_concepts/_concepts_sender.hpp>
 #include <concore/detail/sender_helpers.hpp>
@@ -75,16 +76,17 @@ struct transform_sender : sender_types_base<Sender::sends_done, Res> {
 
     //! The connect CPO that returns an operation state object
     template <typename R>
-    transform_sender_oper_state<Sender, R, F> connect(R&& r) && {
+    friend transform_sender_oper_state<Sender, R, F> tag_invoke(
+            connect_t, transform_sender&& s, R&& r) {
         static_assert(receiver<R>, "Given object is not a receiver");
-        return {(Sender &&) sender_, (R &&) r, (F &&) f_};
+        return {(Sender &&) s.sender_, (R &&) r, (F &&) s.f_};
     }
-
     //! @overload
     template <typename R>
-    transform_sender_oper_state<Sender, R, F> connect(R&& r) const& {
+    friend transform_sender_oper_state<Sender, R, F> tag_invoke(
+            connect_t, const transform_sender& s, R&& r) {
         static_assert(receiver<R>, "Given object is not a receiver");
-        return {sender_, (R &&) r, f_};
+        return {s.sender_, (R &&) r, s.f_};
     }
 
 private:

@@ -92,16 +92,17 @@ struct on_sender {
 
     //! The connect CPO that returns an operation state object
     template <typename R>
-    on_sender_oper_state<Sender, SchedSender, R> connect(R&& r) && {
+    friend on_sender_oper_state<Sender, SchedSender, R> tag_invoke(
+            connect_t, on_sender&& s, R&& r) {
         static_assert(sender_to<Sender, R>, "Given receiver doesn't match the sender");
-        return {(R &&) r, (Sender &&) sender_, (SchedSender &&) schedSender_};
+        return {(R &&) r, (Sender &&) s.sender_, (SchedSender &&) s.schedSender_};
     }
-
     //! @overload
     template <typename R>
-    on_sender_oper_state<Sender, SchedSender, R> connect(R&& r) const& {
+    friend on_sender_oper_state<Sender, SchedSender, R> tag_invoke(
+            connect_t, const on_sender& s, R&& r) {
         static_assert(sender_to<Sender, R>, "Given receiver doesn't match the sender");
-        return {(R &&) r, sender_, schedSender_};
+        return {(R &&) r, s.sender_, s.schedSender_};
     }
 
 private:
