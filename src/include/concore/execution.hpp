@@ -11,7 +11,6 @@
 #include <concore/_cpo/_cpo_execute.hpp>
 #include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
-#include <concore/_cpo/_cpo_submit.hpp>
 #include <concore/_cpo/_cpo_schedule.hpp>
 #include <concore/_cpo/_cpo_bulk_execute.hpp>
 #include <concore/_concepts/_concepts_executor.hpp>
@@ -49,7 +48,6 @@ inline namespace v1 {
  *      - @ref concore::execute()
  *      - @ref concore::connect()
  *      - @ref concore::start()
- *      - @ref concore::submit()
  *      - @ref concore::schedule()
  *      - @ref concore::bulk_execute()
  *
@@ -60,7 +58,6 @@ inline namespace v1 {
  *      - @ref concore::execute_t
  *      - @ref concore::connect_t
  *      - @ref concore::start_t
- *      - @ref concore::submit_t
  *      - @ref concore::schedule_t
  *      - @ref concore::bulk_execute_t
  */
@@ -271,41 +268,6 @@ void start(Oper&& o);
 struct start_t {};
 
 /**
- * @brief   Submit work from a sender, by combining it with a receiver
- *
- * @param   snd The sender object, that triggers the work
- * @param   rcv The receiver object that receives the results of the work
- *
- * @details
- *
- * The `sender_to<Sender, Receiver>` concept must hold.
- *
- * If there is no @ref submit() customization point defined for the given `Sender` object (taking a
- * `Receiver` object), then this will fall back to calling @ref concore::connect().
- *
- * Usage example:
- * @code{.cpp}
- *      submit(snd, rcv);
- * @endcode
- *
- * @see     connect()
- */
-template <sender Sender, receiver Receiver>
-void submit(Sender&& snd, Receiver&& rcv);
-
-/**
- * @brief   Customization point object tag for @ref concore::submit()
- *
- * To add support for @ref concore::submit() to a type `S`, with the receiver `R`, one can define:
- * @code{.cpp}
- *      void tag_invoke(submit_t, S, R);
- * @endcode
- *
- * @see     concore::submit()
- */
-struct submit_t {};
-
-/**
  * @brief   Transforms a scheduler (an execution context) into a single-shot sender
  *
  * @param   sched   The scheduler object
@@ -514,14 +476,12 @@ struct receiver_of {};
  *  - @ref set_error() if an exception occurred during the operation, or while calling @ref
  *    set_value()
  *
- * The sender starts working when ``submit(S, R)`` or ``start(connect(S, R))`` is called passing the
+ * The sender starts working when ``start(connect(S, R))`` is called passing the
  * sender and a receiver object in. The sender should not execute any other work after calling one
  * of the three completion signals operations. The sender should not finish its work without calling
  * one of these.
  *
  * A sender should expose a @ref connect() customization-point object to connect it to a receiver.
- * Also, typically there is @ref submit() CPO for a sender, but this can be inferred from @ref
- * connect().
  *
  * A sender typically exposes the type of the values it sets, and the type of errors it can
  * generate, but this is not mandatory.

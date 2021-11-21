@@ -361,8 +361,8 @@ public:
      *
      * @details
      *
-     * The returned scheduler object can be used to create sender objects that may be used to submit
-     * receiver objects to this thread pool.
+     * The returned scheduler object can be used to create sender objects that may be used to
+     * schedule receiver objects to this thread pool.
      *
      * The returned object has the following properties:
      *  - execution::allocator
@@ -377,8 +377,8 @@ public:
      *
      * @details
      *
-     * This returns an executor object that can be used to submit function objects to be executed by
-     * this thread pool.
+     * This returns an executor object that can be used to schedule function objects to be executed
+     * by this thread pool.
      *
      * The returned object has the following properties:
      *  - execution::blocking.possibly

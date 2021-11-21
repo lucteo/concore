@@ -32,7 +32,6 @@ set(func_sourceFiles
     "func/std/test_cpo_schedule.cpp"
     "func/std/test_cpo_receiver.cpp"
     "func/std/test_cpo_connect.cpp"
-    "func/std/test_cpo_submit.cpp"
     "func/std/test_sender_algo.cpp"
     "func/std/test_sender_done_error.cpp"
 

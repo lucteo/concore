@@ -10,7 +10,6 @@
 #include <concore/_cpo/_cpo_set_value.hpp>
 #include <concore/_cpo/_cpo_set_error.hpp>
 #include <concore/_cpo/_cpo_connect.hpp>
-#include <concore/_cpo/_cpo_submit.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_cpo/_cpo_schedule.hpp>
 #include <concore/_concepts/_concept_scheduler.hpp>
@@ -43,7 +42,8 @@ struct on_sender_oper_state {
 
         friend void tag_invoke(set_value_t, sched_receiver&& self) noexcept {
             try {
-                concore::submit((Sender &&) self.sender_, (Receiver &&) self.receiver_);
+                auto op = concore::connect((Sender &&) self.sender_, (Receiver &&) self.receiver_);
+                concore::start(op);
             } catch (...) {
                 concore::set_error((Receiver &&) self.receiver_, std::current_exception());
             }

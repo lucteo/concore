@@ -6,7 +6,7 @@
  */
 #pragma once
 
-#include <concore/_cpo/_cpo_submit.hpp>
+#include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_concepts/_concepts_sender.hpp>
 #include <concore/detail/sender_helpers.hpp>
 
@@ -69,8 +69,9 @@ struct sync_wait_receiver {
 template <typename Res, CONCORE_CONCEPT_OR_TYPENAME(sender) Sender>
 Res sync_wait_impl(Sender&& s) {
     sync_wait_data<Res, Sender> data;
-    // Connect the sender and the receiver and submit the work
-    concore::submit((Sender &&) s, sync_wait_receiver<Res, Sender>{&data});
+    // Connect the sender and the receiver and start the work
+    auto op = concore::connect((Sender &&) s, sync_wait_receiver<Res, Sender>{&data});
+    concore::start(op);
     // Wait for the result and interpret it
     int type = data.wait();
     if (type == 1)
