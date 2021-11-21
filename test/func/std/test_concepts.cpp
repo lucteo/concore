@@ -119,7 +119,7 @@ struct my_executor {
 };
 
 struct my_operation {
-    friend void tag_invoke(concore::start_t, my_operation&) {}
+    friend void tag_invoke(concore::start_t, my_operation&) noexcept {}
 };
 
 struct my_sender0 {
