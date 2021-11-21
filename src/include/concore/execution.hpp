@@ -12,7 +12,6 @@
 #include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_cpo/_cpo_schedule.hpp>
-#include <concore/_cpo/_cpo_bulk_execute.hpp>
 #include <concore/_concepts/_concepts_executor.hpp>
 #include <concore/_concepts/_concepts_receiver.hpp>
 #include <concore/_concepts/_concepts_sender.hpp>
@@ -49,7 +48,6 @@ inline namespace v1 {
  *      - @ref concore::connect()
  *      - @ref concore::start()
  *      - @ref concore::schedule()
- *      - @ref concore::bulk_execute()
  *
  * Customization point object tags:
  *      - @ref concore::set_value_t
@@ -59,7 +57,6 @@ inline namespace v1 {
  *      - @ref concore::connect_t
  *      - @ref concore::start_t
  *      - @ref concore::schedule_t
- *      - @ref concore::bulk_execute_t
  */
 
 /**
@@ -300,36 +297,6 @@ auto schedule(Scheduler&& sched);
  * @see concore::schedule()
  */
 struct schedule_t {};
-
-/**
- * @brief   Customization point object that can be used to bulk_execute work on executors
- *
- * @param   e   The executor object we are using for our execution
- * @param   f   The functor to be invoked
- * @param   n   The number of times we have to invoke the functor
- *
- * @details
- *
- * This will tell the executor object to invoke the given functor, according to the rules defined in
- * the executor.
- *
- * @see concore::execute()
- */
-template <typename Executor, typename Ftor, typename Num>
-void bulk_execute(Executor&& e, Ftor&& f, Num n);
-
-/**
- * @brief   Customization point object tag for @ref concore::bulk_execute()
- *
- * To add support for @ref concore::bulk_execute() to a type `T`, for given functor type `F` and a
- * numeric type `N`, one can define:
- * @code{.cpp}
- *      void tag_invoke(bulk_execute_t, T, F, N);
- * @endcode
- *
- * @see concore::bulk_execute()
- */
-struct bulk_execute_t {};
 
 /**
  * @brief   A type representing the archetype of an invocable object

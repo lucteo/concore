@@ -190,8 +190,6 @@ public:
      * This will ensure that the execution follows the properties established for this object.
      *
      * If the function exits with an exception, std::terminate() will be called.
-     *
-     * \see     bulk_execute()
      */
     template <typename F>
     void execute(F&& f) const {
@@ -199,25 +197,6 @@ public:
     }
 
     void execute(task t) const noexcept { pool_enqueue_noexcept(*impl_, std::move(t)); }
-
-    /**
-     * \brief   Bulk-executes the given functor in the current thread pool.
-     *
-     * \tparam  F   The type of the functor to execute; compatible with void(size_t)
-     * \param   f   The functor to be executed
-     * \param   n   The number of calls to the function
-     *
-     * This will ensure that the execution follows the properties established for this object.
-     *
-     * If the function exits with an exception, std::terminate() will be called.
-     *
-     * \see     bulk_execute()
-     */
-    template <typename F>
-    void bulk_execute(F&& f, size_t n) const {
-        for (size_t i = 0; i < n; i++)
-            pool_enqueue(*impl_, [i, f]() { f(i); });
-    }
 
 private:
     //! The implementation data; use pimpl idiom.

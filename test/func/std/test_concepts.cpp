@@ -30,12 +30,6 @@ struct not_quite_executor {
     void operator()(F&& f) const {
         ((F &&) f)();
     }
-
-    template <typename F>
-    void bulk_execute(F&& f, size_t n) const {
-        for (size_t i = 0; i < n; i++)
-            ((F &&) f)(i);
-    }
 };
 
 TEST_CASE("not all classes model the executor concept", "[execution][concepts]") {
