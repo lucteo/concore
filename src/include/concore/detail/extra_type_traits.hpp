@@ -31,8 +31,19 @@ struct type_identity {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 template <typename T>
-concept moveable_value = std::is_move_constructible<remove_cvref_t<T>>::value&&
+concept moveable_value = std::is_move_constructible<remove_cvref_t<T>>::value &&
         std::is_constructible_v<remove_cvref_t<T>, T>;
+#endif
+
+// Ensure that we have std::invoke_result and std::invoke_result_t from C++17
+#if CONCORE_CPP_VERSION >= 17
+using std::invoke_result;
+using std::invoke_result_t;
+#else
+template <typename F, typename... Args>
+using invoke_result = result_of<F(Args...)>;
+template <typename F, typename... Args>
+using invoke_result_t = result_of_t<F(Args...)>;
 #endif
 
 } // namespace detail
