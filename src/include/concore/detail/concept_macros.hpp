@@ -9,7 +9,7 @@ namespace detail {
 
 //! Introduces a value of the given type. Can be used with vaargs types.
 #define CONCORE_DECLVAL(...) static_cast<__VA_ARGS__ (*)() noexcept>(nullptr)()
-#define CONCORE_DECLVALREF(T) *static_cast<T*>(nullptr)
+#define CONCORE_DECLVALREF(...) *static_cast<__VA_ARGS__ *>(nullptr)
 
 //! Helper macro to pass lists of tokens as arguments
 #define CONCORE_LIST(...) __VA_ARGS__
