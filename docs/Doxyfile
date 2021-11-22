@@ -2546,7 +2546,7 @@ DOT_CLEANUP            = YES
 
 PROJECT_NAME           = "concore"
 
-INPUT                  = ../include
+INPUT                  = ../src/include
 #INPUT                  += ../src
 RECURSIVE              = YES
 

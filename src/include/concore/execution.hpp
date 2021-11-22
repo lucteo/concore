@@ -30,8 +30,6 @@ inline namespace v1 {
  * @details
  *
  * Concepts defined:
- *      - @ref concore::v1::executor
- *      - @ref concore::v1::executor_of
  *      - @ref concore::v1::receiver
  *      - @ref concore::v1::receiver_of
  *      - @ref concore::v1::sender
@@ -44,16 +42,14 @@ inline namespace v1 {
  *      - @ref concore::set_value()
  *      - @ref concore::set_done()
  *      - @ref concore::set_error()
- *      - @ref concore::execute()
  *      - @ref concore::connect()
  *      - @ref concore::start()
  *      - @ref concore::schedule()
  *
- * Customization point object tags:
+ * Customization point object tag types:
  *      - @ref concore::set_value_t
  *      - @ref concore::set_done_t
  *      - @ref concore::set_error_t
- *      - @ref concore::execute_t
  *      - @ref concore::connect_t
  *      - @ref concore::start_t
  *      - @ref concore::schedule_t
@@ -67,8 +63,11 @@ inline namespace v1 {
  *
  * @details
  *
+ * This call is equivalent to `tag_invoke(concore::set_value, r, vs...)`.
+ *
  * This is called by a sender whenever the sender has finished work and produces some values. This
- * can be called even if the sender doesn't have any values to send to the receiver.
+ * can be called even if the sender doesn't have any values to send to the receiver; i.e., it's a
+ * void receiver.
  *
  * The `Receiver` type should model concepts @ref concore::v1::receiver "receiver" and
  * `receiver_of<Vs...>`.
@@ -81,16 +80,13 @@ void set_value(Receiver&& r, Vs&&... vs);
 /**
  * @brief   Type to use for customization point for @ref concore::set_value()
  *
- * To add support for @ref concore::set_value() to a type `T`, for value types `Vs...`, one can
+ * This is equivalent with `decltype(concore::set_value)` (if we ignore constness).
+ *
+ * To add support for @ref concore::set_value() to a type `T`, for value types `Vs...`, one needs to
  * define:
  * @code{.cpp}
  *      void tag_invoke(set_value_t, T, Vs...);
  * @endcode
- *
- * A type models is a receiver if it has the following three customization point objects defined:
- *  - @ref concore::set_value()
- *  - @ref concore::set_done()
- *  - @ref concore::set_error()
  *
  * @see concore::set_value(), set_done_t, set_error_t
  */
@@ -102,6 +98,8 @@ struct set_value_t {};
  * @param   r       The receiver object that is signaled about sender's stop signal
  *
  * @details
+ *
+ * This call is equivalent to `tag_invoke(concore::set_done, r)`.
  *
  * This is called by a sender whenever the sender is stopped, and the execution of the task cannot
  * continue. When this is called, @ref set_value() is not called anymore.
@@ -116,15 +114,12 @@ void set_done(Receiver&& r);
 /**
  * @brief   Type to use for customization point for @ref concore::set_done()
  *
- * To add support for @ref concore::set_done() to a type `T`, one can define:
+ * This is equivalent with `decltype(concore::set_done)` (if we ignore constness).
+ *
+ * To add support for @ref concore::set_done() to a type `T`, one needs to define:
  * @code{.cpp}
  *      void tag_invoke(set_done_t, T);
  * @endcode
- *
- * A type models is a receiver if it has the following three customization point objects defined:
- *  - @ref concore::set_value()
- *  - @ref concore::set_done()
- *  - @ref concore::set_error()
  *
  * @see concore::set_done(), set_value_t, set_error_t
  */
@@ -137,6 +132,8 @@ struct set_done_t {};
  * @param   e       The error to be to the receiver
  *
  * @details
+ *
+ * This call is equivalent to `tag_invoke(concore::set_error, r, e)`.
  *
  * This is called by a sender whenever the sender has an error to report to the sender. Sending an
  * error means that the sender is done processing; it will not call @ref set_value() and @ref
@@ -152,51 +149,17 @@ void set_error(Receiver&& r, Err&& e);
 /**
  * @brief   Type to use for customization point for @ref concore::set_error()
  *
- * To add support for @ref concore::set_error() to a type `T`, with an error type `E`, one can
+ * This is equivalent with `decltype(concore::set_error)` (if we ignore constness).
+ *
+ * To add support for @ref concore::set_error() to a type `T`, with an error type `E`, one needs to
  * define:
  * @code{.cpp}
  *      void tag_invoke(set_error_t, T, E);
  * @endcode
  *
- * A type models is a receiver if it has the following three customization point objects defined:
- *  - @ref concore::set_value()
- *  - @ref concore::set_done()
- *  - @ref concore::set_error()
- *
  * @see concore::set_error(), set_value_t, set_done_t
  */
 struct set_error_t {};
-
-/**
- * @brief   Customization point object that can be used to execute work on executors
- *
- * @param   e   The executor object we are using for our execution
- * @param   f   The functor to be invoked
- *
- * @details
- *
- * This will tell the executor object to invoke the given functor, according to the rules defined in
- * the executor.
- *
- * The `Executor` type should model concept `executor_of<Ftor>`.
- *
- * @see executor_of
- */
-template <typename Executor, typename Ftor>
-void execute(Executor&& e, Ftor&& f);
-
-/**
- * @brief   Type to use for customization point for @ref concore::execute()
- *
- * To add support for @ref concore::execute() to a type `T`, for given functor type `F`, one can
- * define:
- * @code{.cpp}
- *      void tag_invoke(execute_t, T, F);
- * @endcode
- *
- * @see concore::execute()
- */
-struct execute_t {};
 
 /**
  * @brief   Connect a sender with a receiver, returning an async operation object
@@ -297,59 +260,6 @@ auto schedule(Scheduler&& sched);
  * @see concore::schedule()
  */
 struct schedule_t {};
-
-/**
- * @brief   A type representing the archetype of an invocable object
- *
- * This essentially represents a `void()` functor.
- */
-struct invocable_archetype {
-    //! Type of operation compatible with `void()`.
-    void operator()() & noexcept {}
-};
-
-/**
- * @brief   Concept that defines an executor
- *
- * @tparam  E   The type that we want to model the concept
- *
- * @details
- *
- * An executor object is an object that can "execute" work. Given a functor compatible with @ref
- * invocable_archetype, the executor will be able to execute that function, in some specified
- * manner.
- *
- * Properties that a type needs to have in order for it to be an executor:
- *  - it's copy-constructible
- *  - the copy constructor is nothrow
- *  - it's equality-comparable
- *  - one can call `execute(obj, invocable_archetype{})`, where `obj` is an object of the type
- *
- * To be able to call @ref execute() on an executor, the executor type must have one the following:
- *  - an inner method `execute` that takes a functor
- *  - an associated `execute` free function that takes the executor and a functor
- *  - an customization point `tag_invoke(execute_t, Ex, Fn)`
- *
- * @see     executor_of, execute_t, execute()
- */
-template <typename E>
-struct executor {};
-
-/**
- * @brief Defines an executor that can execute a given functor type
- *
- * @tparam  E   The type that we want to model the concept
- * @tparam  F   The type functor that can be called by the executor
- *
- * @details
- *
- * This is similar to the @ref executor concept, but instead of being capable of executing `void()`
- * functors, this can execute functors of the given type `F`
- *
- * @see     executor
- */
-template <typename E, typename F>
-struct executor_of {};
 
 /**
  * @brief Concept that defines a bare-bone receiver

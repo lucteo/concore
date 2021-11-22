@@ -1,5 +1,5 @@
 sphinx>=2.0
-breathe
+breathe>=4.31.0
 exhale
 sphinx_rtd_theme
 sphinxcontrib-plantuml
