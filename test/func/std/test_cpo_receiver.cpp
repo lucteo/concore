@@ -3,7 +3,7 @@
 #include <test_common/receivers.hpp>
 
 #include <string>
-#include <limits.h>
+#include <climits>
 
 using concore::set_done_t;
 using concore::set_error_t;
