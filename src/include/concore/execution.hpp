@@ -230,7 +230,7 @@ void start(Oper&& o);
 struct start_t {};
 
 /**
- * @brief   Transforms a scheduler (an execution context) into a single-shot sender
+ * @brief   Transforms a scheduler (an execution context) into a sender
  *
  * @param   sched   The scheduler object
  *
@@ -434,8 +434,8 @@ struct operation_state {};
  * A scheduler type allows a @ref schedule() operation that creates a sender out of the scheduler. A
  * typical scheduler contains an execution context that will pass to the sender on its creation.
  *
- * The type that match this concept must be move and copy constructible and must also define the
- * @ref schedule() CPO.
+ * The type that match this concept must be move and copy constructible, equality comparable and
+ * must also define the @ref schedule() CPO.
  *
  * @see sender
  */

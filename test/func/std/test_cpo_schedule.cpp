@@ -1,5 +1,8 @@
 #include <catch2/catch.hpp>
-#include <concore/execution.hpp>
+#include <concore/_cpo/_cpo_schedule.hpp>
+
+using concore::schedule_t;
+using concore::detail::cpo_schedule::has_schedule;
 
 struct my_sender {
     template <template <class...> class Tuple, template <class...> class Variant>
@@ -11,19 +14,13 @@ struct my_sender {
     bool from_scheduler_{false};
 };
 
-struct my_scheduler_tag_invoke {};
+struct my_scheduler {
+    friend my_sender tag_invoke(concore::schedule_t, my_scheduler) { return my_sender{true}; }
+};
 
-my_sender tag_invoke(concore::schedule_t, my_scheduler_tag_invoke& sched) {
-    return my_sender{true};
-}
-
-template <typename Sched>
-void test_schedule() {
-    Sched sched;
+TEST_CASE("can call schedule on an appropriate type", "[execution][cpo_schedule]") {
+    static_assert(has_schedule<my_scheduler>, "invalid scheduler type");
+    my_scheduler sched;
     auto snd = concore::schedule(sched);
     CHECK(snd.from_scheduler_);
-}
-
-TEST_CASE("scheduler with tag_invoke connect fulfills schedule CPO", "[execution][cpo_schedule]") {
-    test_schedule<my_scheduler_tag_invoke>();
 }

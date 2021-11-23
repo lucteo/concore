@@ -203,30 +203,3 @@ TEST_CASE("not all combinations of senders & receivers satisfy the sender_to con
     REQUIRE_FALSE(sender_to<my_sender_int, recv0_ec>);
     REQUIRE_FALSE(sender_to<my_sender_int, recv_int_ec>);
 }
-
-TEST_CASE("scheduler types satisfy the scheduler concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace test_models;
-
-    REQUIRE(scheduler<my_scheduler>);
-    auto snd = concore::schedule(my_scheduler{});
-    REQUIRE(sender<decltype(snd)>);
-    static_cast<void>(snd);
-}
-
-TEST_CASE("other types don't satisfy the scheduler concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace test_models;
-
-    REQUIRE_FALSE(scheduler<my_executor>);
-    REQUIRE_FALSE(scheduler<my_sender0>);
-    REQUIRE_FALSE(scheduler<empty_recv::recv0>);
-    REQUIRE_FALSE(scheduler<my_operation>);
-}
-
-TEST_CASE("operation types satisfy the operation_state concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace test_models;
-
-    REQUIRE(operation_state<my_operation>);
-}
