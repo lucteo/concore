@@ -37,6 +37,16 @@ struct recv_set_done_except {
     friend void tag_invoke(set_error_t, recv_set_done_except, std::exception_ptr) noexcept {}
 };
 
+struct recv_non_movable {
+    recv_non_movable() = default;
+    recv_non_movable(recv_non_movable&&) = delete;
+    recv_non_movable& operator=(recv_non_movable&&) = delete;
+
+    friend void tag_invoke(set_value_t, recv_non_movable) noexcept {}
+    friend void tag_invoke(set_done_t, recv_non_movable) noexcept {}
+    friend void tag_invoke(set_error_t, recv_non_movable, std::exception_ptr) noexcept {}
+};
+
 TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]") {
     using namespace empty_recv;
 
@@ -96,4 +106,9 @@ TEST_CASE("type with throwing set_error is not a receiver", "[execution][concept
 TEST_CASE("type with throwing set_done is not a receiver", "[execution][concepts]") {
     REQUIRE(!receiver<recv_set_done_except>);
     REQUIRE(!receiver_of<recv_set_done_except>);
+}
+
+TEST_CASE("non-movable type is not a receiver", "[execution][concepts]") {
+    REQUIRE(!receiver<recv_non_movable>);
+    REQUIRE(!receiver_of<recv_non_movable>);
 }
