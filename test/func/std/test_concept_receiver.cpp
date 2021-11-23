@@ -39,8 +39,11 @@ struct recv_set_done_except {
 
 struct recv_non_movable {
     recv_non_movable() = default;
+    ~recv_non_movable() = default;
     recv_non_movable(recv_non_movable&&) = delete;
     recv_non_movable& operator=(recv_non_movable&&) = delete;
+    recv_non_movable(const recv_non_movable&) = default;
+    recv_non_movable& operator=(const recv_non_movable&) = default;
 
     friend void tag_invoke(set_value_t, recv_non_movable) noexcept {}
     friend void tag_invoke(set_done_t, recv_non_movable) noexcept {}
