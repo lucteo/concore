@@ -262,7 +262,7 @@ auto schedule(Scheduler&& sched);
 struct schedule_t {};
 
 /**
- * @brief Concept that defines a bare-bone receiver
+ * @brief Concept that defines a bare-bone receiver (we don't know the value types)
  *
  * @tparam T The type being checked to see if it's a bare-bone receiver
  * @tparam E The type of errors that the receiver accepts; default ``std::exception_ptr``
@@ -288,6 +288,8 @@ struct schedule_t {};
  * A bare-bone receiver is a receiver that only checks for the following CPOs:
  *  - @ref set_done()
  *  - @ref set_error()
+ *
+ * Both of these operation shall not throw.
  *
  * The @ref set_value() CPO is ignored in a bare-bone receiver, as a receiver may have many ways to
  * be notified about the success of a sender.
@@ -329,6 +331,8 @@ struct receiver {};
  *
  * This is an extension of the @ref receiver concept, but also requiring the @ref set_value() CPO to
  * be present, for a given set of value types.
+ *
+ * The @ref set_value() operation can throw.
  *
  * @see receiver, set_value(), set_done(), set_error()
  */

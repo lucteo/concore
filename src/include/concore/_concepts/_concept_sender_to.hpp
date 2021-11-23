@@ -14,7 +14,7 @@ inline namespace v1 {
 template <typename S, typename R>
 concept sender_to
     =  sender<S>
-    && receiver_partial<R>
+    && receiver<R>
     && requires(S&& s, R&& r) {
         concore::connect((S &&) s, (R &&) r);
     };
@@ -24,7 +24,7 @@ concept sender_to
 
 template <typename S, typename R>
 CONCORE_CONCEPT_OR_BOOL sender_to =
-        sender<S>&& receiver_partial<R>&& detail::cpo_connect::has_connect<S, R>;
+        sender<S>&& receiver<R>&& detail::cpo_connect::has_connect<S, R>;
 
 #endif
 

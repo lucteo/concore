@@ -11,7 +11,7 @@ namespace detail {
 namespace cpo_connect {
 
 template <typename Tag, typename S, typename R>
-CONCORE_CONCEPT_OR_BOOL can_connect = receiver_partial<R>&& sender<S>&& tag_invocable<Tag, S, R>;
+CONCORE_CONCEPT_OR_BOOL can_connect = receiver<R>&& sender<S>&& tag_invocable<Tag, S, R>;
 
 inline const struct connect_t final {
     CONCORE_TEMPLATE_COND(CONCORE_LIST(typename S, typename R), //

@@ -165,28 +165,6 @@ TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
     REQUIRE_FALSE(scheduler<my_executor>);
 }
 
-TEST_CASE("receiver types satisfy the receiver concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace empty_recv;
-
-    REQUIRE(receiver<recv0>);
-    REQUIRE(receiver<recv_int>);
-    REQUIRE(receiver<recv0_ec>);
-    REQUIRE(receiver<recv_int_ec>);
-    REQUIRE(receiver<recv0_ec, std::error_code>);
-    REQUIRE(receiver<recv_int_ec, std::error_code>);
-}
-
-TEST_CASE("receiver types satisfy the receiver_of concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace empty_recv;
-
-    REQUIRE(receiver_of<recv0>);
-    REQUIRE(receiver_of<recv_int, int>);
-    REQUIRE(receiver_of<recv0_ec>);
-    REQUIRE(receiver_of<recv_int_ec, int>);
-}
-
 TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
     using namespace concore;
     using namespace test_models;

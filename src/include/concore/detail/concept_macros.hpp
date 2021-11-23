@@ -30,6 +30,15 @@ namespace detail {
     template <tparams>                                                                             \
     concept varName = conceptRequiresExpr
 
+//! Same as CONCORE_DEF_REQUIRES, but allows checking if the expression is noexcept.
+//! For the "concepts" implementation, this needs to be handled inside the 'conceptRequiresExpr'
+//! argument.
+//! For the "non-concepts" implementation, this is handled inside the macro.
+#define CONCORE_DEF_REQUIRES_NOEXCEPT(                                                             \
+        varName, tparams, tnames, conceptRequiresExpr, nonConceptRequiresExpr)                     \
+    template <tparams>                                                                             \
+    concept varName = conceptRequiresExpr
+
 //! A template heading with an enabling condition
 #define CONCORE_TEMPLATE_COND(tparams, cond)                                                       \
     template <tparams>                                                                             \
@@ -51,6 +60,17 @@ namespace detail {
     template <tparams>                                                                             \
     CONCORE_CONCEPT_OR_BOOL varName =                                                              \
             sizeof(tester_##varName(static_cast<stag_##varName<tnames>*>(nullptr))) == 1;
+
+#define CONCORE_DEF_REQUIRES_NOEXCEPT(                                                             \
+        varName, tparams, tnames, conceptRequiresExpr, nonConceptRequiresExpr)                     \
+    template <typename...>                                                                         \
+    struct stag_##varName {};                                                                      \
+    template <tparams, typename = decltype(nonConceptRequiresExpr)>                                \
+    char tester_##varName(stag_##varName<tnames>*) noexcept(noexcept(nonConceptRequiresExpr));     \
+    double tester_##varName(...) noexcept(false);                                                  \
+    template <tparams>                                                                             \
+    CONCORE_CONCEPT_OR_BOOL varName =                                                              \
+            noexcept(tester_##varName(static_cast<stag_##varName<tnames>*>(nullptr)));
 
 #define CONCORE_TEMPLATE_COND(tparams, cond) template <tparams, std::enable_if_t<cond, int> = 0>
 

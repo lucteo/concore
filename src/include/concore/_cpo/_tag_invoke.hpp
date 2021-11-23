@@ -18,17 +18,21 @@ CONCORE_DEF_REQUIRES(tag_invocable,                                             
 );
 
 //! Concept that checks if some operation is tag_invocable, and the operation doesn't throw
-template <typename Tag, typename... Args>
-CONCORE_CONCEPT_OR_BOOL nothrow_tag_invocable = //
-        tag_invocable<Tag, Args...>             //
-        && (noexcept(tag_invoke(Tag{}, CONCORE_DECLVAL(Args)...)));
+CONCORE_DEF_REQUIRES_NOEXCEPT(nothrow_tag_invocable,                              //
+        CONCORE_LIST(typename Tag, typename... Args), CONCORE_LIST(Tag, Args...), //
+        (requires(Args&&... args) {                                               //
+            { tag_invoke(Tag{}, (Args &&) args...) }                              //
+            noexcept;                                                             //
+        }),                                                                       // concepts
+        tag_invoke(Tag{}, CONCORE_DECLVAL(Args)...)                               // pre-concepts
+);
 
 //! Helper to get the result of a tag_invoke operation, wrapped
 template <typename Tag, typename... Args>
-using tag_invoke_result = concore::detail::invoke_result<Tag, Args...>;
+using tag_invoke_result = concore::detail::invoke_result<Tag, Tag, Args...>;
 //! Helper to get the result of a tag_invoke operation, without wrapping
 template <typename Tag, typename... Args>
-using tag_invoke_result_t = concore::detail::invoke_result_t<Tag, Args...>;
+using tag_invoke_result_t = concore::detail::invoke_result_t<Tag, Tag, Args...>;
 
 } // namespace detail
 } // namespace concore
