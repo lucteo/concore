@@ -206,6 +206,8 @@ struct connect_t {};
  *
  * @details
  *
+ * The given parameter must be a reference type.
+ *
  * This is called whenever one needs to start an asynchronous operation.
  *
  * The `Oper` type must model concept @ref concore::v1::operation_state "operation_state".
@@ -415,7 +417,7 @@ struct sender_to {};
  * operation. It is the result of calling @ref concore::connect() with a sender and a receiver.
  *
  * A compatible type must implement the @ref concore::start() CPO. In addition, any object of this
- * type must be destructible. Only object types model operation states.
+ * type must be nothrow destructible. Only object types model operation states.
  *
  * @see sender, receiver, connect()
  */

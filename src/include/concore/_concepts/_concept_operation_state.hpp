@@ -14,22 +14,22 @@ inline namespace v1 {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
-// clang-format off
 template <typename OpState>
-concept operation_state
-    =  std::destructible<OpState> && std::is_object_v<OpState>
-    && requires(OpState& op) {
-        { concore::start(op) } noexcept;
-    };
-    // clang-format on
+concept operation_state =            //
+        std::destructible<OpState>   //
+        && std::is_object_v<OpState> //
+        &&(requires(OpState& op) {   //
+            { concore::start(op) }   //
+            noexcept;                //
+        });
 
 #else
 
 template <typename OpState>
-CONCORE_CONCEPT_OR_BOOL operation_state = //
-        (std::is_destructible_v<OpState>) //
-        &&(std::is_object_v<OpState>)     //
-        &&(detail::cpo_start::has_start<concore::detail::remove_cvref_t<OpState>>);
+CONCORE_CONCEPT_OR_BOOL operation_state =         //
+        (std::is_nothrow_destructible_v<OpState>) //
+        &&(std::is_object_v<OpState>)             //
+        &&(detail::nothrow_tag_invocable<start_t, OpState&>);
 
 #endif
 
