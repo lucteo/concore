@@ -18,7 +18,8 @@ struct my_sender {
 struct my_scheduler {
     friend my_sender tag_invoke(schedule_t, my_scheduler) { return my_sender{true}; }
 
-    bool operator==(my_scheduler) noexcept { return false; }
+    friend bool operator==(my_scheduler, my_scheduler) noexcept { return true; }
+    friend bool operator!=(my_scheduler, my_scheduler) noexcept { return false; }
 };
 
 struct no_schedule_cpo {
@@ -31,7 +32,12 @@ struct my_scheduler_except {
         return my_sender{true};
     }
 
-    bool operator==(my_scheduler_except) noexcept { return false; }
+    friend bool operator==(my_scheduler_except, my_scheduler_except) noexcept { return true; }
+    friend bool operator!=(my_scheduler_except, my_scheduler_except) noexcept { return false; }
+};
+
+struct my_scheduler_noequal {
+    friend my_sender tag_invoke(schedule_t, my_scheduler_noequal) { return my_sender{true}; }
 };
 
 TEST_CASE("type with schedule CPO models scheduler", "[execution][concepts]") {
@@ -49,3 +55,9 @@ TEST_CASE("type with schedule that throws is a scheduler", "[execution][concepts
     auto snd = concore::schedule(my_scheduler{});
     REQUIRE(sender<decltype(snd)>);
 }
+
+#if CONCORE_CXX_HAS_CONCEPTS
+TEST_CASE("type w/o equality operations do not model scheduler", "[execution][concepts]") {
+    REQUIRE(!scheduler<my_scheduler_noequal>);
+}
+#endif
