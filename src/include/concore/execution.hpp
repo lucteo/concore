@@ -173,12 +173,13 @@ struct set_error_t {};
  * Usually, the `snd` parameter will model the @ref concore::v1::sender "sender" and
  * `sender_to<Receiver>` concepts.
  *
+ * The senders and the receiver must be compatible.
+ *
  * The resulting type should model the @ref concore::v1::operation_state "operation_state" concept.
  *
  * Usage example:
  * @code{.cpp}
  *      auto op = concore::connect(snd, rcv);
- *      // later
  *      concore::start(op);
  * @endcode
  *
