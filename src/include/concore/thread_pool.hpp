@@ -104,12 +104,7 @@ public:
     static constexpr bool sends_done = true;
 
     template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
-    friend pool_sender_op<remove_cvref_t<R>> tag_invoke(connect_t, thread_pool_sender&& s, R&& r) {
-        return {s.impl_, (R &&) r};
-    }
-    template <CONCORE_CONCEPT_TYPENAME(receiver_of) R>
-    friend pool_sender_op<remove_cvref_t<R>> tag_invoke(
-            connect_t, const thread_pool_sender& s, R&& r) {
+    friend pool_sender_op<remove_cvref_t<R>> tag_invoke(connect_t, thread_pool_sender s, R&& r) {
         return {s.impl_, (R &&) r};
     }
 
@@ -117,13 +112,7 @@ private:
     //! The implementation data; use pimpl idiom.
     //! Parent object must be active for the lifetime of this object
     pool_data* impl_{nullptr};
-
-    friend bool operator==(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
-    friend bool operator!=(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
 };
-
-bool operator==(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
-bool operator!=(const thread_pool_sender& l, const thread_pool_sender& r) noexcept;
 
 //! The scheduler type exposed by the thread pool
 class thread_pool_scheduler {
@@ -152,7 +141,7 @@ public:
      * The sender object can be used to send work on the thread pool.
      */
     friend thread_pool_sender tag_invoke(schedule_t, thread_pool_scheduler sched) noexcept {
-        return thread_pool_sender(sched.impl_);
+        return thread_pool_sender{sched.impl_};
     }
 
 private:
@@ -163,9 +152,6 @@ private:
     friend bool operator==(const thread_pool_scheduler& l, const thread_pool_scheduler& r) noexcept;
     friend bool operator!=(const thread_pool_scheduler& l, const thread_pool_scheduler& r) noexcept;
 };
-
-bool operator==(const thread_pool_scheduler& l, const thread_pool_scheduler& r) noexcept;
-bool operator!=(const thread_pool_scheduler& l, const thread_pool_scheduler& r) noexcept;
 
 class thread_pool_executor {
 public:
@@ -233,13 +219,6 @@ inline namespace v1 {
  * When destructing this object, the implementation ensures to wait on all the in-progress items.
  *
  * Any scheduler or executor objects that are created cannot exceed the lifetime of this object.
- *
- * Properties of the static_thread_pool executor:
- *      - blocking.always
- *      - relationship.fork
- *      - outstanding_work.untracked
- *      - bulk_guarantee.parallel
- *      - mapping.thread
  *
  * @see executor, scheduler, sender
  */
