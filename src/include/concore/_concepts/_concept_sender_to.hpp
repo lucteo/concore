@@ -10,15 +10,11 @@ inline namespace v1 {
 
 #if CONCORE_CXX_HAS_CONCEPTS
 
-// clang-format off
 template <typename S, typename R>
-concept sender_to
-    =  sender<S>
-    && receiver<R>
-    && requires(S&& s, R&& r) {
-        concore::connect((S &&) s, (R &&) r);
-    };
-    // clang-format on
+concept sender_to =    //
+        sender<S>      //
+        && receiver<R> //
+        &&(requires(S&& s, R&& r) { concore::connect((S &&) s, (R &&) r); });
 
 #else
 

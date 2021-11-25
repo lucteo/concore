@@ -15,17 +15,22 @@ namespace concore {
 
 namespace detail {
 
+struct sender_base {};
+
 template <template <template <class...> class Tuple, template <class...> class Variant> class>
 struct has_value_types;
 
 template <template <template <class...> class> class Variant>
 struct has_error_types;
 
+template <typename... Ts>
+struct type_array {};
+
 #if CONCORE_CXX_HAS_CONCEPTS
 
 template <typename S>
 concept has_sender_types = requires() {
-    typename std::integral_constant<bool, S::sends_done>;
+    typename std::bool_constant<S::sends_done>;
     typename has_value_types<S::template value_types>;
     typename has_error_types<S::template error_types>;
 };
@@ -55,53 +60,68 @@ struct typed_sender_traits {
 };
 
 template <typename S>
+struct sender_traits_base {};
+
+template <typename S>
 struct no_sender_traits {
     using __unspecialized = void;
 };
 
+template <typename S, bool has_types = has_sender_types<S>,
+        bool is_derived = std::is_base_of<sender_base, S>::value>
+struct sender_traits_impl;
+
+template <typename S, bool is_derived>
+struct sender_traits_impl<S, true, is_derived> {
+    using type = typed_sender_traits<S>;
+};
 template <typename S>
-using sender_traits_impl =
-        std::conditional<has_sender_types<S>, typed_sender_traits<S>, no_sender_traits<S>>;
+struct sender_traits_impl<S, false, true> {
+    using type = sender_traits_base<S>;
+};
+template <typename S>
+struct sender_traits_impl<S, false, false> {
+    using type = no_sender_traits<S>;
+};
 
 template <typename S>
-CONCORE_CONCEPT_OR_BOOL is_sender = has_sender_types<S>;
+CONCORE_CONCEPT_OR_BOOL is_sender = has_sender_types<S> || std::is_base_of<sender_base, S>::value;
+
+template <typename S, bool typed = has_sender_types<remove_cvref_t<S>>>
+struct sender_has_values_impl {
+    template <typename... Vs>
+    using match = std::is_same<type_array<Vs...>,
+            typename typed_sender_traits<S>::template value_types<type_array, type_identity>>;
+};
+template <typename S>
+struct sender_has_values_impl<S, false> {
+    template <typename... Vs>
+    using match = std::false_type;
+};
 
 } // namespace detail
 
 inline namespace v1 {
 
+using detail::sender_base;
+
 template <typename S>
 struct sender_traits : detail::sender_traits_impl<S>::type {};
 
-#if CONCORE_CXX_HAS_CONCEPTS
-
-// clang-format off
 template <typename S>
-concept sender
-    =  std::move_constructible<std::remove_cvref_t<S>>
-    && detail::is_sender<std::remove_cvref_t<S>>
-    ;
+CONCORE_CONCEPT_OR_BOOL sender =                                                //
+        (std::is_move_constructible<concore::detail::remove_cvref_t<S>>::value) //
+        && detail::is_sender<concore::detail::remove_cvref_t<S>>;
 
 template <typename S>
-concept typed_sender
-    =  sender<S>
-    && detail::has_sender_types<std::remove_cvref_t<S>>
-    ;
-// clang-format on
+CONCORE_CONCEPT_OR_BOOL typed_sender = //
+        (sender<S>)                    //
+        &&detail::has_sender_types<concore::detail::remove_cvref_t<S>>;
 
-#else
-
-template <typename S>
-CONCORE_CONCEPT_OR_BOOL sender =
-        std::is_move_constructible<concore::detail::remove_cvref_t<S>>::value&&
-                detail::is_sender<concore::detail::remove_cvref_t<S>>;
-
-template <typename S>
-CONCORE_CONCEPT_OR_BOOL typed_sender =
-        std::is_move_constructible<concore::detail::remove_cvref_t<S>>::value&&
-                detail::has_sender_types<concore::detail::remove_cvref_t<S>>;
-
-#endif
+template <typename S, typename... Vs>
+CONCORE_CONCEPT_OR_BOOL sender_of = //
+        typed_sender<S>             //
+                && detail::sender_has_values_impl<S>::template match<Vs...>::value;
 
 } // namespace v1
 

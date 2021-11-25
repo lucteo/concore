@@ -112,38 +112,6 @@ struct my_executor {
     }
 };
 
-struct my_operation {
-    friend void tag_invoke(concore::start_t, my_operation&) noexcept {}
-};
-
-struct my_sender0 {
-    template <template <class...> class Tuple, template <class...> class Variant>
-    using value_types = Variant<Tuple<>>;
-    template <template <class...> class Variant>
-    using error_types = Variant<std::exception_ptr>;
-    static constexpr bool sends_done = true;
-
-    friend my_operation tag_invoke(concore::connect_t, my_sender0, empty_recv::recv0&& r) {
-        return my_operation{};
-    }
-};
-struct my_sender_int {
-    template <template <class...> class Tuple, template <class...> class Variant>
-    using value_types = Variant<Tuple<int>>;
-    template <template <class...> class Variant>
-    using error_types = Variant<std::exception_ptr>;
-    static constexpr bool sends_done = true;
-
-    friend my_operation tag_invoke(concore::connect_t, my_sender_int, empty_recv::recv_int&& r) {
-        return my_operation{};
-    }
-};
-struct my_scheduler {
-    friend inline bool operator==(my_scheduler, my_scheduler) { return false; }
-    friend inline bool operator!=(my_scheduler, my_scheduler) { return true; }
-
-    friend my_sender0 tag_invoke(concore::schedule_t, my_scheduler) noexcept { return {}; }
-};
 } // namespace test_models
 
 void void_fun() {}
@@ -163,43 +131,4 @@ TEST_CASE("executor concept is properly modeled", "[execution][concepts]") {
     REQUIRE_FALSE(sender_to<my_executor, empty_recv::recv0>);
     REQUIRE_FALSE(typed_sender<my_executor>);
     REQUIRE_FALSE(scheduler<my_executor>);
-}
-
-TEST_CASE("sender types satisfy the sender concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace test_models;
-
-    REQUIRE(sender<my_sender0>);
-    REQUIRE(sender<my_sender_int>);
-}
-
-TEST_CASE("sender types satisfy the typed_sender concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace test_models;
-
-    REQUIRE(typed_sender<my_sender0>);
-    REQUIRE(typed_sender<my_sender_int>);
-}
-
-TEST_CASE("sender & receiver types satisfy the sender_to concept", "[execution][concepts]") {
-    using namespace concore;
-    using namespace empty_recv;
-    using namespace test_models;
-
-    REQUIRE(sender_to<my_sender0, recv0>);
-    REQUIRE(sender_to<my_sender_int, recv_int>);
-}
-
-TEST_CASE("not all combinations of senders & receivers satisfy the sender_to concept",
-        "[execution][concepts]") {
-    using namespace concore;
-    using namespace empty_recv;
-    using namespace test_models;
-
-    REQUIRE_FALSE(sender_to<my_sender0, recv_int>);
-    REQUIRE_FALSE(sender_to<my_sender0, recv0_ec>);
-    REQUIRE_FALSE(sender_to<my_sender0, recv_int_ec>);
-    REQUIRE_FALSE(sender_to<my_sender_int, recv0>);
-    REQUIRE_FALSE(sender_to<my_sender_int, recv0_ec>);
-    REQUIRE_FALSE(sender_to<my_sender_int, recv_int_ec>);
 }

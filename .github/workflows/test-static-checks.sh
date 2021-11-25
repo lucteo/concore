@@ -8,7 +8,7 @@ source ${CURDIR}/_test_common.sh
 
 startTest "Static checks test"
 
-SRCFILES=""
+SRCFILES="$@"
 
 # Create a temporary directory to store results between runs
 BUILDDIR="build/gh-checks/static-checks/"

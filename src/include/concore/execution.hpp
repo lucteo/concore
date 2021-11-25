@@ -34,6 +34,7 @@ inline namespace v1 {
  *      - @ref concore::v1::receiver_of
  *      - @ref concore::v1::sender
  *      - @ref concore::v1::typed_sender
+ *      - @ref concore::v1::sender_of
  *      - @ref concore::v1::sender_to
  *      - @ref concore::v1::operation_state
  *      - @ref concore::v1::scheduler
@@ -53,6 +54,10 @@ inline namespace v1 {
  *      - @ref concore::connect_t
  *      - @ref concore::start_t
  *      - @ref concore::schedule_t
+ *
+ * Sender helpers
+ *      - @ref concore::v1::sender_base
+ *      - @ref concore::v1::sender_traits
  */
 
 /**
@@ -368,9 +373,10 @@ struct receiver_of {};
  * A sender should expose a @ref connect() customization-point object to connect it to a receiver.
  *
  * A sender typically exposes the type of the values it sets, and the type of errors it can
- * generate, but this is not mandatory.
+ * generate, but this is not mandatory. These are done through the `value_types`, `error_types` and
+ * `sends_done` members (see @ref concore::sender_traits)
  *
- * @see receiver, receiver_of, typed_sender, sender_to
+ * @see receiver, receiver_of, typed_sender, sender_to, sender_traits
  */
 template <typename S>
 struct sender {};
@@ -386,10 +392,29 @@ struct sender {};
  * types that expose the types of values it sets to the receiver and the type of errors it can
  * generate.
  *
- * @see sender, sender_to
+ * To be able to be a typed sender, the type needs to define: `value_types`, `error_types` and
+ * `sends_done` members (see @ref sender_traits).
+ *
+ * @see sender_traits, sender, sender_to
  */
 template <typename S>
 struct typed_sender {};
+
+/**
+ * @brief   Concept that checks if a sender sends the given types
+ *
+ * @tparam  S   The type of sender that is assessed
+ * @tparam  Vs  The types we are checking if the senders support
+ *
+ * @details
+ *
+ * This will check that the sender will send only the given types. If the sender sends more than one
+ * set of values this will fail
+ *
+ * @see     sender, sender_traits
+ */
+template <typename S, typename... Vs>
+struct sender_of {};
 
 /**
  * @brief   Concept that brings together a sender and a receiver
@@ -442,6 +467,69 @@ struct operation_state {};
  */
 template <typename S>
 struct scheduler {};
+
+/**
+ * @brief   Structure that allows easy definition of senders
+ *
+ * @details
+ *
+ * For the framework to treat one type as a sender, that type needs to be somehow marked. Having a
+ * @ref connect() CPO is not a good strategy, as @ref connect checks if the type is a sender. Thus
+ * there needs to be other ways of identifying whether a type is a sender.
+ *
+ * Deriving a class from `sender_base` will mark a type as a sender.
+ *
+ * Another alternative would be to define the `value_types`, `error_types` and `sends_done` members.
+ *
+ * @see typed_sender, sender
+ */
+struct sender_base {};
+
+/**
+ * @brief   Allows querying the properties of a sender
+ *
+ * @details
+ *
+ * This is defined for all possible types. If the given type is not a sender, this will not contain
+ * any useful information. If the given type is not a typed sender, again, this will not contain any
+ * useful information.
+ *
+ * This will contain information only if the given type is a typed sender. This will mirror the
+ * `value_types`, `error_types` and `sends_done` members found in the sender type.
+ *
+ * - `value_types`: allows the user to query what set of values can be yielded by the sender
+ *      - this takes two templates: one for variant, and one for tuple
+ *      - it will yield a set of variants, each variant containing a tuple
+ *      - a sender that will yield a single integer will have `value_types` similar to:
+ *          - @code{.cpp}
+ *          template<template<class...> class Tuple, template<class...> class Variant>
+ *          using value_types = Variant<Tuple<int>>;
+ *          @endcode
+ *      - a sender that will yield either single integer or a set of two doubles will have
+ *      `value_types` similar to:
+ *          - @code{.cpp}
+ *          template<template<class...> class Tuple, template<class...> class Variant>
+ *          using value_types = Variant<Tuple<int>, Tuple<double, double>>;
+ *          @endcode
+ * - `error_types`: allows the user to query what set of values can be yielded by the sender
+ *      - similar to `value_types`, but without the _tuple_
+ *      - a sender that supports only exceptions will have `error_types` similar to:
+ *          - @code{.cpp}
+ *          template<template<class...> class Variant>
+ *          using error_types = Variant<std::exception_ptr>;
+ *          @endcode
+ *      - a sender that also supports integer error codes will have
+ *      `error_types` similar to:
+ *          - @code{.cpp}
+ *          template<template<class...> class Variant>
+ *          using error_types = Variant<std::exception_ptr, int>;
+ *          @endcode
+ * - `sends_done`: indicates whether the sender can call @ref concore::set_done()
+ *
+ * @see     typed_sender
+ */
+template <typename S>
+struct sender_traits {};
 
 #endif
 
