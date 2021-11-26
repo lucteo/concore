@@ -239,3 +239,71 @@ struct logging_receiver {
         *self.state_ = 2;
     }
 };
+
+enum class typecat {
+    undefined,
+    value,
+    ref,
+    cref,
+    rvalref,
+};
+
+template <typename T>
+struct typecat_receiver {
+    T* value_;
+    typecat* cat_;
+
+    // friend void tag_invoke(concore::set_value_t, typecat_receiver self, T v) {
+    //     *self.value_ = v;
+    //     *self.cat_ = typecat::value;
+    // }
+    friend void tag_invoke(concore::set_value_t, typecat_receiver self, T& v) {
+        *self.value_ = v;
+        *self.cat_ = typecat::ref;
+    }
+    friend void tag_invoke(concore::set_value_t, typecat_receiver self, const T& v) {
+        *self.value_ = v;
+        *self.cat_ = typecat::cref;
+    }
+    friend void tag_invoke(concore::set_value_t, typecat_receiver self, T&& v) {
+        *self.value_ = v;
+        *self.cat_ = typecat::rvalref;
+    }
+    friend void tag_invoke(concore::set_done_t, typecat_receiver self) noexcept {
+        FAIL_CHECK("set_done called");
+    }
+    friend void tag_invoke(
+            concore::set_error_t, typecat_receiver self, std::exception_ptr) noexcept {
+        FAIL_CHECK("set_error called");
+    }
+};
+
+template <typename F>
+struct fun_receiver {
+    F f_;
+
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, fun_receiver&& self, Ts... vals) {
+        std::move(self.f_)((Ts &&) vals...);
+    }
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, const fun_receiver& self, Ts... vals) {
+        self.f_((Ts &&) vals...);
+    }
+
+    friend void tag_invoke(concore::set_done_t, fun_receiver) noexcept { FAIL("Done called"); }
+    friend void tag_invoke(concore::set_error_t, fun_receiver, std::exception_ptr eptr) noexcept {
+        try {
+            if (eptr)
+                std::rethrow_exception(eptr);
+            FAIL("Empty exception thrown");
+        } catch (const std::exception& e) {
+            FAIL("Exception thrown: " << e.what());
+        }
+    }
+};
+
+template <typename F>
+fun_receiver<F> make_fun_receiver(F f) {
+    return fun_receiver<F>{std::forward<F>(f)};
+}

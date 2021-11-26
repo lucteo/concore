@@ -36,6 +36,7 @@ set(func_sourceFiles
     "func/std/test_concept_operation_state.cpp"
     "func/std/test_concept_sender.cpp"
     "func/std/test_concept_scheduler.cpp"
+    "func/std/test_just.cpp"
     "func/std/test_sender_algo.cpp"
     "func/std/test_sender_done_error.cpp"
 

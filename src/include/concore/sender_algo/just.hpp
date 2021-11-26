@@ -21,39 +21,51 @@ namespace concore {
 
 namespace detail {
 
-template <typename R, typename... Values>
-struct just_oper {
-    R receiver_;
-    std::tuple<Values...> values_;
-
-    friend void tag_invoke(start_t, just_oper& self) noexcept {
-        try {
-            auto set_value_wrapper = [&](Values&&... vals) {
-                concore::set_value((R &&) self.receiver_, (Values &&) vals...);
-            };
-            std::apply(std::move(set_value_wrapper), std::move(self.values_));
-        } catch (...) {
-            concore::set_error((R &&) self.receiver_, std::current_exception());
-        }
-    }
-};
-
 template <CONCORE_CONCEPT_OR_TYPENAME(CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value))... Ts>
-struct just_sender : sender_types_base<false, Ts...> {
+struct just_sender {
+    //! We can send to receivers the value type(s) received as template args
+    template <template <typename...> class Tuple, template <typename...> class Variant>
+    using value_types = Variant<Tuple<Ts...>>;
+
+    //! Our only error type is exception_ptr
+    template <template <typename...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+
+    //! Cannot call @ref concore::set_done()
+    static constexpr bool sends_done = false;
+
     just_sender(Ts... vals)
         : values_((Ts &&) vals...) {}
 
+    //! The operation state used by this sender
+    template <typename R>
+    struct oper {
+        R receiver_;
+        std::tuple<Ts...> values_;
+
+        friend void tag_invoke(start_t, oper& self) noexcept {
+            try {
+                auto set_value_wrapper = [&](Ts&&... vals) {
+                    concore::set_value((R &&) self.receiver_, (Ts &&) vals...);
+                };
+                std::apply(std::move(set_value_wrapper), std::move(self.values_));
+            } catch (...) {
+                concore::set_error((R &&) self.receiver_, std::current_exception());
+            }
+        }
+    };
+
     //! The connect CPO that returns an operation state object
     template <typename R>
-    friend just_oper<R, Ts...> tag_invoke(connect_t, just_sender&& s, R&& r) {
-        static_assert(receiver<R>, "Type needs to match receiver_of concept");
-        return just_oper<R, Ts...>{(R &&) r, std::move(s.values_)};
+    friend oper<R> tag_invoke(connect_t, just_sender&& s, R&& r) {
+        static_assert(receiver_of<R, Ts...>, "just() cannot connect to a non-matching receiver");
+        return {(R &&) r, std::move(s.values_)};
     }
     //! @overload
     template <typename R>
-    friend just_oper<R, Ts...> tag_invoke(connect_t, const just_sender& s, R&& r) {
-        static_assert(receiver<R>, "Type needs to match receiver_of concept");
-        return just_oper<R, Ts...>{(R &&) r, s.values_};
+    friend oper<R> tag_invoke(connect_t, const just_sender& s, R&& r) {
+        static_assert(receiver_of<R, Ts...>, "just() cannot connect to a non-matching receiver");
+        return {(R &&) r, s.values_};
     }
 
 private:
