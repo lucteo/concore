@@ -12,7 +12,6 @@
 #include <concore/_cpo/_cpo_connect.hpp>
 #include <concore/_cpo/_cpo_start.hpp>
 #include <concore/_concepts/_concepts_receiver.hpp>
-#include <concore/detail/sender_helpers.hpp>
 
 #include <tuple>
 #include <exception>
@@ -76,6 +75,32 @@ private:
 
 inline namespace v1 {
 
+/**
+ * @brief   Returns a sender that completes with the given set of values.
+ *
+ * @tparam Ts   The types of values to be sent
+ *
+ * @param values The values sent by the returned sender
+ *
+ * @details
+ *
+ * This will return a simple sender that, whenever connected to a receiver and started, it will call
+ * @ref set_value() on the receiver object, passing the received values.
+ *
+ * Preconditions:
+ *  - Ts are movable
+ *
+ * Postconditions:
+ *  - returned sender always calls @ref set_value() passing the given values, when started
+ *  - if calling @ref set_value() throws, this will subsequently call @ref set_error() with the
+ * caught exception
+ *  - returned sender never calls @ref set_done()
+ *  - the returned sender has `value_types` = `Variant<Tuple<Ts>>`
+ *  - the returned sender has `error_types` = `Variant<std::exception_ptr>`
+ *  - the returned sender does not advertise its completion scheduler
+ *
+ * @see just_error(), just_done(), set_value()
+ */
 template <CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value)... Ts>
 detail::just_sender<Ts...> just(Ts&&... values) noexcept(
         std::is_nothrow_constructible_v<std::tuple<Ts...>, Ts...>) {

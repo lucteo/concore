@@ -2557,7 +2557,10 @@ GENERATE_LATEX         = NO
 EXCLUDE_PATTERNS       = */detail/* */_cpo/* */_concepts/*
 EXCLUDE_PATTERNS       += */profiling.hpp */version.hpp */integral_iterator.hpp
 EXCLUDE_SYMBOLS        = "concore::detail" "impl"
-PREDEFINED             = DOXYGEN_BUILD
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+PREDEFINED             = DOXYGEN_BUILD \
+                         CONCORE_CONCEPT_OR_TYPENAME(x)=typename
 
 FULL_PATH_NAMES        = NO
 

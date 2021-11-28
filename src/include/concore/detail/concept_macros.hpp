@@ -23,6 +23,9 @@ namespace detail {
 //! Defines a concept-constrained typename, or, if not available, a simple typename
 #define CONCORE_CONCEPT_OR_TYPENAME(name) name
 
+//! Allows introduction of a requires clause, but only for concep-enabled builds
+#define CONCORE_REQUIRES_OPT(cond) requires cond
+
 //! Defines a concept (or a bool variable) with the result of a 'requires' constraint.
 //! This is compatible with compilers that do not support concepts.
 #define CONCORE_DEF_REQUIRES(                                                                      \
@@ -49,6 +52,8 @@ namespace detail {
 #define CONCORE_CONCEPT_OR_BOOL inline constexpr bool
 
 #define CONCORE_CONCEPT_OR_TYPENAME(name) typename
+
+#define CONCORE_REQUIRES_OPT(cond) /*requires cond*/
 
 #define CONCORE_DEF_REQUIRES(                                                                      \
         varName, tparams, tnames, conceptRequiresExpr, nonConceptRequiresExpr)                     \
