@@ -20,9 +20,9 @@ namespace detail {
 
 template <CONCORE_CONCEPT_OR_TYPENAME(CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value)) T>
 struct just_error_sender {
-    //! We are not sending any values; keep this empty
+    //! We are not sending any values
     template <template <typename...> class Tuple, template <typename...> class Variant>
-    using value_types = Variant<Tuple<>>;
+    using value_types = Variant<>;
 
     //! Our error types are T and exception_ptr
     //! If T == exception_ptr, report the type only once
