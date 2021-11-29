@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/sender_algo/just.hpp>
 #include <concore/sender_algo/on.hpp>
-#include <concore/sender_algo/just_on.hpp>
+#include <concore/sender_algo/transfer_just.hpp>
 #include <concore/sender_algo/sync_wait.hpp>
 #include <concore/sender_algo/transform.hpp>
 #include <concore/sender_algo/let_value.hpp>
@@ -170,7 +170,7 @@ TEST_CASE("let_value propagates set_done", "[sender_algo]") {
         fun_executed = true;
         return concore::transform(concore::just(4), [](int) {});
     };
-    auto sender0 = concore::just_on(my_pool.scheduler(), 3);
+    auto sender0 = concore::transfer_just(my_pool.scheduler(), 3);
     auto s = concore::let_value(std::move(sender0), std::move(let_value_fun));
 
     bool executed{false};
@@ -188,7 +188,7 @@ TEST_CASE("let_value calls set_error if the function throws", "[sender_algo]") {
         throw std::logic_error("error");
         return concore::transform(concore::just(4), [](int) {});
     };
-    auto sender0 = concore::just_on(my_pool.scheduler(), 3);
+    auto sender0 = concore::transfer_just(my_pool.scheduler(), 3);
     auto s = concore::let_value(std::move(sender0), std::move(let_value_fun));
 
     bool executed{false};
@@ -212,7 +212,7 @@ TEST_CASE("when_all propagates set_done", "[sender_algo]") {
     auto scheduler = my_pool.scheduler();
     my_pool.stop();
 
-    auto s = concore::when_all(concore::just(2), concore::just_on(scheduler, 3));
+    auto s = concore::when_all(concore::just(2), concore::transfer_just(scheduler, 3));
 
     bool executed{false};
     auto op = concore::connect(std::move(s), expect_done_receiver_ex{&executed});

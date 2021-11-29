@@ -1,7 +1,7 @@
 #include <catch2/catch.hpp>
 #include <concore/sender_algo/just.hpp>
 #include <concore/sender_algo/on.hpp>
-#include <concore/sender_algo/just_on.hpp>
+#include <concore/sender_algo/transfer_just.hpp>
 #include <concore/sender_algo/sync_wait.hpp>
 #include <concore/sender_algo/transform.hpp>
 #include <concore/sender_algo/let_value.hpp>
@@ -57,13 +57,13 @@ TEST_CASE("on forwards the return type", "[sender_algo]") {
             "Improper return type for `on`");
 }
 
-TEST_CASE("just_on sender algo calls receiver on the specified scheduler", "[sender_algo]") {
+TEST_CASE("transfer_just sender algo calls receiver on the specified scheduler", "[sender_algo]") {
     bool executed = false;
     {
         concore::static_thread_pool pool{1};
         auto sched = pool.scheduler();
 
-        auto s = concore::just_on(sched, 1);
+        auto s = concore::transfer_just(sched, 1);
         auto recv = make_fun_receiver([&](int val) {
             // Check the content of the value
             REQUIRE(val == 1);
@@ -83,9 +83,9 @@ TEST_CASE("just_on sender algo calls receiver on the specified scheduler", "[sen
     REQUIRE(executed);
 }
 
-TEST_CASE("just_on returns a sender", "[sender_algo]") {
-    using t = decltype(concore::just_on(concore::static_thread_pool{1}.scheduler(), 1));
-    static_assert(concore::sender<t>, "concore::just_on must return a sender");
+TEST_CASE("transfer_just returns a sender", "[sender_algo]") {
+    using t = decltype(concore::transfer_just(concore::static_thread_pool{1}.scheduler(), 1));
+    static_assert(concore::sender<t>, "concore::transfer_just must return a sender");
     REQUIRE(concore::sender<t>);
 }
 
@@ -101,14 +101,14 @@ TEST_CASE("sync_wait on simple just senders", "[sender_algo]") {
     REQUIRE(rs1 == "this");
 }
 
-TEST_CASE("sync_wait on simple just_on senders", "[sender_algo]") {
+TEST_CASE("sync_wait on simple transfer_just senders", "[sender_algo]") {
     concore::static_thread_pool pool{1};
     auto sched = pool.scheduler();
 
-    auto r1 = concore::sync_wait(concore::just_on(sched, 1));
+    auto r1 = concore::sync_wait(concore::transfer_just(sched, 1));
     REQUIRE(r1 == 1);
 
-    auto r2 = concore::sync_wait(concore::just_on(sched, 3.14));
+    auto r2 = concore::sync_wait(concore::transfer_just(sched, 3.14));
     REQUIRE(r2 == 3.14);
 }
 
@@ -179,7 +179,7 @@ TEST_CASE("let_value invoked on a different thread", "[sender_algo]") {
     concore::static_thread_pool pool{1};
     auto sched = pool.scheduler();
 
-    auto s = concore::let_value(concore::just_on(sched, 3), std::move(let_value_fun));
+    auto s = concore::let_value(concore::transfer_just(sched, 3), std::move(let_value_fun));
     REQUIRE(concore::sync_wait(s) == 7);
 }
 
@@ -189,7 +189,7 @@ TEST_CASE("let_value invokes scheduler on a different thread", "[sender_algo]") 
 
     auto let_value_fun = [&](int& let_v) {
         // we can't use reference on the next line anymore -- dangling reference
-        return concore::transform(concore::just_on(sched, 4), [=](int v) { return let_v + v; });
+        return concore::transform(concore::transfer_just(sched, 4), [=](int v) { return let_v + v; });
     };
 
     auto s = concore::let_value(concore::just(3), std::move(let_value_fun));
