@@ -41,3 +41,13 @@ TEST_CASE("just_error cannot call set_done", "[sender_algo]") {
     using t = decltype(concore::just_error(1));
     CHECK_FALSE(concore::sender_traits<t>::sends_done);
 }
+
+TEST_CASE("just_error removes cv qualifier for the given type", "[sender_algo]") {
+    std::string str{"hello"};
+    const std::string& crefstr = str;
+    auto snd = concore::just_error(crefstr);
+    using t = decltype(snd);
+
+    using et = concore::sender_traits<t>::error_types<type_array>;
+    CHECK(std::is_same<et, type_array<std::string, std::exception_ptr>>::value);
+}

@@ -93,14 +93,13 @@ TEST_CASE("transfer_just forwards set_error calls", "[sender_algo]") {
     concore::start(op);
     // The receiver checks if we receive an error
 }
-// TODO: fix this
-// TEST_CASE("transfer_just forwards set_error calls of other types", "[sender_algo]") {
-//     error_scheduler<std::string> sched{std::string{"error"}};
-//     auto snd = concore::transfer_just(sched, 13);
-//     auto op = concore::connect(std::move(snd), expect_error_receiver{});
-//     concore::start(op);
-//     // The receiver checks if we receive an error
-// }
+TEST_CASE("transfer_just forwards set_error calls of other types", "[sender_algo]") {
+    error_scheduler<std::string> sched{std::string{"error"}};
+    auto snd = concore::transfer_just(sched, 13);
+    auto op = concore::connect(std::move(snd), expect_error_receiver{});
+    concore::start(op);
+    // The receiver checks if we receive an error
+}
 TEST_CASE("transfer_just forwards set_done calls", "[sender_algo]") {
     done_scheduler sched{};
     auto snd = concore::transfer_just(sched, 13);
@@ -126,7 +125,7 @@ TEST_CASE("transfer_just has the values_type corresponding to the given values",
     static_assert(std::is_same<vt2, type_array<type_array<int, double>>>::value);
     static_assert(std::is_same<vt3, type_array<type_array<int, double, std::string>>>::value);
 }
-// TODO: fix this
+// TODO: fix error_types for all the senders involved in the definition of transfer_just
 // TEST_CASE("transfer_just keeps error_types from scheduler's sender", "[sender_algo]") {
 //     inline_scheduler sched1{};
 //     error_scheduler sched2{};
