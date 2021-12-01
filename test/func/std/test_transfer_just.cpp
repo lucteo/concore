@@ -22,7 +22,7 @@ TEST_CASE("transfer_just simple example", "[sender_algo]") {
 TEST_CASE("transfer_just calls the receiver when the scheduler dictates", "[sender_algo]") {
     int recv_value{0};
     impulse_scheduler sched;
-    auto snd = concore::transfer_just(std::move(sched), 13);
+    auto snd = concore::transfer_just(sched, 13);
     auto op = concore::connect(snd, expect_value_receiver_ex{&recv_value});
     concore::start(op);
     // Up until this point, the scheduler didn't start any task; no effect expected
