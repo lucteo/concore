@@ -70,7 +70,7 @@ inline namespace v1 {
  *
  * @see just(), just_error(), set_done()
  */
-detail::just_done_sender just_done() noexcept { return {}; }
+inline detail::just_done_sender just_done() noexcept { return {}; }
 
 } // namespace v1
 } // namespace concore

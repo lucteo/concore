@@ -39,6 +39,7 @@ set(func_sourceFiles
     "func/std/test_just.cpp"
     "func/std/test_just_error.cpp"
     "func/std/test_just_done.cpp"
+    "func/std/test_transfer_just.cpp"
     "func/std/test_sender_algo.cpp"
     "func/std/test_sender_done_error.cpp"
 

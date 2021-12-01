@@ -99,7 +99,7 @@ inline namespace v1 {
  */
 template <CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value) T>
 CONCORE_REQUIRES_OPT(std::is_nothrow_move_constructible_v<T>)
-detail::just_error_sender<T> just_error(T&& err) noexcept {
+inline detail::just_error_sender<T> just_error(T&& err) noexcept {
     return {(T &&) err};
 }
 

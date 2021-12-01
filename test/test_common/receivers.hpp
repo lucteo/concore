@@ -127,6 +127,31 @@ public:
     }
 };
 
+template <typename T>
+class expect_value_receiver_ex {
+    T* dest_;
+
+public:
+    explicit expect_value_receiver_ex(T* dest)
+        : dest_(dest) {}
+
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, expect_value_receiver_ex self, T val) noexcept {
+        *self.dest_ = val;
+    }
+    template <typename... Ts>
+    friend void tag_invoke(concore::set_value_t, expect_value_receiver_ex, Ts...) noexcept {
+        FAIL_CHECK("set_value called with wrong value types on expect_value_receiver_ex");
+    }
+    friend void tag_invoke(concore::set_done_t, expect_value_receiver_ex) noexcept {
+        FAIL_CHECK("set_done called on expect_value_receiver_ex");
+    }
+    friend void tag_invoke(
+            concore::set_error_t, expect_value_receiver_ex, std::exception_ptr) noexcept {
+        FAIL_CHECK("set_error called on expect_value_receiver");
+    }
+};
+
 class expect_done_receiver {
     bool called_{false};
 
