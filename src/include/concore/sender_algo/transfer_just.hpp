@@ -11,6 +11,39 @@
 
 namespace concore {
 
+namespace detail {
+
+template <typename Tag, typename Sched, typename... Vs>
+CONCORE_CONCEPT_OR_BOOL has_transfer_just = tag_invocable<Tag, Sched, Vs...>;
+
+inline const struct transfer_just_t final {
+    // User defined tag_invoke for transfer-just
+    CONCORE_TEMPLATE_COND(CONCORE_LIST(                                                       //
+                                  CONCORE_CONCEPT_OR_TYPENAME(scheduler) Sched,               //
+                                  CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value)... Vs), //
+            (has_transfer_just<transfer_just_t, Sched, Vs...>))
+    auto operator()(Sched&& sched, Vs... vs) const                           //
+            noexcept(nothrow_tag_invocable<transfer_just_t, Sched, Vs...>) { //
+        using res_type = decltype(tag_invoke(transfer_just_t{}, (Sched &&) sched, (Vs &&) vs...));
+        static_assert(typed_sender<res_type>,
+                "Result type of the custom-defined transfer_just operation must "
+                "model the typed_sender concept");
+        return tag_invoke(transfer_just_t{}, (Sched &&) sched, (Vs &&) vs...);
+    }
+
+    // Default transfer_just implementation
+    CONCORE_TEMPLATE_COND(CONCORE_LIST(                                                       //
+                                  CONCORE_CONCEPT_OR_TYPENAME(scheduler) Sched,               //
+                                  CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value)... Vs), //
+            (!has_transfer_just<transfer_just_t, Sched, Vs...>))
+    auto operator()(Sched&& sched, Vs... vs) const                           //
+            noexcept(nothrow_tag_invocable<transfer_just_t, Sched, Vs...>) { //
+        return on(just((Vs &&) vs...), (Sched &&) sched);
+    }
+} transfer_just{};
+
+} // namespace detail
+
 inline namespace v1 {
 
 /**
@@ -32,6 +65,9 @@ inline namespace v1 {
  * represented by the given scheduler, and passes them to the connected receiver in that context.
  *
  * This is equivalent to `transfer(just(values...), sched)`.
+ *
+ * The user can provide its own custom implementation for transfer_just, by providing a tag_invoke
+ * specialization for this object.
  *
  * This will obtain a sender from the given scheduler and connects it to an internal receiver.
  * Whenever that receiver gets the @ref set_value() notification, this will call @ref set_value()
@@ -59,11 +95,12 @@ inline namespace v1 {
  *
  * @see just(), transfer()
  */
-template <CONCORE_CONCEPT_OR_TYPENAME(scheduler) Scheduler,
-        CONCORE_CONCEPT_OR_TYPENAME(detail::moveable_value)... Ts>
-auto transfer_just(Scheduler&& sched, Ts&&... values) {
-    return on(just((Ts &&) values...), (Scheduler &&) sched);
-}
+#if DOXYGEN_BUILD
+template <scheduler Scheduler, detail::moveable_value... Ts>
+auto transfer_just(Scheduler&& sched, Ts&&... values);
+#endif
+
+using detail::transfer_just;
 
 } // namespace v1
 } // namespace concore

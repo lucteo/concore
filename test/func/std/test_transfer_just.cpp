@@ -60,7 +60,7 @@ TEST_CASE("transfer_just sender algo calls receiver on the specified scheduler",
 }
 
 TEST_CASE("transfer_just can be called with value type scheduler", "[sender_algo]") {
-    auto snd = concore::transfer_just<inline_scheduler>({}, 13);
+    auto snd = concore::transfer_just(inline_scheduler{}, 13);
     auto op = concore::connect(std::move(snd), expect_value_receiver{13});
     concore::start(op);
     // The receiver checks if we receive the right value
@@ -162,6 +162,16 @@ TEST_CASE("transfer_just advertises its completion scheduler", "[sender_algo]") 
     // TODO
 }
 
+// Modify the value when we invoke this custom defined transfer_just implementation
+auto tag_invoke(decltype(concore::transfer_just), inline_scheduler sched, std::string value) {
+    return concore::on(concore::just("Hello, " + value), sched);
+}
+
 TEST_CASE("transfer_just can be customized", "[sender_algo]") {
-    // TODO
+    // The customization will alter the value passed in
+    auto snd = concore::transfer_just(inline_scheduler{}, std::string{"world"});
+    std::string res;
+    auto op = concore::connect(std::move(snd), expect_value_receiver_ex<std::string>(&res));
+    concore::start(op);
+    REQUIRE(res == "Hello, world");
 }

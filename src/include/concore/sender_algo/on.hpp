@@ -52,9 +52,8 @@ struct on_sender_oper_state {
             concore::set_done((Receiver &&) self.receiver_);
         }
         template <typename E>
-        friend void tag_invoke(
-                set_error_t, sched_receiver&& self, E&& e) noexcept {
-            concore::set_error((Receiver &&) self.receiver_, (E&&) e);
+        friend void tag_invoke(set_error_t, sched_receiver&& self, E&& e) noexcept {
+            concore::set_error((Receiver &&) self.receiver_, (E &&) e);
         }
     };
 
