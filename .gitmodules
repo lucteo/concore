@@ -1,0 +1,4 @@
+[submodule "p2300"]
+	path = external/p2300
+	url = https://github.com/lucteo/wg21_p2300_std_execution.git
+	branch = int-concore
