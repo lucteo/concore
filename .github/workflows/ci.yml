@@ -61,14 +61,14 @@ jobs:
           cppcheckflags: '--enable=warning,style,performance,portability --inline-suppr'
         env:
           CONAN_RUN_TESTS: 1
-  clang-format:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@master
-      - uses: docker://lucteo/action-cxx-toolkit:latest
-        with:
-          checks: clang-format
-          clangformatdirs: src test
+#  clang-format:
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@master
+#      - uses: docker://lucteo/action-cxx-toolkit:latest
+#        with:
+#          checks: clang-format
+#          clangformatdirs: src test
   sanitizer:
     runs-on: ubuntu-latest
     steps:

@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/thread_pool.hpp>
-#include <concore/execution.hpp>
+#include <concore/execution_old.hpp>
 #include "test_common/task_utils.hpp"
 #include "test_common/receivers.hpp"
 

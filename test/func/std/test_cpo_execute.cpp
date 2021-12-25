@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <concore/execution.hpp>
+#include <concore/execution_old.hpp>
 #include <concore/thread_pool.hpp>
 
 template <typename Ex>

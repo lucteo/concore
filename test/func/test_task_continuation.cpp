@@ -2,7 +2,7 @@
 #include <concore/global_executor.hpp>
 #include <concore/inline_executor.hpp>
 #include <concore/spawn.hpp>
-#include <concore/execution.hpp>
+#include <concore/execution_old.hpp>
 
 #include <atomic>
 #include <thread>

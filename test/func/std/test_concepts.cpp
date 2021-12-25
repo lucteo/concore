@@ -1,5 +1,5 @@
 #include <catch2/catch.hpp>
-#include <concore/execution.hpp>
+#include <concore/execution_old.hpp>
 #include <concore/thread_pool.hpp>
 #include <test_common/receivers.hpp>
 

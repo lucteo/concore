@@ -1,0 +1,22 @@
+---
+- NamespaceReplace:
+    from: "std::execution"
+    to: "concore::detail::execution"
+- NamespaceReplace:
+    from: "std"
+    to: "concore::detail"
+- HeaderReplace:
+    from: "<__utility.hpp>"
+    to: "\"__utility.hpp\""
+- HeaderReplace:
+    from: "<concepts.hpp>"
+    to: "\"concepts.hpp\""
+- HeaderReplace:
+    from: "<coroutine.hpp>"
+    to: "\"coroutine.hpp\""
+- HeaderReplace:
+    from: "<functional.hpp>"
+    to: "\"functional.hpp\""
+- HeaderReplace:
+    from: "<stop_token.hpp>"
+    to: "\"stop_token.hpp\""
