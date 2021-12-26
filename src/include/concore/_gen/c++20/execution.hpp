@@ -3060,7 +3060,7 @@ namespace concore::detail::execution {
       }
     } transfer_when_all_with_variant {};
   } // namespace __when_all
-} // namespace std::execution
+} // namespace concore::detail::execution
 
 namespace std::this_thread {
   /////////////////////////////////////////////////////////////////////////////

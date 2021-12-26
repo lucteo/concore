@@ -17,12 +17,15 @@ def main():
         "functional.hpp",
         "stop_token.hpp",
     ]
+    comp_args = ["-std=c++20"]
 
     # Load the transformation rules
     rules = tr.load_rules(f"{cur_dir}/.transform-rules")
     # Apply the transformation for all our files
     for f in files:
-        tr.apply_transform(f"{in_dir}/{f}", f"{out_dir}/{f}", rules, verbose=True)
+        tr.apply_transform(
+            f"{in_dir}/{f}", f"{out_dir}/{f}", rules, comp_args, verbose=True
+        )
 
 
 if __name__ == "__main__":

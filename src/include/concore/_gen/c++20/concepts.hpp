@@ -110,4 +110,4 @@ namespace concore::detail {
 
   template <class _Trait>
     concept __is_true = _Trait::value;
-} // namespace std
+} // namespace concore::detail
