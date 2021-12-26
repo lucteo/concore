@@ -1,4 +1,4 @@
-from clang.cindex import CursorKind
+from clang.cindex import CursorKind, TokenKind
 
 
 class StopToken:
@@ -147,3 +147,37 @@ def get_complete_namespace_name(node):
                 can_continue = True
                 node = child
     return full_name
+
+
+def interpret_token_list(params_list):
+    """
+    Given a list coming from the configuration yaml file, transform it into a list of pairs (TokenKind, text)
+    :param params_list: the list coming from the configuration file
+    :return: corresponding list containing (TokenKind, text) pairs
+    """
+    res = []
+    for el in params_list:
+        kind = TokenKind.IDENTIFIER
+        if el["token"] == "punct":
+            kind = TokenKind.PUNCTUATION
+        elif el["token"] == "kwd":
+            kind = TokenKind.KEYWORD
+        p = (kind, el["text"])
+        res.append(p)
+    return res
+
+
+def token_list_to_str(tok_list):
+    """
+    Convert a token list to string, for displaying
+    :param tok_list: The token list; list of (TokenKind, text) paris
+    :return: The human-readable string
+    """
+    res = ""
+    prev_kind = TokenKind.PUNCTUATION
+    for t in tok_list:
+        if t[0] != TokenKind.PUNCTUATION and prev_kind != TokenKind.PUNCTUATION:
+            res += " "
+        prev_kind = t[0]
+        res += t[1]
+    return res

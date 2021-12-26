@@ -2168,6 +2168,7 @@ namespace concore::_p2300::execution {
             return __scheduler{__self.__loop_};
           }
 
+          public:
           explicit __schedule_task(run_loop* __loop) noexcept
             : __loop_(__loop)
           {}

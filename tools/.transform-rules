@@ -24,3 +24,54 @@
       - std
       - std::execution
       - std::this_thread
+# Replace "std::XXXX" with "concore::_p2300::XXX" for coroutine functions
+- TokenIdReplace:
+    from: "std"
+    to: "concore::_p2300"
+    after:
+        - token: punct
+          text: "::"
+        - token: id
+          text: __await_suspend
+        - token: punct
+          text: "<"
+- TokenIdReplace:
+    from: "std"
+    to: "concore::_p2300"
+    after:
+        - token: punct
+          text: "::"
+        - token: id
+          text: __get_awaiter
+        - token: punct
+          text: "("
+- TokenIdReplace:
+    from: "std"
+    to: "concore::_p2300"
+    after:
+        - token: punct
+          text: "::"
+        - token: id
+          text: __as_lvalue
+        - token: punct
+          text: "("
+# Make __loop::run_loop::__scheduler::__schedule_task constructor public
+- SurroundTokens:
+    pre: "public:\n          "
+    post: ""
+    tokens:
+      # explicit __schedule_task(run_loop* __loop)
+      - token: kwd
+        text: explicit
+      - token: id
+        text: __schedule_task
+      - token: punct
+        text: "("
+      - token: id
+        text: run_loop
+      - token: punct
+        text: "*"
+      - token: id
+        text: __loop
+      - token: punct
+        text: ")"

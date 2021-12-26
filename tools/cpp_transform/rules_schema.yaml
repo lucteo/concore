@@ -9,6 +9,7 @@ definitions:
           enum:
             - punct
             - id
+            - kwd
         text:
           type: string
       required:

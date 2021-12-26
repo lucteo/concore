@@ -49,7 +49,7 @@ namespace concore::_p2300 {
     concept __awaiter =
       requires (_Awaiter& __await) {
         __await.await_ready() ? 1 : 0;
-        {std::__await_suspend<_Promise>(__await)} -> __await_suspend_result;
+        {concore::_p2300::__await_suspend<_Promise>(__await)} -> __await_suspend_result;
         __await.await_resume();
       };
 
@@ -79,7 +79,7 @@ namespace concore::_p2300 {
   template <class _Awaitable, class _Promise = void>
     concept __awaitable =
       requires (_Awaitable&& __await, _Promise* __promise) {
-        {std::__get_awaiter((_Awaitable&&) __await, __promise)} -> __awaiter<_Promise>;
+        {concore::_p2300::__get_awaiter((_Awaitable&&) __await, __promise)} -> __awaiter<_Promise>;
       };
 
   template <class _T>
@@ -87,6 +87,6 @@ namespace concore::_p2300 {
 
   template <class _Awaitable, class _Promise = void>
       requires __awaitable<_Awaitable, _Promise>
-    using __await_result_t = decltype(std::__as_lvalue(
-        std::__get_awaiter(declval<_Awaitable>(), (_Promise*) nullptr)).await_resume());
+    using __await_result_t = decltype(concore::_p2300::__as_lvalue(
+        concore::_p2300::__get_awaiter(declval<_Awaitable>(), (_Promise*) nullptr)).await_resume());
 }

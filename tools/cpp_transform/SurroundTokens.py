@@ -1,5 +1,5 @@
-from cpp_transform._utils import find_tokens
-from clang.cindex import CursorKind, TokenKind, SourceRange
+from cpp_transform._utils import find_tokens, interpret_token_list, token_list_to_str
+from clang.cindex import SourceRange
 
 
 class SurroundTokens:
@@ -8,7 +8,7 @@ class SurroundTokens:
     def __init__(self, params):
         self._pre = params["pre"]
         self._post = params["post"]
-        self._tokens = _interpret_token_list(params["tokens"])
+        self._tokens = interpret_token_list(params["tokens"])
 
     def run(self, unit, verbose):
         """Run this rule on the given C++ unit"""
@@ -29,7 +29,7 @@ class SurroundTokens:
 
             # Add code before the first token
             loc_start = all_tokens[idx].extent.start
-            loc_end = all_tokens[idx + len(self._tokens)-1].extent.end
+            loc_end = all_tokens[idx + len(self._tokens) - 1].extent.end
             if self._pre:
                 loc_range = SourceRange.from_locations(loc_start, loc_start)
                 unit.add_replacement(loc_range, self._pre)
@@ -45,24 +45,3 @@ class SurroundTokens:
 
         if verbose and changes_count > 0:
             print(f"    made {changes_count} changes")
-
-
-def token_list_to_str(tok_list):
-    res = ""
-    prev_kind = TokenKind.PUNCTUATION
-    for t in tok_list:
-        if t[0] == TokenKind.IDENTIFIER and prev_kind == TokenKind.IDENTIFIER:
-            res += " "
-        res += t[1]
-    return res
-
-
-def _interpret_token_list(params_list):
-    res = []
-    for el in params_list:
-        kind = TokenKind.IDENTIFIER
-        if el["token"] == "punct":
-            kind = TokenKind.PUNCTUATION
-        p = (kind, el["text"])
-        res.append(p)
-    return res

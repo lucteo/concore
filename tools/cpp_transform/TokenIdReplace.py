@@ -1,5 +1,5 @@
-from cpp_transform._utils import find_tokens
-from clang.cindex import TokenKind, SourceRange
+from cpp_transform._utils import find_tokens, interpret_token_list
+from clang.cindex import TokenKind
 
 
 class TokenIdReplace:
@@ -9,8 +9,8 @@ class TokenIdReplace:
         self._from = params["from"]
         self._from_num_parts = self._from.count("::") + 1
         self._to = params["to"]
-        prev = _interpret_token_list(_get(params, "prev", []))
-        after = _interpret_token_list(_get(params, "after", []))
+        prev = interpret_token_list(_get(params, "prev", []))
+        after = interpret_token_list(_get(params, "after", []))
         self._prev_count = len(prev)
         self._expected_tokens = prev + [(TokenKind.IDENTIFIER, self._from)] + after
 
@@ -48,14 +48,3 @@ def _get(d, key, default):
         return d[key]
     else:
         return default
-
-
-def _interpret_token_list(params_list):
-    res = []
-    for el in params_list:
-        kind = TokenKind.IDENTIFIER
-        if el["token"] == "punct":
-            kind = TokenKind.PUNCTUATION
-        p = (kind, el["text"])
-        res.append(p)
-    return res
