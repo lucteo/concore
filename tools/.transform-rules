@@ -1,4 +1,6 @@
 ---
+# Ensure that user-defined headers are included with quotes, so that we can find them
+# Don't use "std" namespace
 - IncludeToQuotes:
     - __utility.hpp
     - concepts.hpp

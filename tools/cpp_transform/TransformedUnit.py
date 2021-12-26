@@ -77,6 +77,14 @@ class TransformedUnit:
         """Returns the top-leve cursor, representing the whole AST of the unit"""
         return self._tu.cursor
 
+    def print_diagnostics(self):
+        """Print the diagnostic messages from libclang; used to check if the parsing is correct"""
+        for diag in self._tu.diagnostics:
+            loc = diag.location
+            fname = loc.file.name if loc.file else "???"
+            sev_str = ["ignored", "note", "warning", "error", "fatal error"][diag.severity]
+            print(f"{fname}:{loc.line}:{loc.column}: {sev_str}: {diag.spelling}")
+
     def _get_modified_content(self):
         """Applies the replacements and get the modified content"""
         if not self.replacements:

@@ -15,6 +15,7 @@ def apply_transform(in_file, out_file, rules, comp_args, verbose=False):
 
     if verbose:
         print(f"Generating {out_file}...")
+        unit.print_diagnostics()
 
     # Apply the rules
     for r in rules:
@@ -84,7 +85,8 @@ def main():
         help="File containing the transformation rules to be applied",
     )
     parser.add_argument(
-        "-c" "--comp-arg",
+        "-c",
+        "--comp-arg",
         type=str,
         nargs="*",
         default=["-std=c++20"],
@@ -112,15 +114,15 @@ def main():
     args = parser.parse_args()
 
     if args.print_tokens:
-        _print_tokens(args.input, args.c__comp_arg)
+        _print_tokens(args.input, args.comp_arg)
         return
 
     if args.print_ast:
-        _print_ast(args.input, args.c__comp_arg)
+        _print_ast(args.input, args.comp_arg)
         return
 
     # Do the transform
-    transform(args.input, args.output, args.rules, args.c__comp_arg, args.verbose)
+    transform(args.input, args.output, args.rules, args.comp_arg, args.verbose)
 
 
 if __name__ == "__main__":

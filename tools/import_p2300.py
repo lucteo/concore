@@ -17,7 +17,13 @@ def main():
         "functional.hpp",
         "stop_token.hpp",
     ]
-    comp_args = ["-std=c++20"]
+    comp_args = [
+        "-std=c++20",
+        f"-I{in_dir}",
+        "-isysroot",
+        # This is platform specific; should be changed by who calls this script
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX12.1.sdk",
+    ]
 
     # Load the transformation rules
     rules = tr.load_rules(f"{cur_dir}/.transform-rules")

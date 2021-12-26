@@ -1,4 +1,3 @@
-import sys
 from cpp_transform._utils import visit_cur_unit_ast, find_token
 from clang.cindex import CursorKind, TokenKind, SourceRange, SourceLocation
 
@@ -7,16 +6,9 @@ class NamespaceRename:
     """Renames namespaces according to the given parameters; namespaces need to be top-level"""
 
     def __init__(self, params):
-        for k, v in params.items():
-            if k == "from":
-                self._from = v
-                self._from_num_parts = v.count("::") + 1
-            elif k == "to":
-                self._to = v
-            else:
-                print(
-                    f"ERROR: invalid parameter {k} in NamespaceRename", file=sys.stderr
-                )
+        self._from = params["from"]
+        self._from_num_parts = self._from.count("::") + 1
+        self._to = params["to"]
 
     def run(self, unit, verbose):
         """Run this rule on the given C++ unit"""

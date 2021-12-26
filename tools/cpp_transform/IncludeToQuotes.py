@@ -7,6 +7,8 @@ class IncludeToQuotes:
 
     def __init__(self, params):
         self.headers = params
+        assert self.headers
+        assert isinstance(self.headers, list)
 
     def run(self, unit, verbose):
         """Run this rule on the given C++ unit"""
