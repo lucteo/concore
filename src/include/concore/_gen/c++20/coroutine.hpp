@@ -25,7 +25,9 @@ namespace __coro = std;
 namespace __coro = std::experimental;
 #endif
 
-namespace concore::detail {
+namespace concore::_p2300 {
+  using namespace std;
+
   // Defined some concepts and utilities for working with awaitables
   template <class _Promise, class _Awaiter>
   decltype(auto) __await_suspend(_Awaiter& __await) {

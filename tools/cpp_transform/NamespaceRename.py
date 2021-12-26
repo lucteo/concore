@@ -1,4 +1,4 @@
-from cpp_transform._utils import visit_cur_unit_ast, find_token
+from cpp_transform._utils import visit_cur_unit_ast, find_token, get_complete_namespace_name
 from clang.cindex import CursorKind, TokenKind, SourceRange, SourceLocation
 
 
@@ -23,7 +23,7 @@ class NamespaceRename:
             # Is this a namespace?
             if node.kind == CursorKind.NAMESPACE:
                 # Is this the namespace name to replace?
-                ns_name = _get_complete_namespace_name(node)
+                ns_name = get_complete_namespace_name(node)
                 if ns_name == self._from:
                     nodes_to_replace.append(node)
                 else:

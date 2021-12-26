@@ -28,7 +28,9 @@
 #include <stop_token>
 #endif
 
-namespace concore::detail {
+namespace concore::_p2300 {
+  using namespace std;
+
   // [stoptoken.inplace], class in_place_stop_token
   class in_place_stop_token;
 

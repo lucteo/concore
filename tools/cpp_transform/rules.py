@@ -4,11 +4,13 @@ from jsonschema import validate
 from cpp_transform.IncludeToQuotes import IncludeToQuotes
 from cpp_transform.NamespaceRename import NamespaceRename
 from cpp_transform.TokenIdReplace import TokenIdReplace
+from cpp_transform.AddInNamespace import AddInNamespace
 
 _all_rules = {
     "IncludeToQuotes": IncludeToQuotes,
     "NamespaceRename": NamespaceRename,
     "TokenIdReplace": TokenIdReplace,
+    "AddInNamespace": AddInNamespace,
 }
 
 _schema = """
@@ -73,6 +75,18 @@ items:
       optional:
       - prev
       - after
+    AddInNamespace:
+      type: object
+      properties:
+        add:
+          type: string
+        in:
+          type: array
+          items:
+            type: string
+      required:
+      - add
+      - in
 """
 
 

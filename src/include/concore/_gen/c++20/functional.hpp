@@ -19,7 +19,9 @@
 
 #include <functional>
 
-namespace concore::detail {
+namespace concore::_p2300 {
+  using namespace std;
+
   // [func.tag_invoke], tag_invoke
   inline namespace __tag_invoke {
     namespace __impl {

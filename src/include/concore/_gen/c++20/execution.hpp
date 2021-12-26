@@ -48,7 +48,9 @@
 _PRAGMA_PUSH()
 _PRAGMA_IGNORE("-Wundefined-internal")
 
-namespace concore::detail::execution {
+namespace concore::_p2300::execution {
+  using namespace std;
+
   template <template <template <class...> class, template <class...> class> class>
     struct __test_has_values;
 
@@ -3060,9 +3062,11 @@ namespace concore::detail::execution {
       }
     } transfer_when_all_with_variant {};
   } // namespace __when_all
-} // namespace concore::detail::execution
+} // namespace concore::_p2300::execution
 
-namespace std::this_thread {
+namespace concore::_p2300::this_thread {
+  using namespace std;
+
   /////////////////////////////////////////////////////////////////////////////
   // [execution.senders.consumers.sync_wait]
   // [execution.senders.consumers.sync_wait_with_variant]
@@ -3183,6 +3187,6 @@ namespace std::this_thread {
       }
     } sync_wait_with_variant {};
   } // namespace __sync_wait
-} // namespace std::this_thread
+} // namespace concore::_p2300::this_thread
 
 _PRAGMA_POP()

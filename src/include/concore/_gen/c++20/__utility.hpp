@@ -17,7 +17,9 @@
 
 #include <type_traits>
 
-namespace concore::detail {
+namespace concore::_p2300 {
+  using namespace std;
+
   struct __ {};
 
   struct __ignore {

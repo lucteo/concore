@@ -1,3 +1,6 @@
+from clang.cindex import CursorKind
+
+
 class StopToken:
     """
     Class used to indicate that the AST exploration should completely stop.
@@ -116,3 +119,31 @@ def visit_cur_unit_ast(node, f):
 
     # Start the exploration
     _do_visit(node)
+
+
+def get_complete_namespace_name(node):
+    """
+    Gets the complete name for a namespace given the start ode
+    :param node: The node of the namespace
+    :return: The complete (i.e., qualified name) of the namespace
+
+    If we have a namespace like "A::B::C", in the AST this will be represented as 3 different namespace nodes. This
+    function will check for this nesting and build the original namespace name
+    """
+    full_name = node.spelling
+    end_loc = node.extent.end
+    # Recursively check if we have connected namespaces, i.e., A::B::C
+    can_continue = True
+    while can_continue:
+        can_continue = False
+        children = list(node.get_children())
+        # If we have only one child
+        if len(children) == 1:
+            child = children[0]
+            # ... and the child is a namespace that ends at the exactly same position
+            if child.kind == CursorKind.NAMESPACE and child.extent.end == end_loc:
+                # ... then this is part of a compound namespace name
+                full_name += f"::{child.spelling}"
+                can_continue = True
+                node = child
+    return full_name

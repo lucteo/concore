@@ -22,7 +22,9 @@
 #else
 #include <type_traits>
 
-namespace concore::detail {
+namespace concore::_p2300 {
+  using namespace std;
+
   // C++20 concepts
   #if defined(__clang__)
   template<class _A, class _B>
@@ -81,7 +83,9 @@ namespace concore::detail {
 }
 #endif
 
-namespace concore::detail {
+namespace concore::_p2300 {
+  using namespace std;
+
   template<class _T, class _U>
     concept __decays_to =
       same_as<decay_t<_T>, _U>;
@@ -110,4 +114,4 @@ namespace concore::detail {
 
   template <class _Trait>
     concept __is_true = _Trait::value;
-} // namespace concore::detail
+} // namespace concore::_p2300

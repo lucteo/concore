@@ -37,7 +37,7 @@ class TransformedUnit:
         """Add a replacement text for the characters indicated by the given SourceLocation"""
         rstart = loc_range.start.offset
         rend = loc_range.end.offset
-        assert rend > rstart
+        assert rend >= rstart
         assert os.path.samefile(
             loc_range.start.file.name, self._filename
         ), f"Invalid location filename: {loc_range.start.file} != {self._filename}"

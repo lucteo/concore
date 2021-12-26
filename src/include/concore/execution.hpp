@@ -6,6 +6,6 @@
 #include <concore/_gen/c++20/execution.hpp>
 
 namespace  concore {
-    using namespace execution = concore::concore::detail::execution;
+    using execution = concore::_p2300::execution;
 }
 #endif
