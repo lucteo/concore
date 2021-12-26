@@ -4,7 +4,7 @@ import yaml
 from jsonschema import validate
 from cpp_transform.IncludeToQuotes import IncludeToQuotes
 from cpp_transform.NamespaceRename import NamespaceRename
-from cpp_transform.TokenIdReplace import TokenIdReplace
+from cpp_transform.ReplaceTokens import ReplaceTokens
 from cpp_transform.AddInNamespace import AddInNamespace
 from cpp_transform.SurroundTokens import SurroundTokens
 

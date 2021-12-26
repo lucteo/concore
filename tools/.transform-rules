@@ -25,30 +25,33 @@
       - std::execution
       - std::this_thread
 # Replace "std::XXXX" with "concore::_p2300::XXX" for coroutine functions
-- TokenIdReplace:
-    from: "std"
-    to: "concore::_p2300"
-    after:
+- ReplaceTokens:
+    to: "concore::_p2300::__await_suspend<"
+    tokens:
+        - token: id
+          text: std
         - token: punct
           text: "::"
         - token: id
           text: __await_suspend
         - token: punct
           text: "<"
-- TokenIdReplace:
-    from: "std"
-    to: "concore::_p2300"
-    after:
+- ReplaceTokens:
+    to: "concore::_p2300::__get_awaiter("
+    tokens:
+        - token: id
+          text: std
         - token: punct
           text: "::"
         - token: id
           text: __get_awaiter
         - token: punct
           text: "("
-- TokenIdReplace:
-    from: "std"
-    to: "concore::_p2300"
-    after:
+- ReplaceTokens:
+    to: "concore::_p2300::__as_lvalue("
+    tokens:
+        - token: id
+          text: std
         - token: punct
           text: "::"
         - token: id

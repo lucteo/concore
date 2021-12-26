@@ -1,24 +1,25 @@
-from cpp_transform._utils import find_tokens, interpret_token_list
-from clang.cindex import TokenKind
+from cpp_transform._utils import find_tokens, interpret_token_list, token_list_to_str
+from clang.cindex import SourceRange
 
 
-class TokenIdReplace:
+class ReplaceTokens:
     """Replaces the content of an identifier, scanning just tokens"""
 
     def __init__(self, params):
-        self._from = params["from"]
-        self._from_num_parts = self._from.count("::") + 1
         self._to = params["to"]
+        self._tokens = interpret_token_list(params["tokens"])
         prev = interpret_token_list(_get(params, "prev", []))
         after = interpret_token_list(_get(params, "after", []))
         self._prev_count = len(prev)
-        self._expected_tokens = prev + [(TokenKind.IDENTIFIER, self._from)] + after
+        self._expected_tokens = prev + self._tokens + after
 
     def run(self, unit, verbose):
         """Run this rule on the given C++ unit"""
 
         if verbose:
-            print(f"  trying replace identifier token {self._from} -> {self._to}...")
+            print(
+                f"  trying to replace tokens {token_list_to_str(self._tokens)} -> {self._to}..."
+            )
         replacements_count = 0
 
         tokens = list(unit.get_tokens())
@@ -32,8 +33,10 @@ class TokenIdReplace:
                 break
 
             # Perform the replacement of our token
-            replace_token = tokens[idx + self._prev_count]
-            unit.add_replacement(replace_token.extent, self._to)
+            loc_start = tokens[idx + self._prev_count].extent.start
+            loc_end = tokens[idx + self._prev_count + len(self._tokens) - 1].extent.end
+            loc_range = SourceRange.from_locations(loc_start, loc_end)
+            unit.add_replacement(loc_range, self._to)
             replacements_count += 1
 
             # Continue from the next token

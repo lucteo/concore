@@ -33,20 +33,20 @@ items:
       required:
         - from
         - to
-    TokenIdReplace:
+    ReplaceTokens:
       type: object
       properties:
-        from:
-          type: string
         to:
           type: string
+        tokens:
+          "$ref": "#/definitions/tokens_list"
         prev:
           "$ref": "#/definitions/tokens_list"
         after:
           "$ref": "#/definitions/tokens_list"
       required:
-        - from
         - to
+        - tokens
       optional:
         - prev
         - after
