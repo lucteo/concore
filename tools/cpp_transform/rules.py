@@ -6,13 +6,7 @@ from cpp_transform.IncludeToQuotes import IncludeToQuotes
 from cpp_transform.NamespaceRename import NamespaceRename
 from cpp_transform.TokenIdReplace import TokenIdReplace
 from cpp_transform.AddInNamespace import AddInNamespace
-
-_all_rules = {
-    "IncludeToQuotes": IncludeToQuotes,
-    "NamespaceRename": NamespaceRename,
-    "TokenIdReplace": TokenIdReplace,
-    "AddInNamespace": AddInNamespace,
-}
+from cpp_transform.SurroundTokens import SurroundTokens
 
 
 def load_rules(rules_file):
@@ -33,12 +27,7 @@ def load_rules(rules_file):
     res = []
     for rule in rules_content:
         for rule_name, params in rule.items():
-            if rule_name in _all_rules:
-                cls = _all_rules[rule_name]
-                if cls:
-                    rule = cls(params)
-                    res.append(rule)
-            else:
-                print(f"ERROR: Unknown rule '{rule_name}'", file=sys.stderr)
+            rule = eval(rule_name)(params)
+            res.append(rule)
 
     return res

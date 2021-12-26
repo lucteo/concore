@@ -61,3 +61,12 @@ items:
       required:
         - add
         - in
+    SurroundTokens:
+      type: object
+      properties:
+        pre:
+          type: string
+        post:
+          type: string
+        tokens:
+          "$ref": "#/definitions/tokens_list"
