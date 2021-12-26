@@ -1,4 +1,5 @@
 import sys
+import os
 import yaml
 from jsonschema import validate
 from cpp_transform.IncludeToQuotes import IncludeToQuotes
@@ -13,82 +14,6 @@ _all_rules = {
     "AddInNamespace": AddInNamespace,
 }
 
-_schema = """
-type: array
-items:
-  type: object
-  properties:
-    IncludeToQuotes:
-      type: array
-      items:
-        type: string
-    NamespaceRename:
-      type: object
-      properties:
-        from:
-          type: string
-        to:
-          type: string
-      required:
-      - from
-      - to
-    TokenIdReplace:
-      type: object
-      properties:
-        from:
-          type: string
-        to:
-          type: string
-        prev:
-          type: array
-          default: []
-          items:
-            type: object
-            properties:
-              token:
-                enum:
-                - punct
-                - id
-              text:
-                type: string
-            required:
-            - token
-            - text
-        after:
-          type: array
-          default: []
-          items:
-            type: object
-            properties:
-              token:
-                enum:
-                - punct
-                - id
-              text:
-                type: string
-            required:
-            - token
-            - text
-      required:
-      - from
-      - to
-      optional:
-      - prev
-      - after
-    AddInNamespace:
-      type: object
-      properties:
-        add:
-          type: string
-        in:
-          type: array
-          items:
-            type: string
-      required:
-      - add
-      - in
-"""
-
 
 def load_rules(rules_file):
     """Load the rules from the given .transform-rules file"""
@@ -96,8 +21,13 @@ def load_rules(rules_file):
     with open(rules_file) as f:
         rules_content = yaml.safe_load(f)
 
+    # Read the rules file
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
+    with open(cur_dir + "/rules_schema.yaml") as f:
+        schema = yaml.safe_load(f)
+
     # Validate the rules content
-    validate(rules_content, yaml.safe_load(_schema))
+    validate(rules_content, schema)
 
     # Generate the resulting list of rules objects
     res = []

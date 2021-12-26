@@ -1,0 +1,63 @@
+definitions:
+  tokens_list:
+    type: array
+    default: [ ]
+    items:
+      type: object
+      properties:
+        token:
+          enum:
+            - punct
+            - id
+        text:
+          type: string
+      required:
+        - token
+        - text
+type: array
+items:
+  type: object
+  properties:
+    IncludeToQuotes:
+      type: array
+      items:
+        type: string
+    NamespaceRename:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+      required:
+        - from
+        - to
+    TokenIdReplace:
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        prev:
+          "$ref": "#/definitions/tokens_list"
+        after:
+          "$ref": "#/definitions/tokens_list"
+      required:
+        - from
+        - to
+      optional:
+        - prev
+        - after
+    AddInNamespace:
+      type: object
+      properties:
+        add:
+          type: string
+        in:
+          type: array
+          items:
+            type: string
+      required:
+        - add
+        - in

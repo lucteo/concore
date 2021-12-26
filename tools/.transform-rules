@@ -2,11 +2,12 @@
 # Ensure that user-defined headers are included with quotes, so that we can find them
 # Don't use "std" namespace
 - IncludeToQuotes:
-  - __utility.hpp
-  - concepts.hpp
-  - coroutine.hpp
-  - functional.hpp
-  - stop_token.hpp
+    - __utility.hpp
+    - concepts.hpp
+    - coroutine.hpp
+    - functional.hpp
+    - stop_token.hpp
+# Rename the namespaces
 - NamespaceRename:
     from: "std::execution"
     to: "concore::_p2300::execution"
