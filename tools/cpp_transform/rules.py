@@ -3,10 +3,12 @@ import yaml
 from jsonschema import validate
 from cpp_transform.IncludeToQuotes import IncludeToQuotes
 from cpp_transform.NamespaceRename import NamespaceRename
+from cpp_transform.TokenIdReplace import TokenIdReplace
 
 _all_rules = {
     "IncludeToQuotes": IncludeToQuotes,
     "NamespaceRename": NamespaceRename,
+    "TokenIdReplace": TokenIdReplace,
 }
 
 _schema = """
@@ -39,12 +41,32 @@ items:
           type: array
           default: []
           items:
-            type: string
+            type: object
+            properties:
+              token:
+                enum:
+                - punct
+                - id
+              text:
+                type: string
+            required:
+            - token
+            - text
         after:
           type: array
           default: []
           items:
-            type: string
+            type: object
+            properties:
+              token:
+                enum:
+                - punct
+                - id
+              text:
+                type: string
+            required:
+            - token
+            - text
       required:
       - from
       - to
