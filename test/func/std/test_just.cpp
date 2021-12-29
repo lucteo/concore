@@ -1,51 +1,32 @@
 #include <catch2/catch.hpp>
-#include <concore/sender_algo/just.hpp>
-#include <concore/detail/sender_helpers.hpp>
-#include <test_common/task_utils.hpp>
-#include <test_common/receivers.hpp>
+#include <concore/execution.hpp>
+#include <test_common/receivers_new.hpp>
+#include <test_common/type_helpers.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
+
+namespace ex = concore::execution;
 
 TEST_CASE("Simple test for just", "[sender_algo]") {
-    auto o1 = concore::connect(concore::just(1), expect_value_receiver(1));
-    concore::start(o1);
-    auto o2 = concore::connect(concore::just(2), expect_value_receiver(2));
-    concore::start(o2);
-    auto o3 = concore::connect(concore::just(3), expect_value_receiver(3));
-    concore::start(o3);
+    auto o1 = ex::connect(ex::just(1), expect_value_receiver(1));
+    ex::start(o1);
+    auto o2 = ex::connect(ex::just(2), expect_value_receiver(2));
+    ex::start(o2);
+    auto o3 = ex::connect(ex::just(3), expect_value_receiver(3));
+    ex::start(o3);
 
-    auto o4 = concore::connect(
-            concore::just(std::string("this")), expect_value_receiver(std::string("this")));
-    concore::start(o4);
-    auto o5 = concore::connect(
-            concore::just(std::string("that")), expect_value_receiver(std::string("that")));
-    concore::start(o5);
+    auto o4 =
+            ex::connect(ex::just(std::string("this")), expect_value_receiver(std::string("this")));
+    ex::start(o4);
+    auto o5 =
+            ex::connect(ex::just(std::string("that")), expect_value_receiver(std::string("that")));
+    ex::start(o5);
 }
 
 TEST_CASE("just returns a sender", "[sender_algo]") {
-    using t = decltype(concore::just(1));
-    static_assert(concore::sender<t>, "concore::just must return a sender");
-    REQUIRE(concore::sender<t>);
-}
-
-TEST_CASE("just has proper return type", "[sender_algo]") {
-    using st_int = decltype(concore::just(1));
-    using st_double = decltype(concore::just(3.14));
-    using st_str = decltype(concore::just(std::string{}));
-
-    using st_int_double = decltype(concore::just(1, 3.14));
-    using st_int_double_str = decltype(concore::just(1, 3.14, std::string{}));
-
-    using concore::detail::sender_single_return_type;
-    static_assert(std::is_same_v<sender_single_return_type<st_int>, int>,
-            "Improper return type for `just`");
-    static_assert(std::is_same_v<sender_single_return_type<st_double>, double>,
-            "Improper return type for `just`");
-    static_assert(std::is_same_v<sender_single_return_type<st_str>, std::string>,
-            "Improper return type for `just`");
-    static_assert(std::is_same_v<sender_single_return_type<st_int_double>, std::tuple<int, double>>,
-            "Improper return type for `just`");
-    static_assert(std::is_same_v<sender_single_return_type<st_int_double_str>,
-                          std::tuple<int, double, std::string>>,
-            "Improper return type for `just`");
+    using t = decltype(ex::just(1));
+    static_assert(ex::sender<t>, "ex::just must return a sender");
+    REQUIRE(ex::sender<t>);
 }
 
 TEST_CASE("just can handle multiple values", "[sender_algo]") {
@@ -55,86 +36,70 @@ TEST_CASE("just can handle multiple values", "[sender_algo]") {
         CHECK(d == 0.14);
         executed = true;
     };
-    auto op = concore::connect(concore::just(3, 0.14), make_fun_receiver(std::move(f)));
-    concore::start(op);
+    auto op = ex::connect(ex::just(3, 0.14), make_fun_receiver(std::move(f)));
+    ex::start(op);
     CHECK(executed);
 }
 
-template <typename... Ts>
-struct type_array {};
-
 TEST_CASE("value types are properly set for just", "[sender_algo]") {
-    using t1 = decltype(concore::just(1));
-    using t2 = decltype(concore::just(3, 0.14));
-    using t3 = decltype(concore::just(3, 0.14, std::string{"pi"}));
+    check_val_types<type_array<type_array<int>>>(ex::just(1));
+    check_val_types<type_array<type_array<double>>>(ex::just(3.14));
+    check_val_types<type_array<type_array<std::string>>>(ex::just(std::string{}));
 
-    using vt1 = concore::sender_traits<t1>::value_types<type_array, type_array>;
-    using vt2 = concore::sender_traits<t2>::value_types<type_array, type_array>;
-    using vt3 = concore::sender_traits<t3>::value_types<type_array, type_array>;
-    static_assert(std::is_same<vt1, type_array<type_array<int>>>::value);
-    static_assert(std::is_same<vt2, type_array<type_array<int, double>>>::value);
-    static_assert(std::is_same<vt3, type_array<type_array<int, double, std::string>>>::value);
+    check_val_types<type_array<type_array<int, double>>>(ex::just(1, 3.14));
+    check_val_types<type_array<type_array<int, double, std::string>>>(
+            ex::just(1, 3.14, std::string{}));
 }
 
 TEST_CASE("error types are properly set for just", "[sender_algo]") {
-    using t1 = decltype(concore::just(1));
-
-    using vt1 = concore::sender_traits<t1>::error_types<type_array>;
-    static_assert(std::is_same<vt1, type_array<std::exception_ptr>>::value);
+    check_err_type<type_array<std::exception_ptr>>(ex::just(1));
 }
 
-TEST_CASE("just cannot call set_done", "[sender_algo]") {
-    using t1 = decltype(concore::just(1));
-    CHECK_FALSE(concore::sender_traits<t1>::sends_done);
-}
+TEST_CASE("just cannot call set_done", "[sender_algo]") { check_sends_done<false>(ex::just(1)); }
 
 TEST_CASE("just works with value type", "[sender_algo]") {
-    auto snd = concore::just<std::string>(std::string{"hello"});
+    auto snd = ex::just(std::string{"hello"});
 
     // Check reported type
-    using S = decltype(snd);
-    using value_type = concore::sender_traits<S>::value_types<type_array, type_array>;
-    static_assert(std::is_same<value_type, type_array<type_array<std::string>>>::value);
+    check_val_types<type_array<type_array<std::string>>>(snd);
 
     // Check received value
     std::string res;
     typecat cat{typecat::undefined};
-    auto op = concore::connect(std::move(snd), typecat_receiver<std::string>{&res, &cat});
-    concore::start(op);
+    auto op = ex::connect(std::move(snd), typecat_receiver<std::string>{&res, &cat});
+    ex::start(op);
     CHECK(res == "hello");
     CHECK(cat == typecat::rvalref);
 }
 TEST_CASE("just works with ref type", "[sender_algo]") {
     std::string original{"hello"};
-    auto snd = concore::just<std::string&>(original);
+    auto snd = ex::just(original);
 
     // Check reported type
-    using S = decltype(snd);
-    using value_type = concore::sender_traits<S>::value_types<type_array, type_array>;
-    static_assert(std::is_same<value_type, type_array<type_array<std::string&>>>::value);
+    check_val_types<type_array<type_array<std::string>>>(snd);
 
     // Check received value
     std::string res;
     typecat cat{typecat::undefined};
-    auto op = concore::connect(std::move(snd), typecat_receiver<std::string>{&res, &cat});
-    concore::start(op);
+    auto op = ex::connect(std::move(snd), typecat_receiver<std::string>{&res, &cat});
+    ex::start(op);
     CHECK(res == original);
-    CHECK(cat == typecat::ref);
+    CHECK(cat == typecat::rvalref);
 }
 TEST_CASE("just works with const-ref type", "[sender_algo]") {
-    std::string original{"hello"};
-    auto snd = concore::just<const std::string&>(original);
+    const std::string original{"hello"};
+    auto snd = ex::just(original);
 
     // Check reported type
-    using S = decltype(snd);
-    using value_type = concore::sender_traits<S>::value_types<type_array, type_array>;
-    static_assert(std::is_same<value_type, type_array<type_array<const std::string&>>>::value);
+    check_val_types<type_array<type_array<std::string>>>(snd);
 
     // Check received value
     std::string res;
     typecat cat{typecat::undefined};
-    auto op = concore::connect(std::move(snd), typecat_receiver<std::string>{&res, &cat});
-    concore::start(op);
+    auto op = ex::connect(std::move(snd), typecat_receiver<std::string>{&res, &cat});
+    ex::start(op);
     CHECK(res == original);
-    CHECK(cat == typecat::cref);
+    CHECK(cat == typecat::rvalref);
 }
+
+#endif
