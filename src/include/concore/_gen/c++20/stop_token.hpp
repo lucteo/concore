@@ -270,7 +270,7 @@ namespace concore::_p2300 {
     return false;
   }
 
-  uint8_t in_place_stop_source::__lock_() noexcept {
+  inline uint8_t in_place_stop_source::__lock_() noexcept {
     __detail::__spin_wait __spin;
     auto __old_state = __state_.load(memory_order_relaxed);
     do {
@@ -287,11 +287,11 @@ namespace concore::_p2300 {
     return __old_state;
   }
 
-  void in_place_stop_source::__unlock_(uint8_t __old_state) noexcept {
+  inline void in_place_stop_source::__unlock_(uint8_t __old_state) noexcept {
     (void)__state_.store(__old_state, memory_order_release);
   }
 
-  bool in_place_stop_source::__try_lock_unless_stop_requested_(
+  inline bool in_place_stop_source::__try_lock_unless_stop_requested_(
       bool __set_stop_requested) noexcept {
     __detail::__spin_wait __spin;
     auto __old_state = __state_.load(memory_order_relaxed);
@@ -317,7 +317,7 @@ namespace concore::_p2300 {
     return true;
   }
 
-  bool in_place_stop_source::__try_add_callback_(
+  inline bool in_place_stop_source::__try_add_callback_(
       __detail::__in_place_stop_callback_base* __callbk) noexcept {
     if (!__try_lock_unless_stop_requested_(false)) {
       return false;
@@ -335,7 +335,7 @@ namespace concore::_p2300 {
     return true;
   }
 
-  void in_place_stop_source::__remove_callback_(
+  inline void in_place_stop_source::__remove_callback_(
       __detail::__in_place_stop_callback_base* __callbk) noexcept {
   auto __old_state = __lock_();
 
