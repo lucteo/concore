@@ -3,6 +3,8 @@
 #include <test_common/receivers_new.hpp>
 #include <test_common/type_helpers.hpp>
 
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
+
 TEST_CASE("Simple test for just_error", "[sender_algo]") {
     auto op = concore::connect(concore::just_error(std::exception_ptr{}), expect_error_receiver{});
     concore::start(op);
@@ -48,3 +50,5 @@ TEST_CASE("just_error removes cv qualifier for the given type", "[sender_algo]")
     // incorrect test:
     check_err_type<type_array<const std::string&>>(snd);
 }
+
+#endif
