@@ -22,9 +22,6 @@ TEST_CASE("just_error returns a typed sender", "[sender_algo]") {
 }
 
 TEST_CASE("error types are properly set for just_error<int>", "[sender_algo]") {
-    // check_err_type<type_array<int, std::exception_ptr>>(concore::just_error(1));
-    // TODO: we should also expect std::exception_ptr here
-    // incorrect test:
     check_err_type<type_array<int>>(concore::just_error(1));
 }
 TEST_CASE("error types are properly set for just_error<exception_ptr>", "[sender_algo]") {
@@ -44,9 +41,8 @@ TEST_CASE("just_error removes cv qualifier for the given type", "[sender_algo]")
     std::string str{"hello"};
     const std::string& crefstr = str;
     auto snd = concore::just_error(crefstr);
-    // check_err_type<type_array<std::string, std::exception_ptr>>(snd);
-    // TODO: 1) std:exception_ptr must also be returned
-    // TODO: 2) don't return const reference here
+    // check_err_type<type_array<std::string>>(snd);
+    // TODO: don't return const reference here
     // incorrect test:
     check_err_type<type_array<const std::string&>>(snd);
 }
