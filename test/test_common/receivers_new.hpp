@@ -7,9 +7,9 @@
 
 namespace empty_recv {
 
-using concore::execution::set_done_t;
-using concore::execution::set_error_t;
-using concore::execution::set_value_t;
+using concore::set_done_t;
+using concore::set_error_t;
+using concore::set_value_t;
 
 struct recv0 {
     friend void tag_invoke(set_value_t, recv0&&) {}
@@ -54,19 +54,18 @@ public:
         return *this;
     }
 
-    friend void tag_invoke(concore::execution::set_value_t, expect_void_receiver&& self) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_void_receiver&& self) noexcept {
         self.called_ = true;
     }
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_void_receiver&&, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_void_receiver&&, Ts...) noexcept {
         FAIL_CHECK("set_value called on expect_void_receiver with some non-void value");
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_void_receiver&&) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_void_receiver&&) noexcept {
         FAIL_CHECK("set_done called on expect_void_receiver");
     }
     friend void tag_invoke(
-            concore::execution::set_error_t, expect_void_receiver&&, std::exception_ptr) noexcept {
+            concore::set_error_t, expect_void_receiver&&, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called on expect_void_receiver");
     }
 };
@@ -75,15 +74,14 @@ struct expect_void_receiver_ex {
     bool* executed_;
 
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_void_receiver_ex&& self, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_void_receiver_ex&& self, Ts...) noexcept {
         *self.executed_ = true;
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_void_receiver_ex&&) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_void_receiver_ex&&) noexcept {
         FAIL_CHECK("set_done called on expect_void_receiver_ex");
     }
-    friend void tag_invoke(concore::execution::set_error_t, expect_void_receiver_ex&&,
-            std::exception_ptr) noexcept {
+    friend void tag_invoke(
+            concore::set_error_t, expect_void_receiver_ex&&, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called on expect_void_receiver_ex");
     }
 };
@@ -112,20 +110,19 @@ public:
 
     template <typename... Ts>
     friend void tag_invoke(
-            concore::execution::set_value_t, expect_value_receiver&& self, const T& val) noexcept {
+            concore::set_value_t, expect_value_receiver&& self, const T& val) noexcept {
         CHECK(val == self.value_);
         self.called_ = true;
     }
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_value_receiver&&, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_value_receiver&&, Ts...) noexcept {
         FAIL_CHECK("set_value called with wrong value types on expect_value_receiver");
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_value_receiver&& self) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_value_receiver&& self) noexcept {
         FAIL_CHECK("set_done called on expect_value_receiver");
     }
     friend void tag_invoke(
-            concore::execution::set_error_t, expect_value_receiver&&, std::exception_ptr) noexcept {
+            concore::set_error_t, expect_value_receiver&&, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called on expect_value_receiver");
     }
 };
@@ -139,20 +136,18 @@ public:
         : dest_(dest) {}
 
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_value_receiver_ex self, T val) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_value_receiver_ex self, T val) noexcept {
         *self.dest_ = val;
     }
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_value_receiver_ex, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_value_receiver_ex, Ts...) noexcept {
         FAIL_CHECK("set_value called with wrong value types on expect_value_receiver_ex");
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_value_receiver_ex) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_value_receiver_ex) noexcept {
         FAIL_CHECK("set_done called on expect_value_receiver_ex");
     }
-    friend void tag_invoke(concore::execution::set_error_t, expect_value_receiver_ex,
-            std::exception_ptr) noexcept {
+    friend void tag_invoke(
+            concore::set_error_t, expect_value_receiver_ex, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called on expect_value_receiver");
     }
 };
@@ -175,15 +170,14 @@ public:
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_done_receiver&&, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_done_receiver&&, Ts...) noexcept {
         FAIL_CHECK("set_value called on expect_done_receiver");
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_done_receiver&& self) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_done_receiver&& self) noexcept {
         self.called_ = true;
     }
     friend void tag_invoke(
-            concore::execution::set_error_t, expect_done_receiver&&, std::exception_ptr) noexcept {
+            concore::set_error_t, expect_done_receiver&&, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called on expect_done_receiver");
     }
 };
@@ -192,16 +186,14 @@ struct expect_done_receiver_ex {
     bool* executed_;
 
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_done_receiver_ex&&, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_done_receiver_ex&&, Ts...) noexcept {
         FAIL_CHECK("set_value called on expect_done_receiver_ex");
     }
-    friend void tag_invoke(
-            concore::execution::set_done_t, expect_done_receiver_ex&& self) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_done_receiver_ex&& self) noexcept {
         *self.executed_ = true;
     }
-    friend void tag_invoke(concore::execution::set_error_t, expect_done_receiver_ex&&,
-            std::exception_ptr) noexcept {
+    friend void tag_invoke(
+            concore::set_error_t, expect_done_receiver_ex&&, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called on expect_done_receiver_ex");
     }
 };
@@ -224,20 +216,18 @@ public:
     }
 
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_error_receiver&&, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_error_receiver&&, Ts...) noexcept {
         FAIL_CHECK("set_value called on expect_error_receiver");
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_error_receiver&& self) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_error_receiver&& self) noexcept {
         FAIL_CHECK("set_done called on expect_error_receiver");
     }
-    friend void tag_invoke(concore::execution::set_error_t, expect_error_receiver&& self,
-            std::exception_ptr) noexcept {
+    friend void tag_invoke(
+            concore::set_error_t, expect_error_receiver&& self, std::exception_ptr) noexcept {
         self.called_ = true;
     }
     template <typename E>
-    friend void tag_invoke(
-            concore::execution::set_error_t, expect_error_receiver&& self, E) noexcept {
+    friend void tag_invoke(concore::set_error_t, expect_error_receiver&& self, E) noexcept {
         self.called_ = true;
     }
 };
@@ -246,15 +236,14 @@ struct expect_error_receiver_ex {
     bool* executed_;
 
     template <typename... Ts>
-    friend void tag_invoke(
-            concore::execution::set_value_t, expect_error_receiver_ex&&, Ts...) noexcept {
+    friend void tag_invoke(concore::set_value_t, expect_error_receiver_ex&&, Ts...) noexcept {
         FAIL_CHECK("set_value called on expect_error_receiver_ex");
     }
-    friend void tag_invoke(concore::execution::set_done_t, expect_error_receiver_ex&&) noexcept {
+    friend void tag_invoke(concore::set_done_t, expect_error_receiver_ex&&) noexcept {
         FAIL_CHECK("set_done called on expect_error_receiver_ex");
     }
-    friend void tag_invoke(concore::execution::set_error_t, expect_error_receiver_ex&& self,
-            std::exception_ptr) noexcept {
+    friend void tag_invoke(
+            concore::set_error_t, expect_error_receiver_ex&& self, std::exception_ptr) noexcept {
         *self.executed_ = true;
     }
 };
@@ -262,16 +251,16 @@ struct expect_error_receiver_ex {
 struct logging_receiver {
     int* state_;
     bool should_throw_{false};
-    friend void tag_invoke(concore::execution::set_value_t, logging_receiver&& self) {
+    friend void tag_invoke(concore::set_value_t, logging_receiver&& self) {
         if (self.should_throw_)
             throw std::logic_error("test");
         *self.state_ = 0;
     }
-    friend void tag_invoke(concore::execution::set_done_t, logging_receiver&& self) noexcept {
+    friend void tag_invoke(concore::set_done_t, logging_receiver&& self) noexcept {
         *self.state_ = 1;
     }
     friend void tag_invoke(
-            concore::execution::set_error_t, logging_receiver&& self, std::exception_ptr) noexcept {
+            concore::set_error_t, logging_receiver&& self, std::exception_ptr) noexcept {
         *self.state_ = 2;
     }
 };
@@ -289,27 +278,27 @@ struct typecat_receiver {
     T* value_;
     typecat* cat_;
 
-    // friend void tag_invoke(concore::execution::set_value_t, typecat_receiver self, T v) {
+    // friend void tag_invoke(concore::set_value_t, typecat_receiver self, T v) {
     //     *self.value_ = v;
     //     *self.cat_ = typecat::value;
     // }
-    friend void tag_invoke(concore::execution::set_value_t, typecat_receiver self, T& v) {
+    friend void tag_invoke(concore::set_value_t, typecat_receiver self, T& v) {
         *self.value_ = v;
         *self.cat_ = typecat::ref;
     }
-    friend void tag_invoke(concore::execution::set_value_t, typecat_receiver self, const T& v) {
+    friend void tag_invoke(concore::set_value_t, typecat_receiver self, const T& v) {
         *self.value_ = v;
         *self.cat_ = typecat::cref;
     }
-    friend void tag_invoke(concore::execution::set_value_t, typecat_receiver self, T&& v) {
+    friend void tag_invoke(concore::set_value_t, typecat_receiver self, T&& v) {
         *self.value_ = v;
         *self.cat_ = typecat::rvalref;
     }
-    friend void tag_invoke(concore::execution::set_done_t, typecat_receiver self) noexcept {
+    friend void tag_invoke(concore::set_done_t, typecat_receiver self) noexcept {
         FAIL_CHECK("set_done called");
     }
     friend void tag_invoke(
-            concore::execution::set_error_t, typecat_receiver self, std::exception_ptr) noexcept {
+            concore::set_error_t, typecat_receiver self, std::exception_ptr) noexcept {
         FAIL_CHECK("set_error called");
     }
 };
@@ -319,19 +308,16 @@ struct fun_receiver {
     F f_;
 
     template <typename... Ts>
-    friend void tag_invoke(concore::execution::set_value_t, fun_receiver&& self, Ts... vals) {
+    friend void tag_invoke(concore::set_value_t, fun_receiver&& self, Ts... vals) {
         std::move(self.f_)((Ts &&) vals...);
     }
     template <typename... Ts>
-    friend void tag_invoke(concore::execution::set_value_t, const fun_receiver& self, Ts... vals) {
+    friend void tag_invoke(concore::set_value_t, const fun_receiver& self, Ts... vals) {
         self.f_((Ts &&) vals...);
     }
 
-    friend void tag_invoke(concore::execution::set_done_t, fun_receiver) noexcept {
-        FAIL("Done called");
-    }
-    friend void tag_invoke(
-            concore::execution::set_error_t, fun_receiver, std::exception_ptr eptr) noexcept {
+    friend void tag_invoke(concore::set_done_t, fun_receiver) noexcept { FAIL("Done called"); }
+    friend void tag_invoke(concore::set_error_t, fun_receiver, std::exception_ptr eptr) noexcept {
         try {
             if (eptr)
                 std::rethrow_exception(eptr);

@@ -16,6 +16,6 @@
 #endif
 
 namespace  concore {
-    namespace execution = concore::_p2300::execution;
+    using namespace concore::_p2300::execution;
 }
 #endif
