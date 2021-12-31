@@ -1,14 +1,6 @@
 #pragma once
 
-#include <concore/sender_algo/just.hpp>
-#include <concore/sender_algo/just_error.hpp>
-#include <concore/sender_algo/just_done.hpp>
-#include <concore/_cpo/_cpo_schedule.hpp>
-#include <concore/_cpo/_cpo_connect.hpp>
-#include <concore/_cpo/_cpo_start.hpp>
-#include <concore/_cpo/_cpo_set_value.hpp>
-#include <concore/_cpo/_cpo_set_error.hpp>
-#include <concore/_cpo/_cpo_set_done.hpp>
+#include <concore/execution.hpp>
 
 #include <functional>
 #include <vector>
@@ -61,6 +53,11 @@ private:
         friend oper<R> tag_invoke(concore::connect_t, my_sender self, R&& r) {
             return {self.all_commands_, (R &&) r};
         }
+
+        friend impulse_scheduler tag_invoke(
+                concore::get_completion_scheduler_t<concore::set_value_t>, my_sender) {
+            return {};
+        }
     };
 
 public:
@@ -89,7 +86,37 @@ public:
 
 //! Scheduler that executes everything inline, i.e., on the same thread
 struct inline_scheduler {
-    friend auto tag_invoke(concore::schedule_t, inline_scheduler) { return concore::just(); }
+    template <typename R>
+    struct oper {
+        R recv_;
+        friend void tag_invoke(concore::start_t, oper& self) noexcept {
+            try {
+                concore::set_value((R &&) self.recv_);
+            } catch (...) {
+                concore::set_error((R &&) self.recv_, std::current_exception());
+            }
+        }
+    };
+
+    struct my_sender {
+        template <template <class...> class Tuple, template <class...> class Variant>
+        using value_types = Variant<Tuple<>>;
+        template <template <class...> class Variant>
+        using error_types = Variant<std::exception_ptr>;
+        static constexpr bool sends_done = false;
+
+        template <typename R>
+        friend oper<R> tag_invoke(concore::connect_t, my_sender self, R&& r) {
+            return {(R &&) r};
+        }
+
+        friend inline_scheduler tag_invoke(
+                concore::get_completion_scheduler_t<concore::set_value_t>, my_sender) {
+            return {};
+        }
+    };
+
+    friend my_sender tag_invoke(concore::schedule_t, inline_scheduler) { return {}; }
 
     friend bool operator==(inline_scheduler, inline_scheduler) noexcept { return true; }
     friend bool operator!=(inline_scheduler, inline_scheduler) noexcept { return false; }
@@ -98,10 +125,40 @@ struct inline_scheduler {
 //! Scheduler that returns a sender that always completes with error.
 template <typename E = std::exception_ptr>
 struct error_scheduler {
+    template <typename R>
+    struct oper {
+        R receiver_;
+        E err_;
+
+        friend void tag_invoke(concore::start_t, oper& self) noexcept {
+            concore::set_error((R &&) self.recv_, self.err_);
+        }
+    };
+
+    struct my_sender {
+        E err_;
+
+        template <template <class...> class Tuple, template <class...> class Variant>
+        using value_types = Variant<Tuple<>>;
+        template <template <class...> class Variant>
+        using error_types = Variant<E>;
+        static constexpr bool sends_done = false;
+
+        template <typename R>
+        friend oper<R> tag_invoke(concore::connect_t, my_sender self, R&& r) {
+            return {(R &&) r, (E &&) self.err_};
+        }
+
+        friend error_scheduler tag_invoke(
+                concore::get_completion_scheduler_t<concore::set_value_t>, my_sender) {
+            return {};
+        }
+    };
+
     E err_;
 
-    friend auto tag_invoke(concore::schedule_t, const error_scheduler& self) {
-        return concore::just_error(self.err_);
+    friend my_sender tag_invoke(concore::schedule_t, error_scheduler self) {
+        return {(E &&) self.err_};
     }
 
     friend bool operator==(error_scheduler, error_scheduler) noexcept { return true; }
@@ -110,9 +167,33 @@ struct error_scheduler {
 
 //! Scheduler that returns a sender that always completes with cancellation.
 struct done_scheduler {
-    friend auto tag_invoke(concore::schedule_t, const done_scheduler& self) {
-        return concore::just_done();
-    }
+    template <typename R>
+    struct oper {
+        R receiver_;
+        friend void tag_invoke(concore::start_t, oper& self) noexcept {
+            concore::set_error((R &&) self.recv_, self.err_);
+        }
+    };
+
+    struct my_sender {
+        template <template <class...> class Tuple, template <class...> class Variant>
+        using value_types = Variant<Tuple<>>;
+        template <template <class...> class Variant>
+        using error_types = Variant<>;
+        static constexpr bool sends_done = true;
+
+        template <typename R>
+        friend oper<R> tag_invoke(concore::connect_t, my_sender self, R&& r) {
+            return {(R &&) r};
+        }
+
+        template <typename CPO>
+        friend done_scheduler tag_invoke(concore::get_completion_scheduler_t<CPO>, my_sender) {
+            return {};
+        }
+    };
+
+    friend my_sender tag_invoke(concore::schedule_t, done_scheduler) { return {}; }
 
     friend bool operator==(done_scheduler, done_scheduler) noexcept { return true; }
     friend bool operator!=(done_scheduler, done_scheduler) noexcept { return false; }

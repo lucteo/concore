@@ -2,7 +2,7 @@
 #include <concore/execution.hpp>
 #include <test_common/receivers_new.hpp>
 #include <test_common/type_helpers.hpp>
-#include <test_common/schedulers_new.hpp>
+#include <test_common/schedulers.hpp>
 
 #if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
