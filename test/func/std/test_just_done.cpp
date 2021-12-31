@@ -1,7 +1,9 @@
 #include <catch2/catch.hpp>
-#include <concore/sender_algo/just_done.hpp>
-#include <test_common/task_utils.hpp>
-#include <test_common/receivers.hpp>
+#include <concore/execution.hpp>
+#include <test_common/receivers_new.hpp>
+#include <test_common/type_helpers.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
 TEST_CASE("Simple test for just_done", "[sender_algo]") {
     auto op = concore::connect(concore::just_done(), expect_done_receiver{});
@@ -15,22 +17,20 @@ TEST_CASE("just_done returns a sender", "[sender_algo]") {
     REQUIRE(concore::sender<t>);
 }
 
-template <typename... Ts>
-struct type_array {};
+TEST_CASE("just_done returns a typed sender", "[sender_algo]") {
+    using t = decltype(concore::just_done());
+    static_assert(concore::typed_sender<t>, "concore::just_done must return a typed_sender");
+}
 
 TEST_CASE("value types are properly set for just_done", "[sender_algo]") {
-    using t = decltype(concore::just_done());
-
-    using et = concore::sender_traits<t>::value_types<type_array, type_array>;
-    static_assert(std::is_same<et, type_array<>>::value);
+    check_val_types<type_array<>>(concore::just_done());
 }
 TEST_CASE("error types are properly set for just_done", "[sender_algo]") {
-    using t = decltype(concore::just_done());
-
-    using et = concore::sender_traits<t>::error_types<type_array>;
-    static_assert(std::is_same<et, type_array<>>::value);
+    // no errors sent by just_done
+    check_err_type<type_array<>>(concore::just_done());
 }
 TEST_CASE("just_done advertises that it can call set_done", "[sender_algo]") {
-    using t = decltype(concore::just_done());
-    CHECK(concore::sender_traits<t>::sends_done);
+    check_sends_done<true>(concore::just_done());
 }
+
+#endif
