@@ -1,5 +1,7 @@
 #include <catch2/catch.hpp>
-#include <concore/_concepts/_concept_operation_state.hpp>
+#include <concore/execution.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
 using concore::operation_state;
 using concore::start_t;
@@ -24,3 +26,5 @@ TEST_CASE("reference type is not an operation_state", "[execution][concepts]") {
 TEST_CASE("pointer type is not an operation_state", "[execution][concepts]") {
     REQUIRE(!operation_state<op_noexcept*>);
 }
+
+#endif

@@ -1,6 +1,9 @@
 #include <catch2/catch.hpp>
-#include <concore/_concepts/_concepts_receiver.hpp>
-#include <test_common/receivers.hpp>
+#include <concore/execution.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
+
+#include <test_common/receivers_new.hpp>
 
 using concore::receiver;
 using concore::receiver_of;
@@ -115,3 +118,5 @@ TEST_CASE("non-movable type is not a receiver", "[execution][concepts]") {
     REQUIRE(!receiver<recv_non_movable>);
     REQUIRE(!receiver_of<recv_non_movable>);
 }
+
+#endif

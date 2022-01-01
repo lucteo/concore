@@ -1,11 +1,25 @@
 #include <catch2/catch.hpp>
-#include <concore/_concepts/_concept_scheduler.hpp>
+#include <concore/execution.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
 using concore::schedule_t;
 using concore::scheduler;
 using concore::sender;
 
+struct my_scheduler;
+
 struct my_sender {
+    template <template <class...> class Tuple, template <class...> class Variant>
+    using value_types = Variant<Tuple<>>;
+    template <template <class...> class Variant>
+    using error_types = Variant<std::exception_ptr>;
+    static constexpr bool sends_done = true;
+
+    bool from_scheduler_{false};
+};
+
+struct my_sender2 {
     template <template <class...> class Tuple, template <class...> class Variant>
     using value_types = Variant<Tuple<>>;
     template <template <class...> class Variant>
@@ -22,19 +36,30 @@ struct my_scheduler {
     friend bool operator!=(my_scheduler, my_scheduler) noexcept { return false; }
 };
 
+template <typename CPO>
+my_scheduler tag_invoke(concore::_p2300::execution::get_completion_scheduler_t<CPO>, my_sender) {
+    return {};
+}
+
 struct no_schedule_cpo {
     friend void tag_invoke(int, no_schedule_cpo) {}
 };
 
 struct my_scheduler_except {
-    friend my_sender tag_invoke(schedule_t, my_scheduler_except) {
+    friend my_sender2 tag_invoke(schedule_t, my_scheduler_except) {
         throw std::logic_error("err");
-        return my_sender{true};
+        return my_sender2{true};
     }
 
     friend bool operator==(my_scheduler_except, my_scheduler_except) noexcept { return true; }
     friend bool operator!=(my_scheduler_except, my_scheduler_except) noexcept { return false; }
 };
+
+template <typename CPO>
+my_scheduler_except tag_invoke(
+        concore::_p2300::execution::get_completion_scheduler_t<CPO>, my_sender2) {
+    return {};
+}
 
 struct my_scheduler_noequal {
     friend my_sender tag_invoke(schedule_t, my_scheduler_noequal) { return my_sender{true}; }
@@ -60,4 +85,6 @@ TEST_CASE("type with schedule that throws is a scheduler", "[execution][concepts
 TEST_CASE("type w/o equality operations do not model scheduler", "[execution][concepts]") {
     REQUIRE(!scheduler<my_scheduler_noequal>);
 }
+#endif
+
 #endif
