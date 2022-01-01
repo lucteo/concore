@@ -2,6 +2,8 @@
 
 #include <concore/execution.hpp>
 
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
+
 #include <functional>
 #include <vector>
 
@@ -198,3 +200,5 @@ struct done_scheduler {
     friend bool operator==(done_scheduler, done_scheduler) noexcept { return true; }
     friend bool operator!=(done_scheduler, done_scheduler) noexcept { return false; }
 };
+
+#endif
