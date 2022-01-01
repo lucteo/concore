@@ -25,7 +25,6 @@ set(func_sourceFiles
     "func/test_task_continuation.cpp"
 
     "func/std/test_thread_pool.cpp"
-    "func/std/test_concepts.cpp"
     "func/std/test_executor_concepts.cpp"
     "func/std/test_cpo_execute.cpp"
     "func/std/test_cpo_start.cpp"
@@ -40,8 +39,7 @@ set(func_sourceFiles
     "func/std/test_just_error.cpp"
     "func/std/test_just_done.cpp"
     "func/std/test_transfer_just.cpp"
-    "func/std/test_sender_algo.cpp"
-    "func/std/test_sender_done_error.cpp"
+    "func/std/test_old_sender_algo.cpp"
 
     "func/profiling_helper_test.cpp" # Must be last
 )
@@ -100,7 +98,7 @@ if(${glm_FOUND})
     elseif()
         set(${glm_FOUND} 0)
     endif()
-    
+
 endif()
 
 

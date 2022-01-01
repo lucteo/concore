@@ -1,9 +1,9 @@
 #pragma once
 
 #include <catch2/catch.hpp>
-#include <concore/_cpo/_cpo_set_value.hpp>
-#include <concore/_cpo/_cpo_set_done.hpp>
-#include <concore/_cpo/_cpo_set_error.hpp>
+#include <concore/execution.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
 namespace empty_recv {
 
@@ -332,3 +332,5 @@ template <typename F>
 fun_receiver<F> make_fun_receiver(F f) {
     return fun_receiver<F>{std::forward<F>(f)};
 }
+
+#endif

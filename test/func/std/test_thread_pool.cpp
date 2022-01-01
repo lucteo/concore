@@ -2,7 +2,7 @@
 #include <concore/thread_pool.hpp>
 #include <concore/execution_old.hpp>
 #include "test_common/task_utils.hpp"
-#include "test_common/receivers.hpp"
+#include "test_common/receivers_old.hpp"
 
 #include <array>
 #include <atomic>

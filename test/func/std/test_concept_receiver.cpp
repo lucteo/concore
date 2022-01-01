@@ -3,7 +3,7 @@
 
 #if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
-#include <test_common/receivers_new.hpp>
+#include <test_common/receivers.hpp>
 
 using concore::receiver;
 using concore::receiver_of;

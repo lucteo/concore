@@ -1,6 +1,6 @@
 #include <catch2/catch.hpp>
 #include <concore/execution.hpp>
-#include <test_common/receivers_new.hpp>
+#include <test_common/receivers.hpp>
 #include <test_common/type_helpers.hpp>
 
 #if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20

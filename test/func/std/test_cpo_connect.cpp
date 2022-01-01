@@ -2,7 +2,7 @@
 #include <concore/execution.hpp>
 
 #if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
-#include <test_common/receivers_new.hpp>
+#include <test_common/receivers.hpp>
 
 #include <functional>
 
