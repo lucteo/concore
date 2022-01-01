@@ -1,8 +1,10 @@
 #include <catch2/catch.hpp>
-#include <concore/_cpo/_cpo_schedule.hpp>
+#include <concore/execution.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
 
 using concore::schedule_t;
-using concore::detail::cpo_schedule::has_schedule;
+using concore::_p2300::tag_invocable;
 
 struct my_sender {
     template <template <class...> class Tuple, template <class...> class Variant>
@@ -19,8 +21,10 @@ struct my_scheduler {
 };
 
 TEST_CASE("can call schedule on an appropriate type", "[execution][cpo_schedule]") {
-    static_assert(has_schedule<my_scheduler>, "invalid scheduler type");
+    static_assert(tag_invocable<concore::schedule_t, my_scheduler>, "invalid scheduler type");
     my_scheduler sched;
     auto snd = concore::schedule(sched);
     CHECK(snd.from_scheduler_);
 }
+
+#endif

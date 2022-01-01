@@ -1,6 +1,8 @@
 #include <catch2/catch.hpp>
-#include <concore/execution_old.hpp>
-#include <test_common/receivers.hpp>
+#include <concore/execution.hpp>
+
+#if CONCORE_USE_CXX2020 && CONCORE_CPP_VERSION >= 20
+#include <test_common/receivers_new.hpp>
 
 #include <string>
 #include <climits>
@@ -8,9 +10,7 @@
 using concore::set_done_t;
 using concore::set_error_t;
 using concore::set_value_t;
-using concore::detail::cpo_set_done::has_set_done;
-using concore::detail::cpo_set_error::has_set_error;
-using concore::detail::cpo_set_value::has_set_value;
+using concore::_p2300::tag_invocable;
 
 struct recv_value {
     int* target_;
@@ -77,78 +77,90 @@ TEST_CASE("set_value with a value passes the value to the receiver", "[execution
 }
 
 TEST_CASE("can call set_value on a receiver with plain value type", "[execution][cpo_receiver]") {
-    static_assert(has_set_value<recv_value, int>, "cannot call set_value on recv_value");
+    static_assert(tag_invocable<concore::set_value_t, recv_value, int>,
+            "cannot call set_value on recv_value");
     int val = 0;
     concore::set_value(recv_value{&val}, 10);
     REQUIRE(val == 10);
 }
 TEST_CASE("can call set_value on a receiver with r-value ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_value<recv_rvalref, int>, "cannot call set_value on recv_rvalref");
+    static_assert(tag_invocable<concore::set_value_t, recv_rvalref, int>,
+            "cannot call set_value on recv_rvalref");
     int val = 0;
     concore::set_value(recv_rvalref{&val}, 10);
     REQUIRE(val == 10);
 }
 TEST_CASE("can call set_value on a receiver with ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_value<recv_ref&, int>, "cannot call set_value on recv_ref");
+    static_assert(tag_invocable<concore::set_value_t, recv_ref&, int>,
+            "cannot call set_value on recv_ref");
     int val = 0;
     recv_ref recv{&val};
     concore::set_value(recv, 10);
     REQUIRE(val == 10);
 }
 TEST_CASE("can call set_value on a receiver with const ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_value<recv_cref, int>, "cannot call set_value on recv_cref");
+    static_assert(tag_invocable<concore::set_value_t, recv_cref, int>,
+            "cannot call set_value on recv_cref");
     int val = 0;
     concore::set_value(recv_cref{&val}, 10);
     REQUIRE(val == 10);
 }
 
 TEST_CASE("can call set_error on a receiver with plain value type", "[execution][cpo_receiver]") {
-    static_assert(has_set_error<recv_value, int>, "cannot call set_error on recv_value");
+    static_assert(tag_invocable<concore::set_error_t, recv_value, int>,
+            "cannot call set_error on recv_value");
     int val = 0;
     concore::set_error(recv_value{&val}, 10);
     REQUIRE(val == -10);
 }
 TEST_CASE("can call set_error on a receiver with r-value ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_error<recv_rvalref, int>, "cannot call set_error on recv_rvalref");
+    static_assert(tag_invocable<concore::set_error_t, recv_rvalref, int>,
+            "cannot call set_error on recv_rvalref");
     int val = 0;
     concore::set_error(recv_rvalref{&val}, 10);
     REQUIRE(val == -10);
 }
 TEST_CASE("can call set_error on a receiver with ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_error<recv_ref&, int>, "cannot call set_error on recv_ref");
+    static_assert(tag_invocable<concore::set_error_t, recv_ref&, int>,
+            "cannot call set_error on recv_ref");
     int val = 0;
     recv_ref recv{&val};
     concore::set_error(recv, 10);
     REQUIRE(val == -10);
 }
 TEST_CASE("can call set_error on a receiver with const ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_error<recv_cref, int>, "cannot call set_error on recv_cref");
+    static_assert(tag_invocable<concore::set_error_t, recv_cref, int>,
+            "cannot call set_error on recv_cref");
     int val = 0;
     concore::set_error(recv_cref{&val}, 10);
     REQUIRE(val == -10);
 }
 
 TEST_CASE("can call set_done on a receiver with plain value type", "[execution][cpo_receiver]") {
-    static_assert(has_set_done<recv_value>, "cannot call set_done on recv_value");
+    static_assert(
+            tag_invocable<concore::set_done_t, recv_value>, "cannot call set_done on recv_value");
     int val = 0;
     concore::set_done(recv_value{&val});
     REQUIRE(val == INT_MAX);
 }
 TEST_CASE("can call set_done on a receiver with r-value ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_done<recv_rvalref>, "cannot call set_done on recv_rvalref");
+    static_assert(tag_invocable<concore::set_done_t, recv_rvalref>,
+            "cannot call set_done on recv_rvalref");
     int val = 0;
     concore::set_done(recv_rvalref{&val});
     REQUIRE(val == INT_MAX);
 }
 TEST_CASE("can call set_done on a receiver with ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_done<recv_ref&>, "cannot call set_done on recv_ref");
+    static_assert(
+            tag_invocable<concore::set_done_t, recv_ref&>, "cannot call set_done on recv_ref");
     int val = 0;
     recv_ref recv{&val};
     concore::set_done(recv);
     REQUIRE(val == INT_MAX);
 }
 TEST_CASE("can call set_done on a receiver with const ref type", "[execution][cpo_receiver]") {
-    static_assert(has_set_done<recv_cref>, "cannot call set_done on recv_cref");
+    static_assert(
+            tag_invocable<concore::set_done_t, recv_cref>, "cannot call set_done on recv_cref");
     int val = 0;
     concore::set_done(recv_cref{&val});
     REQUIRE(val == INT_MAX);
@@ -176,3 +188,5 @@ TEST_CASE("tag types can be deduced from set_value, set_error and set_done",
     static_assert(std::is_same_v<const set_error_t, decltype(concore::set_error)>, "type mismatch");
     static_assert(std::is_same_v<const set_done_t, decltype(concore::set_done)>, "type mismatch");
 }
+
+#endif
