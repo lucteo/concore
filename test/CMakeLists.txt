@@ -49,8 +49,8 @@ target_link_libraries(test.concore concore)
 target_include_directories(test.concore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # The tests depend on catch2, rapidcheck
-target_link_libraries(test.concore CONAN_PKG::catch2)
-target_link_libraries(test.concore CONAN_PKG::rapidcheck)
+target_link_libraries(test.concore Catch2::Catch2)
+target_link_libraries(test.concore rapidcheck::rapidcheck)
 
 # Check if TBB was enabled
 get_target_property(CONCORE_DEFINES concore COMPILE_DEFINITIONS)
@@ -106,7 +106,7 @@ endif()
 
 function(def_perf_test target sourceFile)
     add_executable(${target} ${sourceFile})
-    target_link_libraries(${target} concore CONAN_PKG::benchmark)
+    target_link_libraries(${target} concore benchmark::benchmark)
     target_compile_definitions(${target} PUBLIC ${EXTRA_DEFS})
     target_include_directories(${target} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
     if(tbb_link_target)

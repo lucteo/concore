@@ -241,6 +241,6 @@ TEST_CASE("as_scheduler produces a good scheduler", "[execution][concept_wrapper
     auto sched = as_scheduler<my_executor>(my_executor{});
     CHECK_FALSE(called);
     concore::submit(sched.schedule(), recv);
-    static_assert(concore::scheduler<typeof(sched)>, "Type is not a scheduler");
+    static_assert(concore::scheduler<decltype(sched)>, "Type is not a scheduler");
     CHECK(called);
 }

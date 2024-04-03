@@ -3,13 +3,6 @@ cmake_minimum_required(VERSION 3.17.0)
 # Define the concore project
 project(concore-dev LANGUAGES CXX)
 
-if(EXISTS ${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-    conan_basic_setup(TARGETS)
-else()
-    message(ERROR "The file conanbuildinfo.cmake doesn't exist, you have to run conan install first")
-endif()
-
 # Set the version of the project
 project(concore-dev VERSION "${CONAN_PACKAGE_VERSION}")
 
@@ -24,6 +17,10 @@ add_subdirectory(src)
 
 # Prevent linking errors with CXX11 or older ABI (visible when linking with rapidcheck)
 target_compile_definitions(concore PUBLIC _GLIBCXX_USE_CXX11_ABI=1)
+
+find_package(Catch2 REQUIRED)
+find_package(rapidcheck REQUIRED)
+find_package(benchmark REQUIRED)
 
 # Testing code
 enable_testing()

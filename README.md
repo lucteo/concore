@@ -1,4 +1,5 @@
 # concore
+
 Core abstractions for dealing with concurrency in C++
 
 [![CI](https://github.com/lucteo/concore/workflows/CI/badge.svg)](https://github.com/lucteo/concore/actions)
@@ -16,20 +17,35 @@ The library also aims at building highly efficient applications, by trying to ma
 ## Building
 
 The following tools are needed:
-* [`conan`](https://www.conan.io/)
-* [`CMake`](https://cmake.org/)
+
+* [`Conan`](https://www.conan.io/) (>=3.23)
+* [`CMake`](https://cmake.org/) (>=2.0)
 
 Perform the following actions:
-```
+
+```sh
 mkdir -p build
 pushd build
-
-conan install .. --build=missing -s build_type=Release
-
-cmake -G<gen> -D CMAKE_BUILD_TYPE=Release -D concore.testing=ON ..
-cmake --build .
-
-popd build
+conan install .. --build=missing -s build_type=Release -c tools.build:skip_test=False
+cmake --preset conan-release ..
+cmake --build Release
+popd
+ctest --preset conan-release
 ```
 
-Here, `<gen>` can be `Ninja`, `make`, `XCode`, `"Visual Studio 15 Win64"`, etc.
+Or, to build without tests:
+
+```sh
+mkdir -p build
+pushd build
+conan install .. --build=missing -s build_type=Release
+cmake --preset conan-release ../src
+cmake --build Release
+popd
+```
+
+Also, creating the `concore` Conan package and storing it in the local cache can be done in a single shot. To do so, issue the following command from the root of the repository:
+
+```sh
+conan create . --build=missing -s build_type=Release
+```
